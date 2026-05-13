@@ -4,6 +4,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## 名前について
+
+- **ori**（**織**）— "weave" / 織りなす
+- **ori-ori**（**折々**）— "from time to time" / "season by season"（四季折々）
+
+DDD 文書・feature・コードを 1 つのグラフに**織り**込み、節目（**折々**）に変更を伝播させる、という二重の意味を込めています。npm scope `@ori-ori/` もこの語源に由来します。
+
 ## 概要
 
 **ori** は以下を統合した開発支援ツールです：
@@ -26,7 +33,7 @@
 ```
 ori/
 ├── packages/
-│   ├── cli/              # @ori/cli — npm 配布の TypeScript CLI
+│   ├── cli/              # @ori-ori/cli — npm 配布の TypeScript CLI
 │   ├── parser/           # markdown/frontmatter/section parsing
 │   ├── coherence/        # propagation 計算 + ハッシュ管理
 │   ├── feature-runner/   # 7-phase workflow runner + beads bridge
@@ -44,7 +51,7 @@ ori/
 
 ```bash
 # 1. CLI バイナリ（決定的処理）
-npm i -g @ori/cli
+npm i -g @ori-ori/cli
 
 # 2. AI コンテキスト（skill/agent/hook を各 CLI に配置）
 apm install dev-komenzar/ori

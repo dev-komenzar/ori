@@ -23,7 +23,7 @@ APM resolves the contents below into each AI harness's native format (`.claude/`
 Skills and hooks call the `ori` CLI binary, which is **not** part of this APM package. Install separately:
 
 ```bash
-npm i -g @ori/cli
+npm i -g @ori-ori/cli
 ```
 
 This split keeps the heavy deterministic processing (parsing, hashing, propagation graph) in a versioned npm binary, while the AI-context (skills/instructions/hooks) is delivered to every harness via APM.

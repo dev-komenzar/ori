@@ -1,4 +1,4 @@
-import { extractSections, hashSection, parseFrontmatter } from "@ori/parser";
+import { extractSections, hashSection, parseFrontmatter } from "@ori-ori/parser";
 import type { NodeRef } from "./graph.js";
 
 export type ChangedKind = "file" | "section" | "section-removed";

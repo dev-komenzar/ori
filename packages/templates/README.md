@@ -1,4 +1,4 @@
-# @ori/templates
+# @ori-ori/templates
 
 DDD code-generation templates used by `ori init --template <name>` and by
 phase 4 (`impl-green`) of `ori feature run`.

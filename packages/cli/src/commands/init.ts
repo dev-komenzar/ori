@@ -3,7 +3,7 @@ import { consola } from "consola";
 import { mkdir, writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { stringify as yamlStringify } from "yaml";
-import { DEFAULT_AGENTS, DEFAULT_PHASE_CONFIG } from "@ori/feature-runner";
+import { DEFAULT_AGENTS, DEFAULT_PHASE_CONFIG } from "@ori-ori/feature-runner";
 
 const DIRS = [
   ".ori/domain/workflows",
@@ -73,7 +73,7 @@ export const initCommand = defineCommand({
 
     if (args.template) {
       consola.info(
-        `Template "${args.template}" requested. Template copy is not implemented yet (MVP). See @ori/templates.`,
+        `Template "${args.template}" requested. Template copy is not implemented yet (MVP). See @ori-ori/templates.`,
       );
     }
 

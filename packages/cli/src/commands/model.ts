@@ -9,7 +9,7 @@ import {
   PHASES,
   resolveModel,
   type OriModelConfig,
-} from "@ori/feature-runner";
+} from "@ori-ori/feature-runner";
 
 async function loadConfig(): Promise<OriModelConfig> {
   try {

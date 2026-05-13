@@ -19,7 +19,7 @@
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",
     "typecheck": "pnpm -r run typecheck",
-    "cli": "pnpm --filter @ori/cli exec ori"
+    "cli": "pnpm --filter @ori-ori/cli exec ori"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

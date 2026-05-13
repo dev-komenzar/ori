@@ -1,9 +1,9 @@
-# @ori/cli
+# @ori-ori/cli
 
 The `ori` command-line tool. Distributed via npm:
 
 ```bash
-npm i -g @ori/cli
+npm i -g @ori-ori/cli
 ```
 
 ## Commands (MVP)
@@ -26,10 +26,10 @@ npm i -g @ori/cli
 Built with [citty](https://github.com/unjs/citty) (small, ESM-friendly).
 Wraps the workspace packages:
 
-- `@ori/parser` — markdown / frontmatter / section extraction
-- `@ori/coherence` — propagation graph, change detection, manifest schema
-- `@ori/feature-runner` — phase definitions, model resolution, beads bridge
-- `@ori/templates` — DDD code-generation templates
+- `@ori-ori/parser` — markdown / frontmatter / section extraction
+- `@ori-ori/coherence` — propagation graph, change detection, manifest schema
+- `@ori-ori/feature-runner` — phase definitions, model resolution, beads bridge
+- `@ori-ori/templates` — DDD code-generation templates
 
 All heavy / deterministic operations live in those packages; this CLI is the
 thin entrypoint that AI agents invoke via Bash and APM hooks.

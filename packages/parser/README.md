@@ -1,4 +1,4 @@
-# @ori/parser
+# @ori-ori/parser
 
 Markdown / frontmatter / section parsing for the ori toolchain.
 

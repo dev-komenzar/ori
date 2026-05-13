@@ -34,7 +34,7 @@ dependencies:
 requirements:
   cli:
     - name: ori
-      install: "npm i -g @ori/cli"
+      install: "npm i -g @ori-ori/cli"
       min_version: "0.0.1"
     - name: bd
       install: "See https://github.com/... for beads installation"

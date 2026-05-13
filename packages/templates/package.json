@@ -1,9 +1,16 @@
 {
-  "name": "@ori/templates",
+  "name": "@ori-ori/templates",
   "version": "0.0.1",
-  "private": true,
   "description": "DDD code-generation templates for ori (TypeScript + Tauri MVP)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dev-komenzar/ori",
+    "directory": "packages/templates"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "files": ["ddd-typescript-tauri"],
   "exports": {

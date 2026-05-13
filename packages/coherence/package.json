@@ -1,10 +1,18 @@
 {
-  "name": "@ori/coherence",
+  "name": "@ori-ori/coherence",
   "version": "0.0.1",
-  "private": true,
   "description": "Propagation graph and change detection for ori",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dev-komenzar/ori",
+    "directory": "packages/coherence"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
+  "files": ["dist"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -20,7 +28,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ori/parser": "workspace:*",
+    "@ori-ori/parser": "workspace:*",
     "yaml": "^2.5.0",
     "zod": "^3.23.0"
   }

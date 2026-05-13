@@ -1,4 +1,4 @@
-# @ori/coherence
+# @ori-ori/coherence
 
 Change detection and propagation for the ori coherence graph.
 

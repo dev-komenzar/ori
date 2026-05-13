@@ -84,7 +84,7 @@ review phase は **fresh_context: true** で別 session を spawn。
 
 ## 配布
 
-- **CLI**: `npm i -g @ori/cli` — 決定的重処理
+- **CLI**: `npm i -g @ori-ori/cli` — 決定的重処理
 - **APM パッケージ**: `apm install dev-komenzar/ori` — instructions / skills / agents / hooks
 - APM が harness 固有形式に変換（.claude/、.cursor/、.codex/、.opencode/、.windsurf/、.github/）
 

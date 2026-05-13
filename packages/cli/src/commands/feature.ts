@@ -3,7 +3,7 @@ import { consola } from "consola";
 import { mkdir, writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { stringify as yamlStringify } from "yaml";
-import { PHASES, type Phase } from "@ori/feature-runner";
+import { PHASES, type Phase } from "@ori-ori/feature-runner";
 
 async function exists(path: string): Promise<boolean> {
   try {

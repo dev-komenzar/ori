@@ -1,4 +1,4 @@
-import type { NodeRef } from "@ori/coherence";
+import type { NodeRef } from "@ori-ori/coherence";
 import type { Phase, PhaseRecord } from "./phases.js";
 
 export interface DirtyEntry {

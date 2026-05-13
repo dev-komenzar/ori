@@ -2,7 +2,7 @@ import { defineCommand } from "citty";
 import { consola } from "consola";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
-import { extractSections, parseFrontmatter } from "@ori/parser";
+import { extractSections, parseFrontmatter } from "@ori-ori/parser";
 
 interface LintIssue {
   file: string;
