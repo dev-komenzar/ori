@@ -1,0 +1,30 @@
+{
+  "name": "ori-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ori (織) — DDD-driven feature scaffolding with CoDD coherence + per-feature TDD",
+  "license": "MIT",
+  "author": "Takuya Kometan <takuya.kometan@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dev-komenzar/ori"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "cli": "pnpm --filter @ori/cli exec ori"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "tsup": "^8.3.0",
+    "vitest": "^2.1.0"
+  }
+}

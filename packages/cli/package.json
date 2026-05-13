@@ -1,0 +1,35 @@
+{
+  "name": "@ori/cli",
+  "version": "0.0.1",
+  "description": "ori CLI — DDD-driven feature scaffolding with CoDD coherence",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "ori": "./dist/bin.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "templates"],
+  "scripts": {
+    "build": "tsup src/bin.ts src/index.ts --format esm --dts --clean",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsup src/bin.ts --format esm --watch"
+  },
+  "dependencies": {
+    "@ori/coherence": "workspace:*",
+    "@ori/feature-runner": "workspace:*",
+    "@ori/parser": "workspace:*",
+    "citty": "^0.1.6",
+    "consola": "^3.2.0",
+    "yaml": "^2.5.0",
+    "zod": "^3.23.0"
+  }
+}

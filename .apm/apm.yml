@@ -1,0 +1,41 @@
+name: ori
+version: 0.0.1
+description: DDD-driven feature scaffolding with CoDD-style coherence + per-feature TDD
+authors:
+  - takuya.kometan@gmail.com
+license: MIT
+repository: https://github.com/dev-komenzar/ori
+
+provides:
+  instructions:
+    - instructions/ori-conventions.instructions.md
+    - instructions/domain-phase.instructions.md
+    - instructions/feature-manifest.instructions.md
+    - instructions/feature-spec.instructions.md
+    - instructions/ddd-typescript.instructions.md
+    - instructions/ddd-test.instructions.md
+    - instructions/ddd-rust.instructions.md
+  skills:
+    - skills/ori-init.md
+    - skills/ori-flow.md
+    - skills/ori-sync.md
+    - skills/ori-propose.md
+    - skills/ori-review-proposals.md
+    - skills/ori-distill.md
+  agents:
+    - agents/ori-reviewer.md
+  hooks:
+    - hooks/post-write-domain.yaml
+
+dependencies:
+  apm: []
+  mcp: []
+
+requirements:
+  cli:
+    - name: ori
+      install: "npm i -g @ori/cli"
+      min_version: "0.0.1"
+    - name: bd
+      install: "See https://github.com/... for beads installation"
+      min_version: "0.0.0"

@@ -1,0 +1,27 @@
+{
+  "name": "@ori/coherence",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Propagation graph and change detection for ori",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ori/parser": "workspace:*",
+    "yaml": "^2.5.0",
+    "zod": "^3.23.0"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@ori/templates",
+  "version": "0.0.1",
+  "private": true,
+  "description": "DDD code-generation templates for ori (TypeScript + Tauri MVP)",
+  "license": "MIT",
+  "type": "module",
+  "files": ["ddd-typescript-tauri"],
+  "exports": {
+    "./ddd-typescript-tauri/*": "./ddd-typescript-tauri/*"
+  },
+  "scripts": {
+    "test": "vitest run"
+  }
+}

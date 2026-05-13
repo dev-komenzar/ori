@@ -1,0 +1,10 @@
+name: ori-post-write-domain
+description: ドメイン / feature 文書が書き換わったら ori sync を自動起動して伝播計算
+when: post_write
+match:
+  paths:
+    - ".ori/domain/**/*.md"
+    - ".ori/features/**/manifest.yaml"
+    - ".ori/features/**/spec.md"
+run: |
+  ori sync --file "${WRITTEN_FILE}"

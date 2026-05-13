@@ -1,0 +1,27 @@
+{
+  "name": "@ori/feature-runner",
+  "version": "0.0.1",
+  "private": true,
+  "description": "7-phase per-feature workflow runner + beads bridge",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ori/coherence": "workspace:*",
+    "@ori/parser": "workspace:*",
+    "yaml": "^2.5.0",
+    "zod": "^3.23.0"
+  }
+}
