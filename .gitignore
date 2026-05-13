@@ -1,3 +1,6 @@
+# direnv
+.direnv/
+
 node_modules/
 dist/
 build/
