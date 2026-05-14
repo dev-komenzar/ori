@@ -47,7 +47,15 @@ ori/
 └── docs/                 # 設計文書
 ```
 
-## ユーザのインストール
+## Getting started
+
+スタック別の開始ガイドは [docs/start/index.md](docs/start/index.md) に
+まとまっています。代表例:
+
+- [docs/start/typescript-web.md](docs/start/typescript-web.md) — TS 単体（web / Node）
+- [docs/start/tauri-v2.md](docs/start/tauri-v2.md) — TS + Rust (Tauri 2)
+
+共通ステップ:
 
 ```bash
 # 1. CLI バイナリ（決定的処理）
@@ -55,16 +63,13 @@ npm i -g @ori-ori/cli
 
 # 2. AI コンテキスト（skill/agent/hook を各 CLI に配置）
 apm install dev-komenzar/ori
-```
 
-## 対象プロジェクトでの使い方
-
-```bash
+# 3. プロジェクトを scaffold
 $ cd my-project
-$ ori init --template tauri-ts        # .ori/ 構造 + DDD scaffold
-$ /ori-distill                         # AI が distill-ddd phase 1-11 を対話実行
-$ /ori-flow app-startup                # 1 feature を 7 phase で実装
-$ ori sync                             # 変更伝播計算
+$ ori init --template ddd-typescript          # or ddd-typescript-tauri
+$ /ori-distill                                 # AI が distill-ddd phase 1-11 を対話実行
+$ /ori-flow app-startup                        # 1 feature を 7 phase で実装
+$ ori sync                                     # 変更伝播計算
 ```
 
 ## バグが見つかったときの動線
