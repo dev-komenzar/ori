@@ -1,26 +1,22 @@
 # @ori-ori/templates
 
-DDD code-generation templates used by `ori init --template <name>` and by
+Code-generation templates used by `ori init --template <name>` and by
 phase 4 (`impl-green`) of `ori feature run`.
 
-## MVP
+## Templates
 
-- **ddd-typescript-tauri**: TypeScript + Tauri 2 desktop app skeleton with
-  the canonical `src/contexts/<bc>/{domain,application,infrastructure}/` layout.
+- **ddd-typescript** — minimal feature-sliced TypeScript DDD scaffold.
+  - `src/lib/<feature>/{domain,application,infrastructure,presentation,tests}`
+  - `src/lib/shared/{types,events,contracts}` for cross-feature primitives
+  - one feature exposes only `index.ts` as its public API
+  - `.ori/architecture.md` is the SSoT; `eslint.config.ori.js` is generated
+    from it via `@ori-ori/arch-adapter-eslint`
+  - ships a worked `tasks` aggregate + vitest specs
+
+See `ddd-typescript/README.md` for the full layout.
 
 ## Roadmap
 
-- `ddd-typescript-node`: pure-Node server (no Tauri)
-- `ddd-rust`: Rust DDD (axum/actix backend or Tauri Rust side)
-- `ddd-typescript-react`: React frontend without Tauri
-
-Each template ships:
-
-- `src/` skeleton (one example Bounded Context with Aggregate + VO + Workflow)
-- `tests/` skeleton (vitest + property tests)
-- `package.json` / `tsconfig.json` / linter configs
-- Top-level README explaining the layout
-
-The CLI copies the template into the target project with placeholder
-substitution; the AI is expected to fill in the actual content during
-phase 4.
+- `ddd-typescript-tauri` — Tauri 2 derivative of `ddd-typescript` with a Rust
+  feature-sliced backend and `tauri-specta`-generated contracts. Deferred
+  past v0.1 (tracked separately).

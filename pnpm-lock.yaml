@@ -118,7 +118,14 @@ importers:
         specifier: ^4.0.0
         version: 4.0.4
 
-  packages/templates: {}
+  packages/templates:
+    devDependencies:
+      '@ori-ori/arch-adapter-eslint':
+        specifier: workspace:*
+        version: link:../arch-adapter-eslint
+      '@ori-ori/parser':
+        specifier: workspace:*
+        version: link:../parser
 
 packages:
 
