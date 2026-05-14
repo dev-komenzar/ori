@@ -48,6 +48,9 @@ function resolveRoot(spec: ArchitectureSpec, requestedId: string | undefined): R
 async function loadAdapter(cwd: string, name: string): Promise<OriArchAdapter> {
   const pkg = `@ori-ori/arch-adapter-${name}`;
   // Resolve from the user's project, not from where ori itself is installed.
+  // createRequire's resolver honors CJS conditions; adapter packages must
+  // therefore declare a "default" entry in their exports field so the file
+  // can be located. The dynamic import() then loads it as ESM.
   const require = createRequire(join(cwd, "package.json"));
   let mod: unknown;
   try {

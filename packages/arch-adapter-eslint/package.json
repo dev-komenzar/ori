@@ -1,0 +1,42 @@
+{
+  "name": "@ori-ori/arch-adapter-eslint",
+  "version": "0.0.1",
+  "description": "ori arch adapter that compiles .ori/architecture.md to an eslint-plugin-boundaries flat config",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dev-komenzar/ori",
+    "directory": "packages/arch-adapter-eslint"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "files": ["dist"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ori-ori/parser": "workspace:*"
+  },
+  "peerDependencies": {
+    "eslint": ">=9",
+    "eslint-plugin-boundaries": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "eslint": { "optional": true },
+    "eslint-plugin-boundaries": { "optional": true }
+  }
+}
