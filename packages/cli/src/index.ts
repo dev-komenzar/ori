@@ -5,6 +5,7 @@ import { syncCommand } from "./commands/sync.js";
 import { featureCommand } from "./commands/feature.js";
 import { modelCommand } from "./commands/model.js";
 import { proposalsCommand } from "./commands/proposals.js";
+import { archCommand } from "./commands/arch.js";
 
 export const main = defineCommand({
   meta: {
@@ -20,6 +21,7 @@ export const main = defineCommand({
     feature: featureCommand,
     model: modelCommand,
     proposals: proposalsCommand,
+    arch: archCommand,
   },
 });
 
