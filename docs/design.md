@@ -41,6 +41,7 @@
 │       └── status.yaml         beads 派生キャッシュ
 ├── proposals/                  --force 由来の上流提案
 ├── state/                      snapshot.json (git なし時のフォールバック、gitignore)
+├── architecture.md             feature-sliced 層・依存規則 SSoT（docs/architecture-schema.md 参照）
 └── config.yaml                 モデル選択など
 ```
 
@@ -58,6 +59,14 @@
 
 - 各 phase 内で失敗時 1 回 self-fix → それでも失敗なら停止
 - subtask は impl-green issue 内の `- [ ]` checklist。別 issue は作らない
+
+## アーキテクチャ enforcement
+
+`.ori/architecture.md` は feature-sliced 設計（backend layers + FSD UI layers）の
+SSoT。フロントマターでレイヤー・許可される cross-layer 依存・public entry を宣言し、
+`@ori-ori/arch-adapter-*` パッケージが native linter config（eslint /
+dependency-cruiser / import-linter / arch-adapter-rust / regex fallback）へコンパイル。
+schema 仕様は [architecture-schema.md](./architecture-schema.md) を参照。
 
 ## 変更伝播
 
