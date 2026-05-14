@@ -87,9 +87,10 @@ TS 側固有:
 
 Rust 側固有:
 
-- `crate::features::<feature>::*` の絶対パスを基本に使う（`super::` は v0.1 の
-  arch-adapter-rust に既知の制約があるため、非 mod.rs ファイルでは
-  避ける — テンプレートも絶対パスで書かれています）
+- feature 内の sibling は idiomatic な `super::*` で参照、cross-feature 連携の
+  ために `crate::features::shared::*` を使う（arch-adapter-rust は Rust 2018+
+  の module-file convention に沿って `crate::*` / `super::*` / `self::*` を
+  正しく解決します）
 - tauri command は **`src-tauri/src/features/<f>/commands.rs` にのみ**置く
 
 ## 5. TS<->Rust contract: tauri-specta
@@ -172,13 +173,9 @@ pnpm tauri build               # 各 OS のインストーラを生成
 
 ## 10. 既知の制約 (v0.1)
 
-- arch-adapter-rust は `super::X` の解決が mod.rs ファイル向け前提です。
-  非 mod.rs siblings での `super::` import は誤分類されることがあるため、
-  テンプレートは `crate::features::<f>::*` で記述しています。
-  ([追跡 issue: ori-w5j](../../README.md))
-- tauri-specta の v2 RC API は変更頻度が高めです。Cargo.toml に
-  ピン留めしてある version はテンプレート生成時点のもの。アップグレード
-  時には `lib.rs` の Builder API も確認してください。
+- tauri-specta の v2 RC API は変更頻度が高めです。Cargo.toml にピン留めして
+  ある version はテンプレート生成時点のもの。アップグレード時には `lib.rs`
+  の Builder API も確認してください。
 
 ## 関連リンク
 

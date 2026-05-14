@@ -196,6 +196,35 @@ fn extract_uses(content: &str) -> Vec<(String, usize)> {
     out
 }
 
+fn module_dir(importer: &Path) -> Option<PathBuf> {
+    // Rust 2018+ module-file rule:
+    //   <dir>/mod.rs        defines module <dir>
+    //   <dir>/<name>.rs     defines module <name> nested under <dir>
+    // The directory of the *importer module* is therefore:
+    //   for mod.rs           → importer.parent()        (current dir IS the module dir)
+    //   for any other file   → importer.parent().join(<name>)  conceptually,
+    //                          but its file siblings live in importer.parent() itself.
+    // We return the dir that holds sibling files reachable via self::*.
+    let parent = importer.parent()?;
+    if importer.file_name().and_then(|s| s.to_str()) == Some("mod.rs") {
+        Some(parent.to_path_buf())
+    } else {
+        Some(parent.to_path_buf())
+    }
+}
+
+fn parent_module_dir(importer: &Path) -> Option<PathBuf> {
+    // The dir reached by super::* — one module up from the importer.
+    //   for <dir>/mod.rs     → <dir>'s parent
+    //   for <dir>/<name>.rs  → <dir> itself (because <name>'s parent module is <dir>)
+    let parent = importer.parent()?;
+    if importer.file_name().and_then(|s| s.to_str()) == Some("mod.rs") {
+        parent.parent().map(Path::to_path_buf)
+    } else {
+        Some(parent.to_path_buf())
+    }
+}
+
 fn resolve_use(target: &str, importer: &Path) -> Option<PathBuf> {
     if let Some(rest) = target.strip_prefix("crate::") {
         let mut p = PathBuf::from(ROOT_PATH);
@@ -206,7 +235,7 @@ fn resolve_use(target: &str, importer: &Path) -> Option<PathBuf> {
         return Some(p);
     }
     if let Some(rest) = target.strip_prefix("super::") {
-        let mut p = importer.parent()?.parent()?.to_path_buf();
+        let mut p = parent_module_dir(importer)?;
         for s in rest.split("::").filter(|s| !s.is_empty()) {
             p.push(s);
         }
@@ -214,7 +243,7 @@ fn resolve_use(target: &str, importer: &Path) -> Option<PathBuf> {
         return Some(p);
     }
     if let Some(rest) = target.strip_prefix("self::") {
-        let mut p = importer.parent()?.to_path_buf();
+        let mut p = module_dir(importer)?;
         for s in rest.split("::").filter(|s| !s.is_empty()) {
             p.push(s);
         }

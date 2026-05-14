@@ -53,7 +53,7 @@ pub fn complete(task: Task) -> Result<Task, AppError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::features::tasks::domain::{complete, Task, TaskId, TaskTitle};
+    use super::*;
 
     #[test]
     fn task_title_rejects_empty() {

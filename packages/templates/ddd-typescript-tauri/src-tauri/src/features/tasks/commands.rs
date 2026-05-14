@@ -4,10 +4,10 @@
 // up by `tauri-specta` and re-exported to TypeScript at
 // `src/lib/shared/ipc/bindings.ts` (see .ori/architecture.md cross_root).
 
+use super::application::complete_task_usecase;
+use super::domain::{Task, TaskId};
+use super::infrastructure::MemoryRepo;
 use crate::features::shared::AppError;
-use crate::features::tasks::application::complete_task_usecase;
-use crate::features::tasks::domain::{Task, TaskId};
-use crate::features::tasks::infrastructure::MemoryRepo;
 
 #[tauri::command]
 #[specta::specta]

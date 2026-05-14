@@ -4,7 +4,7 @@
 // persistent adapter (SQLite via sqlx, etc.) when your project needs one.
 // Only this layer is allowed to depend on side-effectful crates.
 
-use crate::features::tasks::domain::{Task, TaskId};
+use super::domain::{Task, TaskId};
 use std::sync::Mutex;
 
 pub trait TaskRepository: Send + Sync {

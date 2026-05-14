@@ -125,4 +125,27 @@ describe("@ori-ori/arch-adapter-rust", () => {
     expect(result.files).toHaveLength(0);
     expect(result.notes?.join("\n")).toMatch(/skipped/);
   });
+
+  it("emits the mod.rs-aware super:: resolver (regression for ori-w5j)", async () => {
+    const spec = parseArchitectureSpec(SINGLE_CRATE_SPEC);
+    const result = await adapter.export(spec, spec.roots[0]!);
+    const content = result.files[0]!.content;
+
+    // The fix introduces parent_module_dir() / module_dir() helpers that
+    // branch on whether the importer file is `mod.rs`. Without this branch,
+    // `super::X` from a non-mod.rs sibling would walk one dir too far up
+    // and mis-classify intra-feature imports as cross-feature violations.
+    expect(content).toContain("fn parent_module_dir(importer: &Path)");
+    expect(content).toContain("fn module_dir(importer: &Path)");
+    expect(content).toContain('importer.file_name().and_then(|s| s.to_str()) == Some("mod.rs")');
+
+    // super:: resolver must use parent_module_dir, not the old
+    // importer.parent()?.parent()? double-pop.
+    expect(content).toMatch(
+      /target\.strip_prefix\("super::"\)[\s\S]*?parent_module_dir\(importer\)/,
+    );
+    expect(content).not.toMatch(
+      /target\.strip_prefix\("super::"\)[\s\S]*?importer\.parent\(\)\?\.parent\(\)\?/,
+    );
+  });
 });

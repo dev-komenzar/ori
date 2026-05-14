@@ -147,13 +147,11 @@ src-tauri/src/
   (`lib/<feature>/index.ts`).
 - Same-layer imports are prohibited.
 
-### Rust-specific (v0.1 caveats)
+### Rust-specific
 
 - The arch-adapter-rust enforces cross-feature and cross-layer rules by
-  walking `use` statements. It supports `crate::*` and `self::*` resolution.
-- `super::*` resolution is currently best-effort for `mod.rs` files only;
-  prefer absolute `crate::features::<feature>::*` paths from non-mod.rs
-  siblings to avoid false positives. This is tracked separately.
+  walking `use` statements. `crate::*`, `super::*`, and `self::*` are all
+  resolved against the Rust 2018+ module-file convention.
 - Cross-feature direct imports (e.g., `crate::features::projects` from
   inside `features::tasks`) are rejected by the generated `tests/arch.rs`.
 

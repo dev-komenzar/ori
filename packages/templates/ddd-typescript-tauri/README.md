@@ -73,9 +73,8 @@ pnpm tauri dev                   # also regenerates src/lib/shared/ipc/bindings.
 - **Tauri commands** (`#[tauri::command] #[specta::specta]`) live in
   `commands.rs`. `tauri-specta` collects them at build time and emits
   `src/lib/shared/ipc/bindings.ts` (the only cross-root artifact).
-- Prefer absolute `crate::features::<feature>::*` over `super::*` inside
-  feature-internal modules (workaround for an arch-adapter-rust limitation
-  with non-mod.rs siblings).
+- Use idiomatic `super::*` for sibling modules inside a feature; reach for
+  `crate::features::shared::*` only when you need a shared primitive.
 
 ### Cross-feature collaboration
 

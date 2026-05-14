@@ -120,17 +120,15 @@ describe("ddd-typescript-tauri template", () => {
     }
   });
 
-  it("rust feature modules avoid super:: imports (adapter limitation workaround)", async () => {
-    const rsFiles = [
-      "src-tauri/src/features/tasks/application.rs",
-      "src-tauri/src/features/tasks/commands.rs",
-      "src-tauri/src/features/tasks/domain.rs",
-      "src-tauri/src/features/tasks/infrastructure.rs",
-    ];
-    for (const rel of rsFiles) {
-      const body = await readFile(join(TEMPLATE_ROOT, rel), "utf8");
-      expect(body).not.toMatch(/^use super::/m);
-      expect(body).not.toMatch(/^pub use super::/m);
-    }
+  it("rust feature internals use idiomatic super:: imports", async () => {
+    // arch-adapter-rust correctly resolves super:: for both mod.rs and
+    // non-mod.rs siblings (fixed in ori-w5j), so feature-internal code
+    // can rely on Rust's standard module-relative paths.
+    const application = await readFile(
+      join(TEMPLATE_ROOT, "src-tauri/src/features/tasks/application.rs"),
+      "utf8",
+    );
+    expect(application).toMatch(/^use super::domain::/m);
+    expect(application).toMatch(/^use super::infrastructure::/m);
   });
 });
