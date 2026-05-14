@@ -14,14 +14,22 @@ async function fileExists(path: string): Promise<boolean> {
   }
 }
 
-async function runInit(cwd: string, args: { template?: string; force?: boolean } = {}): Promise<void> {
+async function runInit(
+  cwd: string,
+  args: { template?: string; force?: boolean; skipTauriInit?: boolean } = {},
+): Promise<void> {
   const original = process.cwd();
   process.chdir(cwd);
   try {
     const runner = initCommand.run;
     if (typeof runner !== "function") throw new Error("init.run missing");
     const ctx = {
-      args: { _: [], template: args.template, force: args.force ?? false },
+      args: {
+        _: [],
+        template: args.template,
+        force: args.force ?? false,
+        "skip-tauri-init": args.skipTauriInit ?? true,
+      },
       rawArgs: [],
       cmd: initCommand,
     } as unknown as Parameters<typeof runner>[0];
@@ -77,8 +85,8 @@ describe("init command", () => {
     expect(await fileExists(join(tmp, "src/ui-page/tasks/index.ts"))).toBe(true);
   });
 
-  it("copies TS + Rust scaffolds when --template ddd-typescript-tauri is given", async () => {
-    await runInit(tmp, { template: "ddd-typescript-tauri" });
+  it("copies the ori overlay when --template ddd-typescript-tauri is given (Tauri-owned files delegated)", async () => {
+    await runInit(tmp, { template: "ddd-typescript-tauri", skipTauriInit: true });
     // TS side — same shape as ddd-typescript
     expect(await fileExists(join(tmp, "package.json"))).toBe(true);
     expect(await fileExists(join(tmp, ".ori/architecture.md"))).toBe(true);
@@ -86,15 +94,36 @@ describe("init command", () => {
     expect(await fileExists(join(tmp, "src/ui-feature/complete-task/index.ts"))).toBe(true);
     // tauri-specta target — generated bindings stub
     expect(await fileExists(join(tmp, "src/lib/shared/ipc/bindings.ts"))).toBe(true);
-    // Rust side
-    expect(await fileExists(join(tmp, "src-tauri/Cargo.toml"))).toBe(true);
-    expect(await fileExists(join(tmp, "src-tauri/tauri.conf.json"))).toBe(true);
+    // Rust overlay: lib.rs + features tree stay (we own these)
     expect(await fileExists(join(tmp, "src-tauri/src/lib.rs"))).toBe(true);
     expect(await fileExists(join(tmp, "src-tauri/src/features/mod.rs"))).toBe(true);
     expect(await fileExists(join(tmp, "src-tauri/src/features/tasks/mod.rs"))).toBe(true);
     expect(await fileExists(join(tmp, "src-tauri/src/features/tasks/domain.rs"))).toBe(true);
     expect(await fileExists(join(tmp, "src-tauri/src/features/tasks/commands.rs"))).toBe(true);
     expect(await fileExists(join(tmp, "src-tauri/src/features/shared/mod.rs"))).toBe(true);
+    // Tauri-owned files delegated to 'tauri init' — absent from the template
+    expect(await fileExists(join(tmp, "src-tauri/Cargo.toml"))).toBe(false);
+    expect(await fileExists(join(tmp, "src-tauri/tauri.conf.json"))).toBe(false);
+    expect(await fileExists(join(tmp, "src-tauri/build.rs"))).toBe(false);
+    expect(await fileExists(join(tmp, "src-tauri/src/main.rs"))).toBe(false);
+    expect(await fileExists(join(tmp, "src-tauri/capabilities/default.json"))).toBe(false);
+  });
+
+  it("preserves the tauri-specta wiring in our lib.rs (so 'tauri init' overwrite is reversible)", async () => {
+    await runInit(tmp, { template: "ddd-typescript-tauri", skipTauriInit: true });
+    const libRs = await readFile(join(tmp, "src-tauri/src/lib.rs"), "utf8");
+    expect(libRs).toContain("tauri_specta");
+    expect(libRs).toContain("collect_commands");
+    expect(libRs).toContain("features::tasks::complete_task_cmd");
+  });
+
+  it("copies CLAUDE.md and AGENTS.md to the project root", async () => {
+    await runInit(tmp, { template: "ddd-typescript-tauri", skipTauriInit: true });
+    expect(await fileExists(join(tmp, "CLAUDE.md"))).toBe(true);
+    expect(await fileExists(join(tmp, "AGENTS.md"))).toBe(true);
+    const claude = await readFile(join(tmp, "CLAUDE.md"), "utf8");
+    expect(claude).toContain("@tauri-apps/api/core");
+    expect(claude).toContain("lib/shared/ipc");
   });
 
   it("rejects unknown template names with exit code 2", async () => {

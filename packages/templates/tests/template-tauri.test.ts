@@ -67,9 +67,48 @@ describe("ddd-typescript-tauri template", () => {
     expect((eslintOnRs.notes ?? []).join("\n")).toMatch(/skipped/);
   });
 
+  it("ships the bindings-check CI workflow + pnpm script", async () => {
+    const workflow = await readFile(
+      join(TEMPLATE_ROOT, ".github/workflows/bindings-check.yml"),
+      "utf8",
+    );
+    expect(workflow).toContain("tauri build --debug --no-bundle");
+    expect(workflow).toContain("git diff --exit-code src/lib/shared/ipc/bindings.ts");
+
+    const pkg = JSON.parse(
+      await readFile(join(TEMPLATE_ROOT, "package.json"), "utf8"),
+    );
+    expect(pkg.scripts["bindings:check"]).toBeDefined();
+    expect(pkg.scripts["bindings:check"]).toMatch(
+      /git diff --exit-code src\/lib\/shared\/ipc\/bindings\.ts/,
+    );
+  });
+
+  it("ships AI-agent instructions at the project root", async () => {
+    const claude = await readFile(join(TEMPLATE_ROOT, "CLAUDE.md"), "utf8");
+    const agents = await readFile(join(TEMPLATE_ROOT, "AGENTS.md"), "utf8");
+
+    // Each file must cover the four headline rules so an AI agent reading
+    // *either* file has the context it needs:
+    //   1. feature-sliced layout (TS + Rust mirror)
+    //   2. no-raw-invoke (use lib/shared/ipc/*)
+    //   3. bindings regeneration tempo (pnpm tauri dev)
+    //   4. feature-internal layering one-way rule
+    for (const body of [claude, agents]) {
+      expect(body).toMatch(/feature-?sliced|FSD/i);
+      expect(body).toMatch(/@tauri-apps\/api\/core/);
+      expect(body).toMatch(/lib\/shared\/ipc/);
+      expect(body).toMatch(/tauri dev/);
+      expect(body).toMatch(/presentation.*application.*domain|one-way/i);
+      expect(body).toMatch(/\.ori\/architecture\.md/);
+    }
+  });
+
   it("ships the canonical TS scaffolding files", async () => {
     const expected = [
       "README.md",
+      "CLAUDE.md",
+      "AGENTS.md",
       "package.json",
       "tsconfig.json",
       "vitest.config.ts",
@@ -97,13 +136,8 @@ describe("ddd-typescript-tauri template", () => {
     }
   });
 
-  it("ships the canonical Rust scaffolding files", async () => {
-    const expected = [
-      "src-tauri/Cargo.toml",
-      "src-tauri/build.rs",
-      "src-tauri/tauri.conf.json",
-      "src-tauri/capabilities/default.json",
-      "src-tauri/src/main.rs",
+  it("ships the ori Rust overlay (Tauri-owned files are delegated to 'tauri init')", async () => {
+    const overlay = [
       "src-tauri/src/lib.rs",
       "src-tauri/src/features/mod.rs",
       "src-tauri/src/features/shared/mod.rs",
@@ -115,8 +149,22 @@ describe("ddd-typescript-tauri template", () => {
       "src-tauri/src/features/tasks/infrastructure.rs",
       "src-tauri/src/features/tasks/commands.rs",
     ];
-    for (const rel of expected) {
+    for (const rel of overlay) {
       await expect(readFile(join(TEMPLATE_ROOT, rel), "utf8")).resolves.toBeTypeOf("string");
+    }
+
+    // Tauri-owned, version-volatile files are *intentionally* absent; 'ori init
+    // --template ddd-typescript-tauri' shells out to 'pnpm tauri init --ci ...'
+    // to generate them, so they stay current with each Tauri release.
+    const delegated = [
+      "src-tauri/Cargo.toml",
+      "src-tauri/build.rs",
+      "src-tauri/tauri.conf.json",
+      "src-tauri/capabilities/default.json",
+      "src-tauri/src/main.rs",
+    ];
+    for (const rel of delegated) {
+      await expect(readFile(join(TEMPLATE_ROOT, rel), "utf8")).rejects.toThrow();
     }
   });
 
