@@ -40,6 +40,19 @@ layer_sets:
         - { from: shared,     allow: [] }
       same_layer: prohibited
       public_entry_required: true
+      forbidden_imports:
+        - from: ui-feature
+          modules: ["@tauri-apps/api/core"]
+          reason: "use lib/shared/ipc/* (tauri-specta-generated bindings) instead of raw invoke"
+        - from: ui-widget
+          modules: ["@tauri-apps/api/core"]
+          reason: "use lib/shared/ipc/* (tauri-specta-generated bindings) instead of raw invoke"
+        - from: ui-page
+          modules: ["@tauri-apps/api/core"]
+          reason: "use lib/shared/ipc/* (tauri-specta-generated bindings) instead of raw invoke"
+        - from: ui-entity
+          modules: ["@tauri-apps/api/core"]
+          reason: "use lib/shared/ipc/* (tauri-specta-generated bindings) instead of raw invoke"
   feature-sliced-rust:
     layers:
       - { id: shared,   kind: shared }
@@ -146,6 +159,10 @@ src-tauri/src/
 - **`ui-feature` is the only UI layer permitted to import a domain feature**
   (`lib/<feature>/index.ts`).
 - Same-layer imports are prohibited.
+- **No raw `@tauri-apps/api/core` imports from any UI layer.** Use the
+  tauri-specta-generated bindings under `lib/shared/ipc/`. The eslint adapter
+  emits a `no-restricted-imports` rule that fails the build on raw `invoke`
+  calls — sourced from `forbidden_imports` in the frontmatter above.
 
 ### Rust-specific
 

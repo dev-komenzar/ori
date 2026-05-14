@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:rs": "cd src-tauri && cargo test",
     "typecheck": "tsc --noEmit",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "bindings:check": "pnpm tauri build --debug --no-bundle && git diff --exit-code src/lib/shared/ipc/bindings.ts"
   },
   "devDependencies": {
     "@ori-ori/cli": "^0.0.1",
