@@ -19,3 +19,13 @@ description: 溜まった proposal を人間と一緒にレビューし、accept
 
 - ユーザの判断なしに勝手に accept しない
 - proposal の git history は残す（rejected 含む。失敗した提案も学びになる）
+
+## 次のアクション
+
+レビュー完了後、状況に応じて以下を提示：
+
+- **accept した proposal が ≥ 1 の場合**：`ori sync` が裏で走った dirty feature 群を `/ori-flow <id>` で順次再走（最も影響が大きい順）
+- **reject のみだった場合**：当該 feature の作業は元のまま続行可能。`/ori-flow <feature-id>` で残り phase を続ける
+- **merge を行った場合**：統合後の domain 文書を `ori lint` で再検証 → 影響 feature を `/ori-flow` で再走
+- **pending が残った場合**：休んで OK。次セッションで再度 `/ori-review-proposals` を呼ぶ
+- **session 締めパス**：CLAUDE.md の Session Completion（`bd dolt push` / `git push`）を実行して状態保存
