@@ -56,6 +56,9 @@ importers:
       '@ori-ori/parser':
         specifier: workspace:*
         version: link:../parser
+      '@ori-ori/templates':
+        specifier: workspace:*
+        version: link:../templates
       citty:
         specifier: ^0.1.6
         version: 0.1.6

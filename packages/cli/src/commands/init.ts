@@ -4,6 +4,13 @@ import { mkdir, writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { stringify as yamlStringify } from "yaml";
 import { DEFAULT_AGENTS, DEFAULT_PHASE_CONFIG } from "@ori-ori/feature-runner";
+import {
+  AVAILABLE_TEMPLATES,
+  copyTemplate,
+  isKnownTemplate,
+  resolveTemplateRoot,
+} from "../utils/templates.js";
+import { seedDomainScaffolds } from "../utils/domain-scaffold.js";
 
 const DIRS = [
   ".ori/domain/workflows",
@@ -31,19 +38,25 @@ export const initCommand = defineCommand({
   args: {
     template: {
       type: "string",
-      description:
-        "Code-generation template to scaffold (default: none — domain docs only)",
+      description: `Code-generation template to scaffold (one of: ${AVAILABLE_TEMPLATES.join(", ")}). Default: none — domain docs only`,
       required: false,
     },
     force: {
       type: "boolean",
-      description: "Overwrite existing config.yaml if present",
+      description: "Overwrite existing files if present",
       default: false,
     },
   },
   async run({ args }) {
     const cwd = process.cwd();
     consola.start(`Initializing ori workspace at ${cwd}`);
+
+    if (args.template && !isKnownTemplate(args.template)) {
+      consola.error(
+        `Unknown template "${args.template}". Available: ${AVAILABLE_TEMPLATES.join(", ")}`,
+      );
+      process.exit(2);
+    }
 
     for (const dir of DIRS) {
       await mkdir(join(cwd, dir), { recursive: true });
@@ -71,19 +84,44 @@ export const initCommand = defineCommand({
       await writeFile(gitignorePath, "state/\n", "utf8");
     }
 
-    if (args.template) {
+    const scaffold = await seedDomainScaffolds({ cwd, force: args.force });
+    if (scaffold.written.length > 0) {
+      consola.success(
+        `Seeded ${scaffold.written.length} domain scaffold file(s) under .ori/domain/`,
+      );
+    }
+    if (scaffold.skipped.length > 0) {
       consola.info(
-        `Template "${args.template}" requested. Template copy is not implemented yet (MVP). See @ori-ori/templates.`,
+        `Skipped ${scaffold.skipped.length} existing scaffold file(s) (use --force to overwrite).`,
       );
     }
 
-    consola.box([
+    if (args.template && isKnownTemplate(args.template)) {
+      const src = resolveTemplateRoot(args.template);
+      consola.start(`Copying template "${args.template}" into project root`);
+      const copy = await copyTemplate({ src, dest: cwd, force: args.force });
+      consola.success(
+        `Template "${args.template}": wrote ${copy.written.length} file(s)` +
+          (copy.skipped.length > 0
+            ? `, skipped ${copy.skipped.length} (use --force to overwrite)`
+            : ""),
+      );
+    }
+
+    const steps: string[] = [];
+    if (args.template) {
+      steps.push("pnpm install                   # install template deps");
+    }
+    steps.push("apm install dev-komenzar/ori   # install skills/instructions/hooks");
+    steps.push("/ori-distill                   # AI-guided DDD phase 1-11");
+    steps.push("ori feature new <id>           # bootstrap a feature");
+
+    const nextSteps = [
       "ori workspace ready.",
       "",
       "Next steps:",
-      "  1. apm install dev-komenzar/ori   # install skills/instructions/hooks",
-      "  2. /ori-distill                   # AI-guided DDD phase 1-11",
-      "  3. ori feature new <id>           # bootstrap a feature",
-    ].join("\n"));
+      ...steps.map((s, i) => `  ${i + 1}. ${s}`),
+    ];
+    consola.box(nextSteps.join("\n"));
   },
 });
