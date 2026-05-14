@@ -1,5 +1,7 @@
 # Project Instructions for AI Agents
 
+**言語ポリシー**: 思考は英語でよいが、応答は日本語で行うこと。
+
 This file provides instructions and context for AI coding agents working on this project.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
