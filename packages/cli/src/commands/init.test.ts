@@ -71,6 +71,10 @@ describe("init command", () => {
     expect(await fileExists(join(tmp, ".ori/architecture.md"))).toBe(true);
     expect(await fileExists(join(tmp, "src/lib/tasks/index.ts"))).toBe(true);
     expect(await fileExists(join(tmp, "src/lib/tasks/domain/task-id.ts"))).toBe(true);
+    expect(await fileExists(join(tmp, "src/ui-entity/task-card/index.ts"))).toBe(true);
+    expect(await fileExists(join(tmp, "src/ui-feature/complete-task/index.ts"))).toBe(true);
+    expect(await fileExists(join(tmp, "src/ui-widget/task-list/index.ts"))).toBe(true);
+    expect(await fileExists(join(tmp, "src/ui-page/tasks/index.ts"))).toBe(true);
   });
 
   it("rejects unknown template names with exit code 2", async () => {
