@@ -7,6 +7,7 @@ export {
   type ArchitectureSpec,
   type RootConfig,
   type LayerSet,
+  type ForbiddenImportRule,
   type FeatureInternal,
   type CrossFeature,
   type CrossRoot,

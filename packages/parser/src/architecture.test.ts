@@ -133,6 +133,126 @@ cross_feature: { prohibited_direct: true, via: [] }
     expect(() => parseArchitectureSpec(raw)).toThrow();
   });
 
+  describe("forbidden_imports", () => {
+    it("defaults to an empty array when absent (backwards compatible)", () => {
+      const spec = parseArchitectureSpec(SINGLE_ROOT_SPEC);
+      const set = spec.layer_sets["feature-sliced-ts"]!;
+      expect(set.rules.forbidden_imports).toEqual([]);
+    });
+
+    it("accepts an explicitly empty forbidden_imports list", () => {
+      const raw = `---
+version: 1
+root:
+  path: src
+  language: typescript
+  layer_set: feature-sliced-ts
+  adapter: eslint
+  feature_root: lib
+  public_entry: index.ts
+layer_sets:
+  feature-sliced-ts:
+    layers: [{ id: shared, kind: shared }]
+    rules:
+      cross_layer: []
+      same_layer: prohibited
+      public_entry_required: true
+      forbidden_imports: []
+cross_feature: { prohibited_direct: true, via: [] }
+---
+`;
+      const spec = parseArchitectureSpec(raw);
+      expect(spec.layer_sets["feature-sliced-ts"]!.rules.forbidden_imports).toEqual([]);
+    });
+
+    it("parses forbidden_imports entries with from/modules/reason", () => {
+      const raw = `---
+version: 1
+root:
+  path: src
+  language: typescript
+  layer_set: feature-sliced-ts
+  adapter: eslint
+  feature_root: lib
+  public_entry: index.ts
+layer_sets:
+  feature-sliced-ts:
+    layers:
+      - { id: shared, kind: shared }
+      - { id: ui-feature, kind: ui-layer }
+    rules:
+      cross_layer: []
+      same_layer: prohibited
+      public_entry_required: true
+      forbidden_imports:
+        - from: ui-feature
+          modules: ["@tauri-apps/api/core"]
+          reason: "use lib/shared/ipc/* (tauri-specta-generated) instead of raw invoke"
+cross_feature: { prohibited_direct: true, via: [] }
+---
+`;
+      const spec = parseArchitectureSpec(raw);
+      const fis = spec.layer_sets["feature-sliced-ts"]!.rules.forbidden_imports;
+      expect(fis).toHaveLength(1);
+      expect(fis[0]).toMatchObject({
+        from: "ui-feature",
+        modules: ["@tauri-apps/api/core"],
+        reason: expect.stringContaining("tauri-specta"),
+      });
+    });
+
+    it("rejects forbidden_imports entries with an empty modules array", () => {
+      const raw = `---
+version: 1
+root:
+  path: src
+  language: typescript
+  layer_set: feature-sliced-ts
+  adapter: eslint
+  feature_root: lib
+  public_entry: index.ts
+layer_sets:
+  feature-sliced-ts:
+    layers: [{ id: shared, kind: shared }]
+    rules:
+      cross_layer: []
+      same_layer: prohibited
+      public_entry_required: true
+      forbidden_imports:
+        - from: ui-feature
+          modules: []
+cross_feature: { prohibited_direct: true, via: [] }
+---
+`;
+      expect(() => parseArchitectureSpec(raw)).toThrow();
+    });
+
+    it("rejects forbidden_imports entries missing required fields", () => {
+      const raw = `---
+version: 1
+root:
+  path: src
+  language: typescript
+  layer_set: feature-sliced-ts
+  adapter: eslint
+  feature_root: lib
+  public_entry: index.ts
+layer_sets:
+  feature-sliced-ts:
+    layers: [{ id: shared, kind: shared }]
+    rules:
+      cross_layer: []
+      same_layer: prohibited
+      public_entry_required: true
+      forbidden_imports:
+        - modules: ["@tauri-apps/api/core"]
+cross_feature: { prohibited_direct: true, via: [] }
+---
+`;
+      expect(() => parseArchitectureSpec(raw)).toThrow();
+    });
+  });
+
   it("rejects default_root that does not match any root id", () => {
     const raw = `---
 version: 1

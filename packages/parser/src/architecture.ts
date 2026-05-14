@@ -19,6 +19,14 @@ const CrossLayerRuleSchema = z
   })
   .passthrough();
 
+const ForbiddenImportRuleSchema = z
+  .object({
+    from: z.string(),
+    modules: z.array(z.string()).min(1),
+    reason: z.string().optional(),
+  })
+  .passthrough();
+
 const LayerSetSchema = z
   .object({
     layers: z.array(LayerSchema).min(1),
@@ -27,6 +35,7 @@ const LayerSetSchema = z
         cross_layer: z.array(CrossLayerRuleSchema).default([]),
         same_layer: z.enum(["prohibited", "allowed"]).default("prohibited"),
         public_entry_required: z.boolean().default(true),
+        forbidden_imports: z.array(ForbiddenImportRuleSchema).default([]),
       })
       .passthrough(),
   })
@@ -93,6 +102,7 @@ const FrontmatterSchema = z
 
 export type RootConfig = z.infer<typeof RootSchema> & { id: string };
 export type LayerSet = z.infer<typeof LayerSetSchema>;
+export type ForbiddenImportRule = z.infer<typeof ForbiddenImportRuleSchema>;
 export type FeatureInternal = z.infer<typeof FeatureInternalSchema>;
 export type CrossFeature = z.infer<typeof CrossFeatureSchema>;
 export type CrossRoot = z.infer<typeof CrossRootSchema>;

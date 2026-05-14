@@ -92,4 +92,84 @@ describe("@ori-ori/arch-adapter-eslint", () => {
     expect(result.files).toHaveLength(0);
     expect(result.notes?.join("\n")).toMatch(/skipped/);
   });
+
+  describe("forbidden_imports → no-restricted-imports", () => {
+    const SPEC_WITH_FORBIDDEN = `---
+version: 1
+root:
+  path: src
+  language: typescript
+  layer_set: feature-sliced-ts
+  adapter: eslint
+  feature_root: lib
+  public_entry: index.ts
+layer_sets:
+  feature-sliced-ts:
+    layers:
+      - { id: shared, kind: shared }
+      - { id: domain, kind: feature, feature_internal: feature-internal-ts }
+      - { id: ui-feature, kind: ui-layer, order: 2 }
+    rules:
+      cross_layer:
+        - { from: ui-feature, allow: [shared, domain] }
+        - { from: domain, allow: [shared] }
+        - { from: shared, allow: [] }
+      same_layer: prohibited
+      public_entry_required: true
+      forbidden_imports:
+        - from: ui-feature
+          modules: ["@tauri-apps/api/core"]
+          reason: "use lib/shared/ipc/* (tauri-specta-generated) instead of raw invoke"
+cross_feature:
+  prohibited_direct: true
+  via: [shared/contracts, shared/events]
+---
+`;
+
+    it("emits a no-restricted-imports override scoped to the matching layer's files", async () => {
+      const spec = parseArchitectureSpec(SPEC_WITH_FORBIDDEN);
+      const result = await adapter.export(spec, spec.roots[0]!);
+      const content = result.files[0]!.content;
+
+      expect(content).toContain("\"no-restricted-imports\"");
+      // ui-feature layer is a ui-layer kind → glob is `<root.path>/ui-feature/**`
+      expect(content).toMatch(
+        /files: \["src\/ui-feature\/\*\*\/\*\.\{ts,tsx,js,jsx,mts,cts,mjs,cjs\}"\][\s\S]*"no-restricted-imports"/,
+      );
+      expect(content).toContain("@tauri-apps/api/core");
+    });
+
+    it("surfaces the reason string as the per-path message", async () => {
+      const spec = parseArchitectureSpec(SPEC_WITH_FORBIDDEN);
+      const result = await adapter.export(spec, spec.roots[0]!);
+      const content = result.files[0]!.content;
+
+      expect(content).toContain("tauri-specta-generated");
+    });
+
+    it("emits no extra no-restricted-imports block when forbidden_imports is empty", async () => {
+      const spec = parseArchitectureSpec(`---
+version: 1
+root:
+  path: src
+  language: typescript
+  layer_set: feature-sliced-ts
+  adapter: eslint
+  feature_root: lib
+  public_entry: index.ts
+layer_sets:
+  feature-sliced-ts:
+    layers: [{ id: shared, kind: shared }]
+    rules:
+      cross_layer: []
+      same_layer: prohibited
+      public_entry_required: true
+cross_feature: { prohibited_direct: true, via: [] }
+---
+`);
+      const result = await adapter.export(spec, spec.roots[0]!);
+      const content = result.files[0]!.content;
+      expect(content).not.toContain("no-restricted-imports");
+    });
+  });
 });
