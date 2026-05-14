@@ -33,6 +33,12 @@ importers:
         specifier: '>=5'
         version: 6.0.2(eslint@10.3.0)
 
+  packages/arch-adapter-generic:
+    dependencies:
+      '@ori-ori/parser':
+        specifier: workspace:*
+        version: link:../parser
+
   packages/cli:
     dependencies:
       '@ori-ori/coherence':
