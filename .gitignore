@@ -29,3 +29,8 @@ coverage/
 
 # ori local state (per-project, not for ori source repo itself)
 .ori/state/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
