@@ -77,6 +77,26 @@ describe("init command", () => {
     expect(await fileExists(join(tmp, "src/ui-page/tasks/index.ts"))).toBe(true);
   });
 
+  it("copies TS + Rust scaffolds when --template ddd-typescript-tauri is given", async () => {
+    await runInit(tmp, { template: "ddd-typescript-tauri" });
+    // TS side — same shape as ddd-typescript
+    expect(await fileExists(join(tmp, "package.json"))).toBe(true);
+    expect(await fileExists(join(tmp, ".ori/architecture.md"))).toBe(true);
+    expect(await fileExists(join(tmp, "src/lib/tasks/index.ts"))).toBe(true);
+    expect(await fileExists(join(tmp, "src/ui-feature/complete-task/index.ts"))).toBe(true);
+    // tauri-specta target — generated bindings stub
+    expect(await fileExists(join(tmp, "src/lib/shared/ipc/bindings.ts"))).toBe(true);
+    // Rust side
+    expect(await fileExists(join(tmp, "src-tauri/Cargo.toml"))).toBe(true);
+    expect(await fileExists(join(tmp, "src-tauri/tauri.conf.json"))).toBe(true);
+    expect(await fileExists(join(tmp, "src-tauri/src/lib.rs"))).toBe(true);
+    expect(await fileExists(join(tmp, "src-tauri/src/features/mod.rs"))).toBe(true);
+    expect(await fileExists(join(tmp, "src-tauri/src/features/tasks/mod.rs"))).toBe(true);
+    expect(await fileExists(join(tmp, "src-tauri/src/features/tasks/domain.rs"))).toBe(true);
+    expect(await fileExists(join(tmp, "src-tauri/src/features/tasks/commands.rs"))).toBe(true);
+    expect(await fileExists(join(tmp, "src-tauri/src/features/shared/mod.rs"))).toBe(true);
+  });
+
   it("rejects unknown template names with exit code 2", async () => {
     const exitSpy = vi_spyExit();
     try {

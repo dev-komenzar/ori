@@ -2,7 +2,7 @@ import { createRequire } from "node:module";
 import { readdir, readFile, mkdir, writeFile, access } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 
-export const AVAILABLE_TEMPLATES = ["ddd-typescript"] as const;
+export const AVAILABLE_TEMPLATES = ["ddd-typescript", "ddd-typescript-tauri"] as const;
 export type TemplateName = (typeof AVAILABLE_TEMPLATES)[number];
 
 export function isKnownTemplate(name: string): name is TemplateName {

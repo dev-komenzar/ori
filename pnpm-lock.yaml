@@ -126,6 +126,9 @@ importers:
       '@ori-ori/arch-adapter-eslint':
         specifier: workspace:*
         version: link:../arch-adapter-eslint
+      '@ori-ori/arch-adapter-rust':
+        specifier: workspace:*
+        version: link:../arch-adapter-rust
       '@ori-ori/parser':
         specifier: workspace:*
         version: link:../parser

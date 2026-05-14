@@ -1,0 +1,27 @@
+[package]
+name = "ddd-typescript-tauri-app"
+version = "0.0.0"
+description = "DDD Tauri application scaffolded from @ori-ori/templates/ddd-typescript-tauri"
+edition = "2021"
+rust-version = "1.77"
+publish = false
+
+[lib]
+name = "app_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
+specta = "=2.0.0-rc.22"
+specta-typescript = "0.0.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+thiserror = "2"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]

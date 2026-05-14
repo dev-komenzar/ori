@@ -13,10 +13,13 @@ phase 4 (`impl-green`) of `ori feature run`.
     from it via `@ori-ori/arch-adapter-eslint`
   - ships a worked `tasks` aggregate + vitest specs
 
-See `ddd-typescript/README.md` for the full layout.
+- **ddd-typescript-tauri** — Tauri 2 derivative of `ddd-typescript`.
+  - mirrors the TS-side feature/UI layout
+  - adds a Rust feature-sliced backend at `src-tauri/src/features/<f>/`
+    with `mod.rs` as the sole public entry
+  - multi-root `.ori/architecture.md` (ts + rs); compiled by
+    `@ori-ori/arch-adapter-eslint` and `@ori-ori/arch-adapter-rust`
+  - `tauri-specta` cross-root contract emits `src/lib/shared/ipc/bindings.ts`
+    from the Rust `commands.rs` of each feature
 
-## Roadmap
-
-- `ddd-typescript-tauri` — Tauri 2 derivative of `ddd-typescript` with a Rust
-  feature-sliced backend and `tauri-specta`-generated contracts. Deferred
-  past v0.1 (tracked separately).
+See each template's `README.md` for the full layout.

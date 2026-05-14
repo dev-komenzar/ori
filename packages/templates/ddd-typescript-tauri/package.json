@@ -1,0 +1,30 @@
+{
+  "name": "ddd-typescript-tauri-app",
+  "version": "0.0.0",
+  "private": true,
+  "description": "DDD Tauri project scaffolded from @ori-ori/templates/ddd-typescript-tauri",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "arch:export:ts": "ori arch export --adapter=eslint --root=ts",
+    "arch:export:rs": "ori arch export --adapter=rust --root=rs",
+    "arch:export": "pnpm arch:export:ts && pnpm arch:export:rs",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:rs": "cd src-tauri && cargo test",
+    "typecheck": "tsc --noEmit",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@ori-ori/cli": "^0.0.1",
+    "@tauri-apps/cli": "^2.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-boundaries": "^5.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0"
+  }
+}

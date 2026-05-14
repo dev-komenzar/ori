@@ -5,6 +5,7 @@ export default defineConfig({
     include: [
       "tests/**/*.test.ts",
       "ddd-typescript/src/**/*.test.ts",
+      "ddd-typescript-tauri/src/**/*.test.ts",
     ],
   },
 });
