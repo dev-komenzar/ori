@@ -6,10 +6,11 @@ function metaName(cmd: unknown): string | undefined {
 }
 
 describe("arch command", () => {
-  it("exposes export and check subcommands", () => {
+  it("exposes export, check, and sync-ui subcommands", () => {
     expect(metaName(archCommand)).toBe("arch");
     const subs = archCommand.subCommands as Record<string, unknown>;
     expect(metaName(subs.export)).toBe("export");
     expect(metaName(subs.check)).toBe("check");
+    expect(metaName(subs["sync-ui"])).toBe("sync-ui");
   });
 });

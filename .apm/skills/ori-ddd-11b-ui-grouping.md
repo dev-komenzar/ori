@@ -41,8 +41,11 @@ description: ori 独自 Phase 11b（UI Feature Grouping）。ui-fields の依存
 6. **書き戻し**：
    - `screen-*.md` の frontmatter `coherence.depended_by:` を更新
    - `feature-groups.md` を新規生成
-7. **`ori lint .ori/domain/ui-fields/` を実行**して整合性検証
-8. lint 失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
+7. **`ori arch sync-ui` を実行**：
+   - 確定した `depended_by` から `.ori/architecture.md` の UI feature manifest を自動生成
+   - マーカー（`<!-- ori:ui-layer:begin -->` ～ `<!-- ori:ui-layer:end -->`）の外側は保持される
+8. **`ori lint .ori/domain/ui-fields/` を実行**して整合性検証
+9. lint 失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
 
 ### Phase 完了時：UI feature の一括 scaffold 提案
 

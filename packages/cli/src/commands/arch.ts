@@ -10,6 +10,7 @@ import {
   type OriArchAdapter,
   type RootConfig,
 } from "@ori-ori/parser";
+import { syncUiLayer, SyncUiLayerError } from "../utils/sync-ui.js";
 
 const DEFAULT_SPEC_PATH = ".ori/architecture.md";
 
@@ -179,6 +180,74 @@ const checkCmd = defineCommand({
   },
 });
 
+const syncUiCmd = defineCommand({
+  meta: {
+    name: "sync-ui",
+    description:
+      "Auto-derive the UI feature manifest in .ori/architecture.md from .ori/domain/ui-fields/screen-*.md (phase 11b output)",
+  },
+  args: {
+    spec: {
+      type: "string",
+      description: "Path to the architecture spec (default: .ori/architecture.md)",
+      required: false,
+    },
+    "ui-fields-dir": {
+      type: "string",
+      description: "Path to the ui-fields directory (default: .ori/domain/ui-fields)",
+      required: false,
+    },
+    marker: {
+      type: "string",
+      description:
+        "Override the delimiter marker (default: spec frontmatter `ui_layer_map_marker` or `ori:ui-layer`)",
+      required: false,
+    },
+    "dry-run": {
+      type: "boolean",
+      description: "Print the next architecture.md content to stdout without writing",
+      default: false,
+    },
+  },
+  async run({ args }) {
+    const cwd = process.cwd();
+    try {
+      const result = await syncUiLayer({
+        cwd,
+        specPath: args.spec ? join(cwd, args.spec) : undefined,
+        uiFieldsDir: args["ui-fields-dir"] ? join(cwd, args["ui-fields-dir"]) : undefined,
+        marker: args.marker,
+        dryRun: args["dry-run"],
+      });
+
+      if (args["dry-run"]) {
+        process.stdout.write(result.nextContent);
+        if (!result.nextContent.endsWith("\n")) process.stdout.write("\n");
+        consola.info(
+          `Parsed ${result.screensRead} screen(s), derived ${result.features.length} UI feature(s); no files written (dry-run).`,
+        );
+        return;
+      }
+
+      if (result.changed) {
+        consola.success(
+          `Updated ${relative(cwd, result.specPath)} with ${result.features.length} UI feature(s) from ${result.screensRead} screen(s).`,
+        );
+      } else {
+        consola.info(
+          `${relative(cwd, result.specPath)} already up to date (${result.features.length} UI feature(s)).`,
+        );
+      }
+    } catch (err) {
+      if (err instanceof SyncUiLayerError) {
+        consola.error(err.message);
+        process.exit(2);
+      }
+      throw err;
+    }
+  },
+});
+
 export const archCommand = defineCommand({
   meta: {
     name: "arch",
@@ -187,5 +256,6 @@ export const archCommand = defineCommand({
   subCommands: {
     export: exportCmd,
     check: checkCmd,
+    "sync-ui": syncUiCmd,
   },
 });
