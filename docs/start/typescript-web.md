@@ -124,5 +124,5 @@ scaffold には:
 
 - [`packages/templates/ddd-typescript/README.md`](../../packages/templates/ddd-typescript/README.md) — テンプレート本体の詳細
 - [`packages/arch-adapter-eslint/README.md`](../../packages/arch-adapter-eslint/README.md) — adapter の仕様
-- [`docs/architecture-schema.md`](../architecture-schema.md) — `.ori/architecture.md` のスキーマ
+- [`.apm/contexts/architecture-md-schema.md`](../../.apm/contexts/architecture-md-schema.md) — `.ori/architecture.md` のスキーマ
 - [`docs/design.md`](../design.md) — 設計判断の背景
