@@ -41,9 +41,9 @@ description: ori 独自 Phase 11b（Page Grouping）。ui-fields の依存関係
 6. **書き戻し**：
    - `screen-*.md` の frontmatter `coherence.depended_by:` を更新
    - `page-groups.md` を新規生成
-7. **`ori arch sync-ui` を実行**：
-   - 確定した `depended_by` から `.ori/architecture.md` の page manifest を自動生成
-   - マーカー（`<!-- ori:ui-layer:begin -->` ～ `<!-- ori:ui-layer:end -->`）の外側は保持される
+7. **`ori arch sync-page-map` を実行**：
+   - 確定した `depended_by` から `.ori/architecture.md` の `## Page Map` section を自動生成
+   - マーカー（`<!-- BEGIN ori-distill phase-11b auto-generated; do not edit between markers -->` ～ `<!-- END ori-distill phase-11b auto-generated -->`）の外側は保持される
 8. **`ori lint .ori/domain/ui-fields/` を実行**して整合性検証
 9. lint 失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
 
@@ -119,9 +119,14 @@ coherence:
     - types.md#capture-auto-save-input
     - workflows/capture-auto-save.md
   depended_by:
-    - page: capture-form
+    - ui-page: capture-form          # or `ui-widget: <id>` for cross-page UI composition
+  depends_on:
+    - slice: capture-auto-save       # slices the page uses (union'd across member screens
+    - slice: validate-prompt          # → architecture.md Page Map depends_on)
 ---
 ```
+
+`depended_by` の kind は `ui-page` か `ui-widget`。`depends_on` には slice / 別 widget / 別 page を列挙する（`/ori-arch sync-page-map` がこれを束ねて `## Page Map` の `depends_on: [...]` に出力する）。画面遷移を表す `screen: screen-N` を `depends_on` に書いても良い — sync-page-map 側で page-level dep からは除外される。
 
 ## 注意
 

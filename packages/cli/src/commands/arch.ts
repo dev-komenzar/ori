@@ -10,7 +10,7 @@ import {
   type OriArchAdapter,
   type RootConfig,
 } from "@ori-ori/parser";
-import { syncUiLayer, SyncUiLayerError } from "../utils/sync-ui.js";
+import { syncPageMap, SyncPageMapError } from "../utils/page-map.js";
 
 const DEFAULT_SPEC_PATH = ".ori/architecture.md";
 
@@ -180,11 +180,11 @@ const checkCmd = defineCommand({
   },
 });
 
-const syncUiCmd = defineCommand({
+const syncPageMapCmd = defineCommand({
   meta: {
-    name: "sync-ui",
+    name: "sync-page-map",
     description:
-      "Auto-derive the UI feature manifest in .ori/architecture.md from .ori/domain/ui-fields/screen-*.md (phase 11b output)",
+      "Auto-derive the `## Page Map` section in .ori/architecture.md from .ori/domain/ui-fields/screen-*.md (phase 11b output)",
   },
   args: {
     spec: {
@@ -200,7 +200,7 @@ const syncUiCmd = defineCommand({
     marker: {
       type: "string",
       description:
-        "Override the delimiter marker (default: spec frontmatter `page_map_marker` or `ori:ui-layer`)",
+        "Phase identifier embedded in the BEGIN/END delimiters (default: spec frontmatter `page_map_marker` or `phase-11b`)",
       required: false,
     },
     "dry-run": {
@@ -212,7 +212,7 @@ const syncUiCmd = defineCommand({
   async run({ args }) {
     const cwd = process.cwd();
     try {
-      const result = await syncUiLayer({
+      const result = await syncPageMap({
         cwd,
         specPath: args.spec ? join(cwd, args.spec) : undefined,
         uiFieldsDir: args["ui-fields-dir"] ? join(cwd, args["ui-fields-dir"]) : undefined,
@@ -224,22 +224,22 @@ const syncUiCmd = defineCommand({
         process.stdout.write(result.nextContent);
         if (!result.nextContent.endsWith("\n")) process.stdout.write("\n");
         consola.info(
-          `Parsed ${result.screensRead} screen(s), derived ${result.features.length} UI feature(s); no files written (dry-run).`,
+          `Parsed ${result.screensRead} screen(s), derived ${result.entries.length} Page Map entry/entries; no files written (dry-run).`,
         );
         return;
       }
 
       if (result.changed) {
         consola.success(
-          `Updated ${relative(cwd, result.specPath)} with ${result.features.length} UI feature(s) from ${result.screensRead} screen(s).`,
+          `Updated ${relative(cwd, result.specPath)} with ${result.entries.length} Page Map entry/entries from ${result.screensRead} screen(s).`,
         );
       } else {
         consola.info(
-          `${relative(cwd, result.specPath)} already up to date (${result.features.length} UI feature(s)).`,
+          `${relative(cwd, result.specPath)} already up to date (${result.entries.length} Page Map entry/entries).`,
         );
       }
     } catch (err) {
-      if (err instanceof SyncUiLayerError) {
+      if (err instanceof SyncPageMapError) {
         consola.error(err.message);
         process.exit(2);
       }
@@ -256,6 +256,6 @@ export const archCommand = defineCommand({
   subCommands: {
     export: exportCmd,
     check: checkCmd,
-    "sync-ui": syncUiCmd,
+    "sync-page-map": syncPageMapCmd,
   },
 });
