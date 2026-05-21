@@ -23,9 +23,9 @@ function ensureTrailingSlash(p: string): string {
 }
 
 function rootBase(root: RootConfig): string {
-  // e.g., root.path="src", root.feature_root="lib" → "src/lib/"
-  // When feature_root is ".", just root.path.
-  const base = root.feature_root === "." ? root.path : `${root.path}/${root.feature_root}`;
+  // e.g., root.path="src", root.slice_root="lib" → "src/lib/"
+  // When slice_root is ".", just root.path.
+  const base = root.slice_root === "." ? root.path : `${root.path}/${root.slice_root}`;
   return ensureTrailingSlash(base);
 }
 
@@ -34,17 +34,17 @@ function buildElements(spec: ArchitectureSpec, root: RootConfig): Element[] {
   if (!set) {
     throw new Error(`layer_set "${root.layer_set}" not found in layer_sets`);
   }
-  const featBase = rootBase(root);
+  const sliceBase = rootBase(root);
   const elements: Element[] = [];
 
   // Order matters: more-specific patterns first so eslint-plugin-boundaries
   // resolves overlaps the way we mean. We declare shared/ui-layers before
-  // the wildcard feature pattern.
+  // the wildcard slice pattern.
   for (const layer of set.layers) {
     if (layer.kind === "shared") {
       elements.push({
         type: layer.id,
-        pattern: `${featBase}${layer.id}/**`,
+        pattern: `${sliceBase}${layer.id}/**`,
       });
     } else if (layer.kind === "ui-layer") {
       // No path field in v1 schema — convention: <root.path>/<layer.id>/**
@@ -55,12 +55,12 @@ function buildElements(spec: ArchitectureSpec, root: RootConfig): Element[] {
     }
   }
   for (const layer of set.layers) {
-    if (layer.kind === "feature") {
-      // Captures the feature folder name so cross-feature rules can compare it.
+    if (layer.kind === "slice") {
+      // Captures the slice folder name so cross-slice rules can compare it.
       elements.push({
         type: layer.id,
-        pattern: `${featBase}*/**`,
-        capture: ["featureName"],
+        pattern: `${sliceBase}*/**`,
+        capture: ["sliceName"],
       });
     }
   }
@@ -68,25 +68,25 @@ function buildElements(spec: ArchitectureSpec, root: RootConfig): Element[] {
 }
 
 function buildElementTypeRules(set: LayerSet): ElementTypeRule[] {
-  const featureLayerIds = new Set(
-    set.layers.filter((l) => l.kind === "feature").map((l) => l.id),
+  const sliceLayerIds = new Set(
+    set.layers.filter((l) => l.kind === "slice").map((l) => l.id),
   );
   const rules: ElementTypeRule[] = [];
 
   for (const cr of set.rules.cross_layer) {
-    const isFeature = featureLayerIds.has(cr.from);
+    const isSlice = sliceLayerIds.has(cr.from);
     const allow: ElementTypeRule["allow"] = cr.allow.map((target) => {
-      if (target === cr.from && isFeature) {
-        // Same-layer for "feature" layers means same feature only — enforce via capture.
-        return [target, { featureName: "${from.featureName}" }];
+      if (target === cr.from && isSlice) {
+        // Same-layer for "slice" layers means same slice only — enforce via capture.
+        return [target, { sliceName: "${from.sliceName}" }];
       }
       return target;
     });
 
-    if (isFeature && !cr.allow.includes(cr.from)) {
-      // Cross-feature isolation: feature must be allowed to import from
-      // itself, otherwise even feature-internal imports would be forbidden.
-      allow.push([cr.from, { featureName: "${from.featureName}" }]);
+    if (isSlice && !cr.allow.includes(cr.from)) {
+      // Cross-slice isolation: slice must be allowed to import from
+      // itself, otherwise even slice-internal imports would be forbidden.
+      allow.push([cr.from, { sliceName: "${from.sliceName}" }]);
     }
 
     rules.push({ from: [cr.from], allow });
@@ -104,15 +104,15 @@ function layerFileGlob(
   if (!set) return null;
   const layer = set.layers.find((l) => l.id === layerId);
   if (!layer) return null;
-  const featBase = rootBase(root);
+  const sliceBase = rootBase(root);
   if (layer.kind === "shared") {
-    return `${featBase}${layer.id}/**/*.${PATTERN_EXT}`;
+    return `${sliceBase}${layer.id}/**/*.${PATTERN_EXT}`;
   }
   if (layer.kind === "ui-layer") {
     return `${root.path}/${layer.id}/**/*.${PATTERN_EXT}`;
   }
-  if (layer.kind === "feature") {
-    return `${featBase}*/**/*.${PATTERN_EXT}`;
+  if (layer.kind === "slice") {
+    return `${sliceBase}*/**/*.${PATTERN_EXT}`;
   }
   return null;
 }
@@ -169,7 +169,7 @@ function stringifyConfig(
     .map((line, i) => (i === 0 ? line : `    ${line}`))
     .join("\n");
 
-  // ${from.featureName} must be emitted as a string literal — not interpolated
+  // ${from.sliceName} must be emitted as a string literal — not interpolated
   // by JSON.stringify (it preserves the dollar sign fine, but we double-check).
   const rulesJson = JSON.stringify(rules, null, 2)
     .split("\n")
@@ -239,9 +239,9 @@ const adapter: OriArchAdapter = {
     const content = stringifyConfig(elements, rules, root, forbiddenBlocks);
 
     const notes: string[] = [];
-    if (spec.cross_feature.prohibited_direct) {
+    if (spec.cross_slice.prohibited_direct) {
       notes.push(
-        "Cross-feature direct imports are enforced via the boundaries 'featureName' capture; allowed bridges (shared/contracts, shared/events) live under the shared element.",
+        "Cross-slice direct imports are enforced via the boundaries 'sliceName' capture; allowed bridges (shared/contracts, shared/events) live under the shared element.",
       );
     }
     if (set.rules.public_entry_required && root.public_entry !== "index.ts") {

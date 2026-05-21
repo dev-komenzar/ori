@@ -12,20 +12,20 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: generic
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
     layers:
       - { id: shared, kind: shared }
-      - { id: domain, kind: feature }
+      - { id: domain, kind: slice }
     rules:
       cross_layer:
         - { from: domain, allow: [shared] }
         - { from: shared, allow: [] }
       same_layer: prohibited
       public_entry_required: true
-cross_feature:
+cross_slice:
   prohibited_direct: true
   via: [shared/contracts]
 ---
@@ -83,7 +83,7 @@ export function place() { return new EventBus(); }
     }
   });
 
-  it("check() flags cross-feature direct imports", async () => {
+  it("check() flags cross-slice direct imports", async () => {
     const dir = await setupTempProject();
     await writeFile(
       join(dir, "src/lib/orders/application/place-order.ts"),
@@ -102,7 +102,7 @@ export function place(s: Stock) { return s; }
       const spec = parseArchitectureSpec(SPEC);
       const result = await adapter.check!(spec, spec.roots[0]!);
       expect(result.violations).toHaveLength(1);
-      expect(result.violations[0]?.message).toMatch(/cross-feature/);
+      expect(result.violations[0]?.message).toMatch(/cross-slice/);
       expect(result.violations[0]?.file).toMatch(/orders\/application\/place-order\.ts$/);
     } finally {
       process.chdir(prev);

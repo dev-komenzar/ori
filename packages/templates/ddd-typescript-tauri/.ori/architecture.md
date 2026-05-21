@@ -7,14 +7,14 @@ roots:
     language: typescript
     layer_set: feature-sliced-ts
     adapter: eslint
-    feature_root: lib
+    slice_root: lib
     public_entry: index.ts
   - id: rs
     path: src-tauri/src
     language: rust
     layer_set: feature-sliced-rust
     adapter: rust
-    feature_root: features
+    slice_root: features
     public_entry: mod.rs
 cross_root:
   - from: { root: rs, path: src-tauri/src/features/tasks/commands.rs }
@@ -25,7 +25,7 @@ layer_sets:
   feature-sliced-ts:
     layers:
       - { id: shared,     kind: shared }
-      - { id: domain,     kind: feature, feature_internal: feature-internal-ts }
+      - { id: domain,     kind: slice, slice_internal: slice-internal-ts }
       - { id: ui-entity,  kind: ui-layer, order: 1 }
       - { id: ui-feature, kind: ui-layer, order: 2 }
       - { id: ui-widget,  kind: ui-layer, order: 3 }
@@ -56,22 +56,22 @@ layer_sets:
   feature-sliced-rust:
     layers:
       - { id: shared,   kind: shared }
-      - { id: features, kind: feature }
+      - { id: features, kind: slice }
     rules:
       cross_layer:
         - { from: features, allow: [shared] }
         - { from: shared,   allow: [] }
       same_layer: prohibited
       public_entry_required: true
-feature_internal:
-  feature-internal-ts:
+slice_internal:
+  slice-internal-ts:
     sub_layers: [presentation, application, domain, infrastructure]
     rules:
       - { from: presentation,   allow: [application, domain] }
       - { from: application,    allow: [domain, infrastructure] }
       - { from: domain,         allow: [] }
       - { from: infrastructure, allow: [domain] }
-cross_feature:
+cross_slice:
   prohibited_direct: true
   via: [shared/contracts, shared/events]
 ---
@@ -90,10 +90,10 @@ pnpm exec ori arch export --adapter=rust --root=rs
 
 ## Roots
 
-| id  | path             | language    | adapter | feature_root | public_entry |
-| --- | ---------------- | ----------- | ------- | ------------ | ------------ |
-| ts  | `src`            | typescript  | eslint  | `lib`        | `index.ts`   |
-| rs  | `src-tauri/src`  | rust        | rust    | `features`   | `mod.rs`     |
+| id  | path             | language    | adapter | slice_root | public_entry |
+| --- | ---------------- | ----------- | ------- | ---------- | ------------ |
+| ts  | `src`            | typescript  | eslint  | `lib`      | `index.ts`   |
+| rs  | `src-tauri/src`  | rust        | rust    | `features` | `mod.rs`     |
 
 The two roots are bridged by **tauri-specta**, which derives the TS bindings
 under `src/lib/shared/ipc/bindings.ts` from the `#[tauri::command]` functions
@@ -105,12 +105,12 @@ cross-root contract; everything else stays inside its own root.
 ```
 src/
 ├── lib/
-│   ├── shared/              # cross-feature primitives (types, events, contracts, ipc)
+│   ├── shared/              # cross-slice primitives (types, events, contracts, ipc)
 │   │   ├── ipc/             # tauri-specta-generated bindings (regenerated on build)
 │   │   ├── types/
 │   │   ├── events/
 │   │   └── contracts/
-│   └── <feature>/           # `tasks/` is the worked example
+│   └── <slice>/             # `tasks/` is the worked example
 │       ├── index.ts         # PUBLIC API
 │       ├── domain/
 │       ├── application/
@@ -118,7 +118,7 @@ src/
 │       ├── presentation/
 │       └── tests/
 ├── ui-entity/               # FSD layer 1
-├── ui-feature/              # FSD layer 2 — may import lib/<feature>/index.ts
+├── ui-feature/              # FSD layer 2 — may import lib/<slice>/index.ts
 ├── ui-widget/               # FSD layer 3
 └── ui-page/                 # FSD layer 4
 ```
@@ -131,11 +131,11 @@ src-tauri/src/
 ├── main.rs                  # binary entry
 └── features/
     ├── mod.rs               # `pub mod shared; pub mod tasks;`
-    ├── shared/              # below every feature in the dependency graph
+    ├── shared/              # below every slice in the dependency graph
     │   ├── mod.rs           # PUBLIC API
     │   ├── result.rs        # AppError / AppResult
     │   └── events.rs        # DomainEvent
-    └── tasks/               # one folder per backend feature
+    └── tasks/               # one folder per backend slice
         ├── mod.rs           # PUBLIC API — only this file is `pub use`d outside
         ├── domain.rs
         ├── application.rs
@@ -147,10 +147,10 @@ src-tauri/src/
 
 ### Shared
 
-- **Cross-feature direct imports are prohibited** on both sides.
+- **Cross-slice direct imports are prohibited** on both sides.
   Use `shared/contracts/` (TS) / `features::shared` (Rust) or domain events
-  to collaborate across features.
-- **Each feature has exactly one public entry**: `index.ts` (TS) / `mod.rs` (Rust).
+  to collaborate across slices.
+- **Each slice has exactly one public entry**: `index.ts` (TS) / `mod.rs` (Rust).
 
 ### TypeScript-specific
 
@@ -166,10 +166,10 @@ src-tauri/src/
 
 ### Rust-specific
 
-- The arch-adapter-rust enforces cross-feature and cross-layer rules by
+- The arch-adapter-rust enforces cross-slice and cross-layer rules by
   walking `use` statements. `crate::*`, `super::*`, and `self::*` are all
   resolved against the Rust 2018+ module-file convention.
-- Cross-feature direct imports (e.g., `crate::features::projects` from
+- Cross-slice direct imports (e.g., `crate::features::projects` from
   inside `features::tasks`) are rejected by the generated `tests/arch.rs`.
 
 Regenerate after editing this file:

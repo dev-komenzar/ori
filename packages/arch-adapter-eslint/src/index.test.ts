@@ -9,13 +9,13 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: eslint
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
     layers:
       - { id: shared,     kind: shared }
-      - { id: domain,     kind: feature, feature_internal: feature-internal-ts }
+      - { id: domain,     kind: slice, slice_internal: slice-internal-ts }
       - { id: ui-entity,  kind: ui-layer, order: 1 }
       - { id: ui-feature, kind: ui-layer, order: 2 }
       - { id: ui-widget,  kind: ui-layer, order: 3 }
@@ -30,7 +30,7 @@ layer_sets:
         - { from: shared,     allow: [] }
       same_layer: prohibited
       public_entry_required: true
-cross_feature:
+cross_slice:
   prohibited_direct: true
   via: [shared/contracts, shared/events]
 ---
@@ -55,33 +55,33 @@ describe("@ori-ori/arch-adapter-eslint", () => {
 
     // shared element pattern
     expect(content).toContain("\"pattern\": \"src/lib/shared/**\"");
-    // domain (feature) element with capture
+    // domain (slice) element with capture
     expect(content).toContain("\"pattern\": \"src/lib/*/**\"");
-    expect(content).toContain("\"featureName\"");
+    expect(content).toContain("\"sliceName\"");
     // ui layer patterns (literal id as folder name, v1 convention)
     expect(content).toContain("\"pattern\": \"src/ui-entity/**\"");
     expect(content).toContain("\"pattern\": \"src/ui-page/**\"");
   });
 
-  it("encodes cross-feature isolation via the capture interpolation", async () => {
+  it("encodes cross-slice isolation via the capture interpolation", async () => {
     const spec = parseArchitectureSpec(TS_SPEC);
     const result = await adapter.export(spec, spec.roots[0]!);
     const content = result.files[0]!.content;
 
-    // domain → ["domain", { featureName: "${from.featureName}" }] must be present
-    expect(content).toMatch(/"domain"[\s\S]*"featureName"[\s\S]*"\$\{from\.featureName\}"/);
+    // domain → ["domain", { sliceName: "${from.sliceName}" }] must be present
+    expect(content).toMatch(/"domain"[\s\S]*"sliceName"[\s\S]*"\$\{from\.sliceName\}"/);
   });
 
-  it("orders shared before feature element so overlapping globs resolve correctly", async () => {
+  it("orders shared before slice element so overlapping globs resolve correctly", async () => {
     const spec = parseArchitectureSpec(TS_SPEC);
     const result = await adapter.export(spec, spec.roots[0]!);
     const content = result.files[0]!.content;
 
     const sharedIdx = content.indexOf("src/lib/shared/**");
-    const featureIdx = content.indexOf("src/lib/*/**");
+    const sliceIdx = content.indexOf("src/lib/*/**");
     expect(sharedIdx).toBeGreaterThan(0);
-    expect(featureIdx).toBeGreaterThan(0);
-    expect(sharedIdx).toBeLessThan(featureIdx);
+    expect(sliceIdx).toBeGreaterThan(0);
+    expect(sharedIdx).toBeLessThan(sliceIdx);
   });
 
   it("skips non-typescript/javascript roots with a note", async () => {
@@ -101,13 +101,13 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: eslint
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
     layers:
       - { id: shared, kind: shared }
-      - { id: domain, kind: feature, feature_internal: feature-internal-ts }
+      - { id: domain, kind: slice, slice_internal: slice-internal-ts }
       - { id: ui-feature, kind: ui-layer, order: 2 }
     rules:
       cross_layer:
@@ -120,7 +120,7 @@ layer_sets:
         - from: ui-feature
           modules: ["@tauri-apps/api/core"]
           reason: "use lib/shared/ipc/* (tauri-specta-generated) instead of raw invoke"
-cross_feature:
+cross_slice:
   prohibited_direct: true
   via: [shared/contracts, shared/events]
 ---
@@ -155,7 +155,7 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: eslint
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
@@ -164,7 +164,7 @@ layer_sets:
       cross_layer: []
       same_layer: prohibited
       public_entry_required: true
-cross_feature: { prohibited_direct: true, via: [] }
+cross_slice: { prohibited_direct: true, via: [] }
 ---
 `);
       const result = await adapter.export(spec, spec.roots[0]!);

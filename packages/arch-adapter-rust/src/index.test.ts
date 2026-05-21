@@ -9,20 +9,20 @@ root:
   language: rust
   layer_set: feature-sliced-rs
   adapter: rust
-  feature_root: .
+  slice_root: .
   public_entry: mod.rs
 layer_sets:
   feature-sliced-rs:
     layers:
       - { id: shared, kind: shared }
-      - { id: domain, kind: feature }
+      - { id: domain, kind: slice }
     rules:
       cross_layer:
         - { from: domain, allow: [shared] }
         - { from: shared, allow: [] }
       same_layer: prohibited
       public_entry_required: true
-cross_feature:
+cross_slice:
   prohibited_direct: true
   via: [shared/contracts]
 ---
@@ -36,14 +36,14 @@ roots:
     language: typescript
     layer_set: feature-sliced-ts
     adapter: eslint
-    feature_root: lib
+    slice_root: lib
     public_entry: index.ts
   - id: rs
     path: src-tauri/src
     language: rust
     layer_set: feature-sliced-rs
     adapter: rust
-    feature_root: .
+    slice_root: .
     public_entry: mod.rs
 layer_sets:
   feature-sliced-ts:
@@ -52,14 +52,14 @@ layer_sets:
   feature-sliced-rs:
     layers:
       - { id: shared, kind: shared }
-      - { id: domain, kind: feature }
+      - { id: domain, kind: slice }
     rules:
       cross_layer:
         - { from: domain, allow: [shared] }
         - { from: shared, allow: [] }
       same_layer: prohibited
       public_entry_required: true
-cross_feature:
+cross_slice:
   prohibited_direct: true
   via: [shared/contracts]
 ---
@@ -93,14 +93,14 @@ describe("@ori-ori/arch-adapter-rust", () => {
     expect(result.files[0]!.content).toContain("const ROOT_PATH: &str = \"src-tauri/src\"");
   });
 
-  it("encodes feature matchers with feature: true", async () => {
+  it("encodes slice matchers with slice: true", async () => {
     const spec = parseArchitectureSpec(SINGLE_CRATE_SPEC);
     const result = await adapter.export(spec, spec.roots[0]!);
     const content = result.files[0]!.content;
 
-    // shared matcher first, then domain feature matcher with feature: true
-    expect(content).toMatch(/layer_id: "shared"[\s\S]*feature: false/);
-    expect(content).toMatch(/layer_id: "domain"[\s\S]*feature: true/);
+    // shared matcher first, then domain slice matcher with slice: true
+    expect(content).toMatch(/layer_id: "shared"[\s\S]*slice: false/);
+    expect(content).toMatch(/layer_id: "domain"[\s\S]*slice: true/);
 
     const sharedIdx = content.indexOf('layer_id: "shared"');
     const domainIdx = content.indexOf('layer_id: "domain"');
@@ -134,7 +134,7 @@ describe("@ori-ori/arch-adapter-rust", () => {
     // The fix introduces parent_module_dir() / module_dir() helpers that
     // branch on whether the importer file is `mod.rs`. Without this branch,
     // `super::X` from a non-mod.rs sibling would walk one dir too far up
-    // and mis-classify intra-feature imports as cross-feature violations.
+    // and mis-classify intra-slice imports as cross-slice violations.
     expect(content).toContain("fn parent_module_dir(importer: &Path)");
     expect(content).toContain("fn module_dir(importer: &Path)");
     expect(content).toContain('importer.file_name().and_then(|s| s.to_str()) == Some("mod.rs")');

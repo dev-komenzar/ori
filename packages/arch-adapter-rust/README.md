@@ -34,12 +34,12 @@ The adapter strips a trailing `/src` from `root.path` to find the Cargo crate ro
 ## What it enforces
 
 - **Cross-layer rules** from `spec.layer_sets[<id>].rules.cross_layer`.
-- **Cross-feature direct imports** (when `spec.cross_feature.prohibited_direct: true`).
+- **Cross-slice direct imports** (when `spec.cross_slice.prohibited_direct: true`).
 - Resolves `use crate::x::y`, `use super::x`, `use self::x`. Bare `use my_crate::x` (external) is skipped.
 
 ## What's not enforced (v0.1)
 
-- Feature-internal sub-layer rules (`presentation → application → domain`).
+- Slice-internal sub-layer rules (`presentation → application → domain`).
 - `mod.rs as sole public entry` — the generated test does not verify this structurally (relies on convention).
 - Bare module-level imports without `crate::` prefix (uncommon in 2018+ editions).
 

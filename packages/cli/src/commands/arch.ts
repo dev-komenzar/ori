@@ -200,7 +200,7 @@ const syncUiCmd = defineCommand({
     marker: {
       type: "string",
       description:
-        "Override the delimiter marker (default: spec frontmatter `ui_layer_map_marker` or `ori:ui-layer`)",
+        "Override the delimiter marker (default: spec frontmatter `page_map_marker` or `ori:ui-layer`)",
       required: false,
     },
     "dry-run": {

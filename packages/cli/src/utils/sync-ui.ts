@@ -169,9 +169,9 @@ async function listScreenFiles(uiFieldsDir: string): Promise<string[]> {
 async function readMarkerFromSpec(specPath: string): Promise<string | null> {
   const raw = await readFile(specPath, "utf8");
   const { data } = parseFrontmatter(raw);
-  const fm = data as { ui_layer_map_marker?: unknown };
-  return typeof fm.ui_layer_map_marker === "string" && fm.ui_layer_map_marker.length > 0
-    ? fm.ui_layer_map_marker
+  const fm = data as { page_map_marker?: unknown };
+  return typeof fm.page_map_marker === "string" && fm.page_map_marker.length > 0
+    ? fm.page_map_marker
     : null;
 }
 

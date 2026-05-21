@@ -19,28 +19,28 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: eslint
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
     layers:
       - { id: shared, kind: shared }
-      - { id: domain, kind: feature, feature_internal: feature-internal-ts }
+      - { id: domain, kind: slice, slice_internal: slice-internal-ts }
     rules:
       cross_layer:
         - { from: domain, allow: [shared] }
         - { from: shared, allow: [] }
       same_layer: prohibited
       public_entry_required: true
-feature_internal:
-  feature-internal-ts:
+slice_internal:
+  slice-internal-ts:
     sub_layers: [presentation, application, domain, infrastructure]
     rules:
       - { from: presentation, allow: [application, domain] }
       - { from: application,  allow: [domain, infrastructure] }
       - { from: domain,       allow: [] }
       - { from: infrastructure, allow: [domain] }
-cross_feature:
+cross_slice:
   prohibited_direct: true
   via: [shared/contracts, shared/events]
 ---

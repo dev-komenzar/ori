@@ -35,7 +35,7 @@ Bare specifiers (e.g. `react`, `serde`) are ignored — external packages are ou
 ## What it enforces
 
 - **Cross-layer rules** from `spec.layer_sets[<id>].rules.cross_layer`.
-- **Cross-feature isolation** — direct imports between two different features under the same `feature` layer are flagged with a dedicated `cross-feature` message.
+- **Cross-slice isolation** — direct imports between two different slices under the same `slice` layer are flagged with a dedicated `cross-slice` message.
 
 ## Layer → filesystem convention (v0.1)
 
@@ -43,12 +43,12 @@ Same convention as `@ori-ori/arch-adapter-eslint`:
 
 | Layer kind   | Path prefix                                  |
 |--------------|----------------------------------------------|
-| `shared`     | `<root.path>/<root.feature_root>/<id>/`      |
-| `feature`    | `<root.path>/<root.feature_root>/<feature>/` |
+| `shared`     | `<root.path>/<root.slice_root>/<id>/`        |
+| `slice`      | `<root.path>/<root.slice_root>/<slice>/`     |
 | `ui-layer`   | `<root.path>/<id>/`                          |
 
 ## What's deferred to v0.2
 
-- Feature-internal sub-layer enforcement (`presentation → application → domain`).
+- Slice-internal sub-layer enforcement (`presentation → application → domain`).
 - `tsconfig` path alias (`@/foo`) resolution — currently only relative imports resolve.
 - Per-layer path overrides in the schema.

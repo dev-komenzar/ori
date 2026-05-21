@@ -8,25 +8,25 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: eslint
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
     layers:
       - { id: shared, kind: shared }
-      - { id: domain, kind: feature, feature_internal: feature-internal-ts }
+      - { id: domain, kind: slice, slice_internal: slice-internal-ts }
     rules:
       cross_layer:
         - { from: domain, allow: [shared] }
         - { from: shared, allow: [] }
       same_layer: prohibited
       public_entry_required: true
-feature_internal:
-  feature-internal-ts:
+slice_internal:
+  slice-internal-ts:
     sub_layers: [domain, application, infrastructure, presentation, tests]
     rules:
       - { from: presentation, allow: [application, domain] }
-cross_feature:
+cross_slice:
   prohibited_direct: true
   via: [shared/contracts, shared/events]
 ---
@@ -62,14 +62,14 @@ roots:
     language: typescript
     layer_set: feature-sliced-ts
     adapter: eslint
-    feature_root: lib
+    slice_root: lib
     public_entry: index.ts
   - id: rs
     path: src-tauri/src
     language: rust
     layer_set: feature-sliced-rs
     adapter: rust
-    feature_root: .
+    slice_root: .
     public_entry: mod.rs
 cross_root:
   - from: { root: rs, path: shared/contracts }
@@ -91,7 +91,7 @@ layer_sets:
       cross_layer: []
       same_layer: prohibited
       public_entry_required: true
-cross_feature:
+cross_slice:
   prohibited_direct: true
   via: [shared/contracts]
 ---
@@ -108,7 +108,7 @@ cross_feature:
     const raw = `---
 version: 1
 layer_sets: {}
-cross_feature: { prohibited_direct: true, via: [] }
+cross_slice: { prohibited_direct: true, via: [] }
 ---
 `;
     expect(() => parseArchitectureSpec(raw)).toThrow();
@@ -121,13 +121,13 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: eslint
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
     layers: [{ id: shared, kind: shared }]
     rules: { cross_layer: [], same_layer: prohibited, public_entry_required: true }
-cross_feature: { prohibited_direct: true, via: [] }
+cross_slice: { prohibited_direct: true, via: [] }
 ---
 `;
     expect(() => parseArchitectureSpec(raw)).toThrow();
@@ -148,7 +148,7 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: eslint
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
@@ -158,7 +158,7 @@ layer_sets:
       same_layer: prohibited
       public_entry_required: true
       forbidden_imports: []
-cross_feature: { prohibited_direct: true, via: [] }
+cross_slice: { prohibited_direct: true, via: [] }
 ---
 `;
       const spec = parseArchitectureSpec(raw);
@@ -173,7 +173,7 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: eslint
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
@@ -188,7 +188,7 @@ layer_sets:
         - from: ui-feature
           modules: ["@tauri-apps/api/core"]
           reason: "use lib/shared/ipc/* (tauri-specta-generated) instead of raw invoke"
-cross_feature: { prohibited_direct: true, via: [] }
+cross_slice: { prohibited_direct: true, via: [] }
 ---
 `;
       const spec = parseArchitectureSpec(raw);
@@ -209,7 +209,7 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: eslint
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
@@ -221,7 +221,7 @@ layer_sets:
       forbidden_imports:
         - from: ui-feature
           modules: []
-cross_feature: { prohibited_direct: true, via: [] }
+cross_slice: { prohibited_direct: true, via: [] }
 ---
 `;
       expect(() => parseArchitectureSpec(raw)).toThrow();
@@ -235,7 +235,7 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: eslint
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
@@ -246,7 +246,7 @@ layer_sets:
       public_entry_required: true
       forbidden_imports:
         - modules: ["@tauri-apps/api/core"]
-cross_feature: { prohibited_direct: true, via: [] }
+cross_slice: { prohibited_direct: true, via: [] }
 ---
 `;
       expect(() => parseArchitectureSpec(raw)).toThrow();
@@ -262,13 +262,13 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: eslint
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
     layers: [{ id: shared, kind: shared }]
     rules: { cross_layer: [], same_layer: prohibited, public_entry_required: true }
-cross_feature: { prohibited_direct: true, via: [] }
+cross_slice: { prohibited_direct: true, via: [] }
 ---
 `;
     expect(() => parseArchitectureSpec(raw)).toThrow(/default_root/);
