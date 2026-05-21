@@ -10,7 +10,8 @@ const DIRS = [
   ".ori/domain/workflows",
   ".ori/domain/ui-fields",
   ".ori/domain/code",
-  ".ori/features",
+  ".ori/slices",
+  ".ori/pages",
   ".ori/proposals",
   ".ori/state",
 ];
@@ -82,7 +83,8 @@ export const initCommand = defineCommand({
       "apm install dev-komenzar/ori   # install skills/instructions/hooks",
       "/ori-distill                   # AI-guided DDD phase 1-11",
       "/ori-arch                      # decide pattern & framework, scaffold project code",
-      "ori feature new <id>           # bootstrap a feature",
+      "ori slice new <id>             # bootstrap a slice (1 use case = 1 handler)",
+      "ori page new <id>              # bootstrap a page (UI composition of N slices)",
     ];
 
     const nextSteps = [

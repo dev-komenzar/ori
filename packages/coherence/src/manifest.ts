@@ -14,19 +14,38 @@ const ImplementationSchema = z
   })
   .passthrough();
 
-export const ManifestSchema = z
+const KEBAB = /^[a-z][a-z0-9-]*$/;
+
+export const SliceManifestSchema = z
   .object({
-    id: z.string().regex(/^[a-z][a-z0-9-]*$/, "id must be kebab-case"),
-    type: z.enum(["workflow", "ui"]),
+    slice_id: z.string().regex(KEBAB, "slice_id must be kebab-case"),
+    type: z.enum(["command", "query"]),
     derives_from: z.array(z.string()).default([]),
     relations: z.array(RelationSchema).default([]),
     implementation: ImplementationSchema.optional(),
   })
   .strict();
 
-export type ManifestSchema = z.infer<typeof ManifestSchema>;
+export const PageManifestSchema = z
+  .object({
+    page_id: z.string().regex(KEBAB, "page_id must be kebab-case"),
+    type: z.literal("page"),
+    derives_from: z.array(z.string()).default([]),
+    relations: z.array(RelationSchema).default([]),
+    implementation: ImplementationSchema.optional(),
+  })
+  .strict();
 
-export function parseManifest(yaml: string): ManifestSchema {
+export const ManifestSchema = z.discriminatedUnion("type", [
+  SliceManifestSchema,
+  PageManifestSchema,
+]);
+
+export type SliceManifest = z.infer<typeof SliceManifestSchema>;
+export type PageManifest = z.infer<typeof PageManifestSchema>;
+export type Manifest = z.infer<typeof ManifestSchema>;
+
+export function parseManifest(yaml: string): Manifest {
   const data = parseYaml(yaml);
   return ManifestSchema.parse(data);
 }

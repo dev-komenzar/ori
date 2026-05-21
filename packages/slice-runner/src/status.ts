@@ -9,7 +9,7 @@ export interface DirtyEntry {
 }
 
 export interface SliceStatus {
-  feature_id: string;
+  slice_id: string;
   derived_at: string;
   beads: {
     epic: string;

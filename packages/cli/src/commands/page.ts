@@ -3,7 +3,7 @@ import { consola } from "consola";
 import { mkdir, writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { stringify as yamlStringify } from "yaml";
-import { PHASES, type Phase } from "@ori-ori/slice-runner";
+import { formatEpicId, PHASES, type Phase } from "@ori-ori/slice-runner";
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -15,31 +15,26 @@ async function exists(path: string): Promise<boolean> {
 }
 
 const newCmd = defineCommand({
-  meta: { name: "new", description: "Scaffold a new feature directory" },
+  meta: { name: "new", description: "Scaffold a new page directory under .ori/pages/" },
   args: {
     id: { type: "positional", required: true },
-    type: {
-      type: "string",
-      description: "workflow | ui",
-      default: "workflow",
-    },
   },
   async run({ args }) {
     const id = String(args.id);
     if (!/^[a-z][a-z0-9-]*$/.test(id)) {
-      consola.error("feature id must be lower-kebab-case");
+      consola.error("page id must be lower-kebab-case");
       process.exit(1);
     }
-    const dir = join(process.cwd(), ".ori/features", id);
+    const dir = join(process.cwd(), ".ori/pages", id);
     if (await exists(dir)) {
-      consola.error(`Feature already exists: ${dir}`);
+      consola.error(`Page already exists: ${dir}`);
       process.exit(1);
     }
     await mkdir(join(dir, "tests"), { recursive: true });
 
     const manifest = {
-      id,
-      type: args.type,
+      page_id: id,
+      type: "page",
       derives_from: [],
       relations: [],
       implementation: {
@@ -58,23 +53,23 @@ coherence:
   derives_from: []
 ---
 
-# ${id} — Specification
+# ${id} — Page Specification
 
-> This file is a derived document. Edit the source manifest + domain docs and re-run \`ori feature run ${id} --phase derive\`. Use \`ori sync --force\` if you need to edit here directly; ori will create a proposal for the upstream review.
+> This file is a derived document. Edit the source manifest + domain docs and re-run \`ori page run ${id} --phase derive\`. Use \`ori sync --force\` if you need to edit here directly; ori will create a proposal for the upstream review.
 
 ## 概要 {#overview}
 
 TODO
 
-## 入出力 {#io}
+## ホストする slices {#hosted-slices}
 
 TODO
 
-## 不変条件 {#invariants}
+## レイアウト {#layout}
 
 TODO
 
-## テスト観点 {#test-points}
+## テスト観点 (E2E + smoke + a11y) {#test-points}
 
 TODO
 
@@ -86,21 +81,21 @@ TODO
     await writeFile(join(dir, "notes.md"), `# ${id} — Implementation notes\n\n`, "utf8");
 
     const status = {
-      feature_id: id,
+      page_id: id,
       derived_at: new Date().toISOString(),
-      beads: { epic: `ori-feature-${id}`, current_phase: null, completion: [] as Phase[] },
+      beads: { epic: formatEpicId("page", id), current_phase: null, completion: [] as Phase[] },
       phases: {},
       dirty: [],
     };
     await writeFile(join(dir, "status.yaml"), yamlStringify(status), "utf8");
 
-    consola.success(`Created .ori/features/${id}/ (manifest, spec, notes, status)`);
-    consola.info("Next: edit manifest.yaml to add derives_from references, then run `ori feature run <id> --phase derive`");
+    consola.success(`Created .ori/pages/${id}/ (manifest, spec, notes, status)`);
+    consola.info("Next: edit manifest.yaml to add derives_from references, then run `ori page run <id> --phase derive`");
   },
 });
 
 const runCmd = defineCommand({
-  meta: { name: "run", description: "Run one or more phases of a feature workflow" },
+  meta: { name: "run", description: "Run one or more phases of a page workflow" },
   args: {
     id: { type: "positional", required: true },
     phase: {
@@ -110,22 +105,22 @@ const runCmd = defineCommand({
     },
   },
   async run({ args }) {
-    consola.info(`ori feature run ${args.id} (MVP stub)`);
+    consola.info(`ori page run ${args.id} (MVP stub)`);
     consola.warn("Phase runner not wired yet. Coming in next milestone.");
   },
 });
 
 const listCmd = defineCommand({
-  meta: { name: "list", description: "List all features and their phase status" },
+  meta: { name: "list", description: "List all pages and their phase status" },
   async run() {
-    consola.info("ori feature list (MVP stub) — needs status.yaml aggregation");
+    consola.info("ori page list (MVP stub) — needs status.yaml aggregation");
   },
 });
 
-export const featureCommand = defineCommand({
+export const pageCommand = defineCommand({
   meta: {
-    name: "feature",
-    description: "Manage features (new / run / list)",
+    name: "page",
+    description: "Manage pages — a page hosts N slices as a UI composition unit (new / run / list)",
   },
   subCommands: { new: newCmd, run: runCmd, list: listCmd },
 });

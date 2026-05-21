@@ -8,5 +8,5 @@ export {
   DEFAULT_PHASE_CONFIG,
   resolveModel,
 } from "./models.js";
-export { type BeadsBridge, formatIssueId, formatEpicId } from "./beads.js";
+export { type BeadsBridge, type EpicKind, formatIssueId, formatEpicId } from "./beads.js";
 export { type SliceStatus, type DirtyEntry } from "./status.js";

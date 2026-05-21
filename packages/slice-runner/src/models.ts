@@ -77,7 +77,7 @@ export const DEFAULT_AGENTS: Record<string, AgentSpec> = {
     },
     spawn: {
       binary: "claude",
-      args: ["--model", "{model}", "--no-interactive", "--skill", "ori-{phase}", "{feature_id}"],
+      args: ["--model", "{model}", "--no-interactive", "--skill", "ori-{phase}", "{slice_id}"],
       mode: "headless",
     },
   },
@@ -89,7 +89,7 @@ export const DEFAULT_AGENTS: Record<string, AgentSpec> = {
     },
     spawn: {
       binary: "codex",
-      args: ["run", "ori-{phase}", "--model", "{model}", "--feature", "{feature_id}"],
+      args: ["run", "ori-{phase}", "--model", "{model}", "--slice", "{slice_id}"],
       mode: "headless",
     },
   },
@@ -103,7 +103,7 @@ export const DEFAULT_AGENTS: Record<string, AgentSpec> = {
     },
     spawn: {
       binary: "opencode",
-      args: ["run", "--model", "{model}", "ori-{phase}", "{feature_id}"],
+      args: ["run", "--model", "{model}", "ori-{phase}", "{slice_id}"],
       mode: "headless",
     },
   },
@@ -115,7 +115,7 @@ export const DEFAULT_AGENTS: Record<string, AgentSpec> = {
     },
     spawn: {
       binary: "gemini",
-      args: ["run", "--model", "{model}", "skill:ori-{phase}", "{feature_id}"],
+      args: ["run", "--model", "{model}", "skill:ori-{phase}", "{slice_id}"],
       mode: "headless",
     },
   },
@@ -128,7 +128,7 @@ export const DEFAULT_AGENTS: Record<string, AgentSpec> = {
     spawn: {
       mode: "manual",
       instructions:
-        "Cursor does not expose a headless invocation. Open a new chat tab and run: /ori-{phase} {feature_id}  (model: {model})",
+        "Cursor does not expose a headless invocation. Open a new chat tab and run: /ori-{phase} {slice_id}  (model: {model})",
     },
   },
   copilot: {
@@ -140,7 +140,7 @@ export const DEFAULT_AGENTS: Record<string, AgentSpec> = {
     spawn: {
       mode: "manual",
       instructions:
-        "In VSCode Copilot Chat, run: @workspace /ori-{phase} {feature_id}  (model: {model})",
+        "In VSCode Copilot Chat, run: @workspace /ori-{phase} {slice_id}  (model: {model})",
     },
   },
 };

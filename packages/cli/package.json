@@ -1,7 +1,7 @@
 {
   "name": "@ori-ori/cli",
   "version": "0.0.1",
-  "description": "ori CLI — DDD-driven feature scaffolding with CoDD coherence",
+  "description": "ori CLI — DDD-driven slice/page scaffolding with CoDD coherence",
   "license": "MIT",
   "repository": {
     "type": "git",

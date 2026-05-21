@@ -5,16 +5,19 @@ import type { Phase } from "./phases.js";
  * issue state — it only orchestrates which issues to open/close.
  *
  * Naming convention:
- *   ori-feature-<id>          — epic
+ *   ori-slice-<id>            — slice epic
+ *   ori-page-<id>             — page epic
  *   ori-<phase>-<id>          — phase issue (depends on previous phase)
  */
 
-export function formatEpicId(sliceId: string): string {
-  return `ori-feature-${sliceId}`;
+export type EpicKind = "slice" | "page";
+
+export function formatEpicId(kind: EpicKind, id: string): string {
+  return `ori-${kind}-${id}`;
 }
 
-export function formatIssueId(phase: Phase, sliceId: string): string {
-  return `ori-${phase}-${sliceId}`;
+export function formatIssueId(phase: Phase, id: string): string {
+  return `ori-${phase}-${id}`;
 }
 
 export interface BeadsBridge {

@@ -13,9 +13,12 @@ npm i -g @ori-ori/cli
 | `ori init` | ✅ | Silent scaffold of `.ori/` skeleton (framework scaffold lives in `/ori-arch`) |
 | `ori lint [path]` | ✅ partial | Validate `{#id}` anchors + naming convention |
 | `ori sync [--file F] [--since REF] [--check] [--force]` | 🚧 stub | Detect changes + propagate dirty marks |
-| `ori feature new <id>` | ✅ partial | Create feature scaffold |
-| `ori feature run <id> [--phase P]` | 🚧 stub | Run 7-phase workflow |
-| `ori feature list` | 🚧 stub | List features and statuses |
+| `ori slice new <id> [--type=command\|query]` | ✅ partial | Create slice scaffold under `.ori/slices/` |
+| `ori slice run <id> [--phase P]` | 🚧 stub | Run 7-phase slice workflow |
+| `ori slice list` | 🚧 stub | List slices and statuses |
+| `ori page new <id>` | ✅ partial | Create page scaffold under `.ori/pages/` |
+| `ori page run <id> [--phase P]` | 🚧 stub | Run 7-phase page workflow |
+| `ori page list` | 🚧 stub | List pages and statuses |
 | `ori model show` | ✅ | Print per-phase model assignments |
 | `ori proposals [--check]` | 🚧 stub | Review reverse-propagation proposals |
 
