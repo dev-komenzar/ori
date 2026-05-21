@@ -84,7 +84,7 @@ ori slice new switch-edit-target
 ```
 
 phase の中身は `packages/cli/src/commands/feature.ts` および
-`packages/feature-runner/` を参照（slice/page CLI への rename は ori-0kw 待ち）。
+`packages/slice-runner/` を参照（slice/page CLI への rename は ori-0kw 待ち）。
 
 ## 5. アーキテクチャ lint の運用
 

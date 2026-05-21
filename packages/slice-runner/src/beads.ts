@@ -9,19 +9,19 @@ import type { Phase } from "./phases.js";
  *   ori-<phase>-<id>          — phase issue (depends on previous phase)
  */
 
-export function formatEpicId(featureId: string): string {
-  return `ori-feature-${featureId}`;
+export function formatEpicId(sliceId: string): string {
+  return `ori-feature-${sliceId}`;
 }
 
-export function formatIssueId(phase: Phase, featureId: string): string {
-  return `ori-${phase}-${featureId}`;
+export function formatIssueId(phase: Phase, sliceId: string): string {
+  return `ori-${phase}-${sliceId}`;
 }
 
 export interface BeadsBridge {
   /** Create the epic + 7 phase issues with proper dependencies. */
-  createFeatureIssues(featureId: string): Promise<void>;
+  createSliceIssues(sliceId: string): Promise<void>;
   /** Reopen the named phase issue and any downstream issues. */
-  reopenPhase(featureId: string, phase: Phase): Promise<void>;
+  reopenPhase(sliceId: string, phase: Phase): Promise<void>;
   /** Append a comment to the named issue. */
   comment(issueId: string, body: string): Promise<void>;
   /** Update the description of an issue (used by phase 2 to elaborate downstream tasks). */

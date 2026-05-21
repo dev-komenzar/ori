@@ -3,7 +3,7 @@ import { consola } from "consola";
 import { mkdir, writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { stringify as yamlStringify } from "yaml";
-import { DEFAULT_AGENTS, DEFAULT_PHASE_CONFIG } from "@ori-ori/feature-runner";
+import { DEFAULT_AGENTS, DEFAULT_PHASE_CONFIG } from "@ori-ori/slice-runner";
 import { seedDomainScaffolds } from "../utils/domain-scaffold.js";
 
 const DIRS = [

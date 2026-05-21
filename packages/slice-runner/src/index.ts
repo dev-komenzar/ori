@@ -9,4 +9,4 @@ export {
   resolveModel,
 } from "./models.js";
 export { type BeadsBridge, formatIssueId, formatEpicId } from "./beads.js";
-export { type FeatureStatus, type DirtyEntry } from "./status.js";
+export { type SliceStatus, type DirtyEntry } from "./status.js";

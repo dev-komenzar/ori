@@ -888,7 +888,7 @@ src/                             # TS monorepo(開発時 SSoT)
 ├── arch-adapter-eslint/
 ├── arch-adapter-generic/
 ├── arch-adapter-rust/
-├── feature-runner/              # slice/page 生成本体
+├── slice-runner/                # slice/page 生成本体
 └── skills/                      # skill ごとの bundle entry
     ├── ori-arch/index.ts
     ├── ori-sync/index.ts

@@ -28,7 +28,7 @@ Wraps the workspace packages:
 
 - `@ori-ori/parser` — markdown / frontmatter / section extraction
 - `@ori-ori/coherence` — propagation graph, change detection, manifest schema
-- `@ori-ori/feature-runner` — phase definitions, model resolution, beads bridge
+- `@ori-ori/slice-runner` — phase definitions, model resolution, beads bridge
 
 Framework / template scaffold (package.json, src-tauri, etc.) is handled by
 `/ori-arch`'s framework_init step, not by this CLI.

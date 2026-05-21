@@ -8,7 +8,7 @@ export interface DirtyEntry {
   reason?: string;
 }
 
-export interface FeatureStatus {
+export interface SliceStatus {
   feature_id: string;
   derived_at: string;
   beads: {

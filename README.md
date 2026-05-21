@@ -46,7 +46,7 @@ ori/
 │   ├── cli/              # @ori-ori/cli — npm 配布の TypeScript CLI
 │   ├── parser/           # markdown/frontmatter/section parsing
 │   ├── coherence/        # propagation 計算 + ハッシュ管理
-│   ├── feature-runner/   # 7-phase workflow runner + beads bridge
+│   ├── slice-runner/     # 7-phase workflow runner + beads bridge
 │   └── templates/        # DDD コード生成テンプレート（TS/Tauri 等）
 ├── .apm/                 # APM 配布アセット
 │   ├── apm.yml
