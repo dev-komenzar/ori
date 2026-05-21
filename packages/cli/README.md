@@ -10,7 +10,7 @@ npm i -g @ori-ori/cli
 
 | Command | Status | Description |
 |---------|--------|-------------|
-| `ori init [--template <name>]` | ✅ stub | Scaffold `.ori/` structure |
+| `ori init` | ✅ | Silent scaffold of `.ori/` skeleton (framework scaffold lives in `/ori-arch`) |
 | `ori lint [path]` | ✅ partial | Validate `{#id}` anchors + naming convention |
 | `ori sync [--file F] [--since REF] [--check] [--force]` | 🚧 stub | Detect changes + propagate dirty marks |
 | `ori feature new <id>` | ✅ partial | Create feature scaffold |
@@ -29,7 +29,9 @@ Wraps the workspace packages:
 - `@ori-ori/parser` — markdown / frontmatter / section extraction
 - `@ori-ori/coherence` — propagation graph, change detection, manifest schema
 - `@ori-ori/feature-runner` — phase definitions, model resolution, beads bridge
-- `@ori-ori/templates` — DDD code-generation templates
+
+Framework / template scaffold (package.json, src-tauri, etc.) is handled by
+`/ori-arch`'s framework_init step, not by this CLI.
 
 All heavy / deterministic operations live in those packages; this CLI is the
 thin entrypoint that AI agents invoke via Bash and APM hooks.
