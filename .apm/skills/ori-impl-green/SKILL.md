@@ -3,11 +3,11 @@ name: ori-impl-green
 description: /ori-flow phase 4。failing test を GREEN にする最小実装を src/contexts/<bc>/ に書く（DDD レイアウト準拠）
 ---
 
-ユーザが `/ori-impl-green <feature-id>` を呼ぶ、または `/ori-flow` 内部から phase 4 として起動した際に、**phase 3 で書いた failing test を GREEN にする最小実装を `src/contexts/<bc>/` 配下に書く**。**過剰な抽象化は phase 5（refactor）の責務**。
+ユーザが `/ori-impl-green <slice-id>` を呼ぶ、または `/ori-flow` 内部から phase 4 として起動した際に、**phase 3 で書いた failing test を GREEN にする最小実装を `src/contexts/<bc>/` 配下に書く**。**過剰な抽象化は phase 5（refactor）の責務**。
 
 ## 引数
 
-- `feature-id`：対象 feature の id（`tests/` に failing test が存在する事を前提）
+- `slice-id`：対象 slice の id（`tests/` に failing test が存在する事を前提）
 
 ## 役割
 
@@ -18,14 +18,14 @@ description: /ori-flow phase 4。failing test を GREEN にする最小実装を
 ## 入力 / 出力
 
 - 入力：
-  - `.ori/features/<id>/spec.md`
-  - `.ori/features/<id>/tests/*.test.ts`（phase 3 で RED 確認済み）
+  - `.ori/slices/<id>/spec.md`
+  - `.ori/slices/<id>/tests/*.test.ts`（phase 3 で RED 確認済み）
   - `.apm/instructions/ddd-typescript.instructions`（実装規約）
 - 出力：
   - `src/contexts/<bounded-context>/domain/...`
   - `src/contexts/<bounded-context>/application/...`
   - `src/contexts/<bounded-context>/infrastructure/...`（必要時）
-  - `.ori/features/<id>/tests/` 配下の全テストが GREEN
+  - `.ori/slices/<id>/tests/` 配下の全テストが GREEN
 
 ## ddd-typescript.instructions 準拠ルール
 
@@ -42,7 +42,7 @@ description: /ori-flow phase 4。failing test を GREEN にする最小実装を
 ## 手順
 
 1. **前提確認**：
-   - `pnpm -F <feature-pkg> test` を Bash で実行し RED であることを確認（phase 3 完了の検証）
+   - `pnpm -F <slice-pkg> test` を Bash で実行し RED であることを確認（phase 3 完了の検証）
    - 既に GREEN なら停止し phase 3 へ差し戻す（`/ori-test-red` の "GREEN-on-first-run" と同等）
 2. **テストを 1 本ずつ通す**：
    - 一番外側の `it` から順に attack
@@ -55,13 +55,13 @@ description: /ori-flow phase 4。failing test を GREEN にする最小実装を
    - branded types が裸の primitive で漏れていないか
 4. **進捗の記録**：beads issue description の checklist を Bash で更新：
    ```bash
-   bd update ori-impl-green-<feature-id> --notes="step N done: <topic>"
+   bd update ori-impl-green-<slice-id> --notes="step N done: <topic>"
    ```
    - **サブ issue は切らない**（ori-flow.md 注意事項）
 5. **全テスト GREEN を確認**：
    ```bash
-   pnpm -F <feature-pkg> test
-   pnpm -F <feature-pkg> typecheck
+   pnpm -F <slice-pkg> test
+   pnpm -F <slice-pkg> typecheck
    ```
 6. **lint / format**：
    ```bash
@@ -74,7 +74,7 @@ description: /ori-flow phase 4。failing test を GREEN にする最小実装を
    - それでも失敗 → 停止して人間に判断を委ねる
 8. **完了**：
    ```bash
-   bd close ori-impl-green-<feature-id> --reason="all tests green; <N> files added under src/contexts/<bc>/"
+   bd close ori-impl-green-<slice-id> --reason="all tests green; <N> files added under src/contexts/<bc>/"
    ```
 
 ## 出力テンプレート
@@ -125,6 +125,6 @@ export const captureAutoSave =
 
 phase 4 完了後、`/ori-flow` 内部なら自動的に phase 5 へ。単独呼び出しの場合：
 
-- **メインパス**：`/ori-refactor <feature-id>` — phase 5。テストを GREEN に保ったまま重複除去・抽象化
+- **メインパス**：`/ori-refactor <slice-id>` — phase 5。テストを GREEN に保ったまま重複除去・抽象化
 - **観点漏れ発覚パス**：実装中に「このケースが spec に無い」と気付いた場合 → phase 3 (`/ori-test-red`) に戻し新観点を追加
 - **ドメイン誤り発覚パス**：不変条件が満たせないと気付いた場合 → `/ori-propose` で domain 修正提案

@@ -1,6 +1,6 @@
 ---
 name: ori-distill
-description: distill-ddd phase 1-11 + ori 独自 phase 11b（UI feature grouping）を対話的に進める
+description: distill-ddd phase 1-11 + ori 独自 phase 11b（Page grouping）を対話的に進める
 ---
 
 ユーザが `/ori-distill [phase=<name>]` を呼んだ際、distill-ddd の対話フローを ori convention 注入版で実行します。
@@ -18,7 +18,7 @@ description: distill-ddd phase 1-11 + ori 独自 phase 11b（UI feature grouping
 9. **workflows** — DMMF pipelines（**ori はファイル分割：`workflows/{index.md, <id>.md}`**）
 10. **types** — Compilable type definitions
 11. **simulate** — Type-level scenario verification + ui-fields
-11b. **ui-grouping** *(ori 独自)* — `ui-fields/screen-*.md` の depended_by を決定し UI feature 群を確定
+11b. **ui-grouping** *(ori 独自)* — `ui-fields/screen-*.md` の depended_by を決定し page 群を確定
 
 ## 各 phase の出力
 
@@ -33,10 +33,10 @@ description: distill-ddd phase 1-11 + ori 独自 phase 11b（UI feature grouping
 2. **指定 phase（または最も近い未完 phase）から開始**
 3. 対話的に質問を投げ、ユーザの返答を文書に反映
 4. phase 完了時に `ori lint <生成ファイル>` で自己検証
-5. **Phase 9 完了時**: workflow ごとに `ori feature new <id>` を提案（手動 OK / 自動 OK の選択）
-6. **Phase 11b 完了時**: 各 UI feature について同様に `ori feature new ui-<id>` を提案
+5. **Phase 9 完了時**: workflow ごとに `ori slice new <id>` を提案（手動 OK / 自動 OK の選択）
+6. **Phase 11b 完了時**: 各 page について同様に `ori page new <id>` を提案
 
 ## 注意
 
 - distill-ddd 本家のアップストリーム変更があれば手動で取り込む（fork 形態）
-- このスキルは **`ori-flow` を呼ばない**。feature 単位の実装は別途
+- このスキルは **`ori-flow` を呼ばない**。slice / page 単位の実装は別途

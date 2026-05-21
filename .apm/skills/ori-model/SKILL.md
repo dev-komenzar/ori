@@ -116,7 +116,7 @@ ori model show --by agent
 
 設定変更後、ユーザに以下を提示：
 
-- **試運転パス**：`/ori-flow <small-feature>` で小さい feature を 1 つ回し、コスト・品質を確認
+- **試運転パス**：`/ori-flow <small-slice>` で小さい slice を 1 つ回し、コスト・品質を確認
 - **元に戻すパス**：`git diff` で `.apm/agents/*.md` の変更を確認。問題あれば `git checkout HEAD -- .apm/agents/`
 - **doctor 確認パス**：`/ori-doctor` で全体に影響が出ていないか
 - **commit 推奨**：model 設定は session 跨ぎで重要。`git add .apm/agents && git commit` を案内

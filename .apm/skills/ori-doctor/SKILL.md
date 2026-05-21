@@ -23,16 +23,16 @@ description: ori プロジェクトの健康診断。.ori/ を歩き ori lint / 
 - `ori lint .ori/domain/` を実行
 - 全 H2/H3 に `{#id}` があるか
 - frontmatter `coherence:` ブロックがあるか
-- 必須セクション（feature ごと / phase ごと）の有無
+- 必須セクション（slice / page ごと / phase ごと）の有無
 
 ### 2. 派生文書の hash 一致
 
-- `.ori/features/*/status.yaml` の `upstream_hash` と現在の domain section ハッシュを比較
+- `.ori/slices/*/status.yaml` の `upstream_hash` と現在の domain section ハッシュを比較
 - 不一致なら **dirty 残存** として報告
 
 ### 3. status.yaml ⇔ beads の同期
 
-- 各 feature について `status.yaml.phase_status` と `bd show ori-<phase>-<id>` の `status` を突き合わせる
+- 各 slice について `status.yaml.phase_status` と `bd show ori-<phase>-<id>` の `status` を突き合わせる
 - ズレを報告（例：beads では closed だが status.yaml では in_progress）
 
 ### 4. Cross-reference の整合
@@ -45,10 +45,10 @@ description: ori プロジェクトの健康診断。.ori/ を歩き ori lint / 
 - `.ori/proposals/` 配下の pending proposal をカウント
 - N > 0 なら `/ori-review-proposals` を案内
 
-### 6. orphan feature / domain section
+### 6. orphan slice / page / domain section
 
-- どの feature からも `derives_from:` されていない domain section（dead documentation の可能性）
-- どの domain にも対応しない feature（孤立 feature）
+- どの slice / page からも `derives_from:` されていない domain section（dead documentation の可能性）
+- どの domain にも対応しない slice / page（孤立 slice / page）
 
 ### 7. beads 健全性
 
@@ -61,7 +61,8 @@ description: ori プロジェクトの健康診断。.ori/ を歩き ori lint / 
 2. **各検査を順次実行**：それぞれ `Bash` で：
    ```bash
    ori lint .ori/domain/
-   ori lint .ori/features/
+   ori lint .ori/slices/
+   ori lint .ori/pages/
    ori doctor --check=hash
    ori doctor --check=status-sync
    ori doctor --check=cross-ref
@@ -83,15 +84,15 @@ description: ori プロジェクトの健康診断。.ori/ を歩き ori lint / 
   fix: edit aggregates.md, add anchor manually (human judgment)
 
 ═══ Hash Consistency ═══
-⚠ features/capture-auto-save: 1 upstream out of sync
+⚠ slices/capture-auto-save: 1 upstream out of sync
   upstream: domain/aggregates.md#note-aggregate
   fix: /ori-flow capture-auto-save (re-derive)
 
 ═══ Status Sync ═══
-✓ all features in sync with beads
+✓ all slices / pages in sync with beads
 
 ═══ Cross-Reference ═══
-✗ features/edit-past-note-start/spec.md → broken link: domain/aggregates.md#draft-aggregate
+✗ slices/edit-past-note-start/spec.md → broken link: domain/aggregates.md#draft-aggregate
   fix: target was renamed to #note-aggregate; edit manifest.derives_from
 
 ═══ Proposals ═══
@@ -99,7 +100,7 @@ description: ori プロジェクトの健康診断。.ori/ を歩き ori lint / 
   /ori-review-proposals
 
 ═══ Orphans ═══
-⚠ domain/aggregates.md#tag-aggregate — derived by no feature
+⚠ domain/aggregates.md#tag-aggregate — derived by no slice / page
 ℹ this may be intentional (read-only reference)
 
 ═══ Beads ═══
@@ -121,8 +122,8 @@ recommended action: fix broken cross-ref first (blocks /ori-flow on edit-past-no
 レポート内容に応じて以下を案内：
 
 - **schema 違反パス**：`vim .ori/domain/<file>.md` で手動修正（自動修正しない）→ 再度 `/ori-doctor`
-- **hash 不一致パス**：`/ori-flow <feature>` で該当 feature を再 derive
-- **broken cross-ref パス**：該当 feature の `manifest.yaml` を更新 or 旧 anchor を domain 側で復活
+- **hash 不一致パス**：`/ori-flow <id>` で該当 slice / page を再 derive
+- **broken cross-ref パス**：該当 slice / page の `manifest.yaml` を更新 or 旧 anchor を domain 側で復活
 - **proposal 残存パス**：`/ori-review-proposals` で人間判断
 - **orphan domain パス**：意図的なら無視、不要なら削除を検討
 - **beads 不整合パス**：`bd dolt push` / `bd dolt pull` で再同期、`bd orphans` で個別対処

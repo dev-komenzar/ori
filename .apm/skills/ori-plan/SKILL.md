@@ -3,11 +3,11 @@ name: ori-plan
 description: /ori-flow phase 2。spec.md を読み、下流 phase の beads issue description を埋める。plan.md ファイルは作らない（beads 単一情報源）
 ---
 
-ユーザが `/ori-plan <feature-id>` を呼ぶ、または `/ori-flow` 内部から phase 2 として起動した際に、**spec.md の内容を下流 beads issue（test-red / impl-green / refactor / review / finalize）の description として展開**します。**plan.md は作らない**——タスク分解は beads が単一情報源。
+ユーザが `/ori-plan <slice-id>` を呼ぶ、または `/ori-flow` 内部から phase 2 として起動した際に、**spec.md の内容を下流 beads issue（test-red / impl-green / refactor / review / finalize）の description として展開**します。**plan.md は作らない**——タスク分解は beads が単一情報源。
 
 ## 引数
 
-- `feature-id`：対象 feature の id（`.ori/features/<id>/spec.md` が存在する前提）
+- `slice-id`：対象 slice の id（`.ori/slices/<id>/spec.md` が存在する前提）
 
 ## 役割
 
@@ -18,9 +18,9 @@ description: /ori-flow phase 2。spec.md を読み、下流 phase の beads issu
 ## 入力 / 出力
 
 - 入力：
-  - `.ori/features/<id>/spec.md`（phase 1 で生成）
+  - `.ori/slices/<id>/spec.md`（phase 1 で生成）
   - 既存の下流 beads issue（`ori-test-red-<id>`、`ori-impl-green-<id>`、`ori-refactor-<id>`、`ori-review-<id>`、`ori-finalize-<id>`）
-    - 存在しない場合は **scaffold を勝手にしない**。先に `ori feature run <id> --setup-issues` をユーザに促す
+    - 存在しない場合は **scaffold を勝手にしない**。先に `ori slice run <id> --setup-issues` をユーザに促す
 - 出力（**ファイル無し / beads のみ更新**）：
   - `bd update ori-test-red-<id> --description=... --notes="checklist..."`
   - `bd update ori-impl-green-<id> --description=...`
@@ -37,7 +37,7 @@ description: /ori-flow phase 2。spec.md を読み、下流 phase の beads issu
 ## 手順
 
 1. **前提確認**：
-   - `.ori/features/<id>/spec.md` が存在し、TBD が解消されているか確認
+   - `.ori/slices/<id>/spec.md` が存在し、TBD が解消されているか確認
    - 下流 beads issue が全て存在するか（`bd show ori-test-red-<id>` 等）
 2. **spec.md を読み解く**：
    - `## テスト観点 {#test-perspectives}` → test-red の description
@@ -91,12 +91,12 @@ description: /ori-flow phase 2。spec.md を読み、下流 phase の beads issu
 - **plan.md ファイルは作らない**：beads description が SSoT
 - **サブ issue を切らない**：description 内 `- [ ]` checklist で対応
 - **TBD は積極的に詰める**：phase 2 の主目的の一つ
-- **CLI 自動化との関係**：`ori feature run <id> --phase plan` が CLI 側で雛形 description を作るが、このスキルは中身を埋める
+- **CLI 自動化との関係**：`ori slice run <id> --phase plan` が CLI 側で雛形 description を作るが、このスキルは中身を埋める
 
 ## 次のアクション
 
 phase 2 完了後、`/ori-flow` 内部なら自動的に phase 3 へ。単独呼び出しの場合：
 
-- **メインパス**：`/ori-test-red <feature-id>` — phase 3。failing test を tests/ に書き起こす
+- **メインパス**：`/ori-test-red <slice-id>` — phase 3。failing test を tests/ に書き起こす
 - **TBD 残存パス**：`/ori-derive` で spec を再派生 or `/ori-propose` で domain 修正
-- **scaffold 不在パス**：`ori feature run <id> --setup-issues` で beads epic + 7 phase を作成
+- **scaffold 不在パス**：`ori slice run <id> --setup-issues` で beads epic + 7 phase を作成
