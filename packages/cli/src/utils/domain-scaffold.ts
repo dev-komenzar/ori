@@ -14,8 +14,12 @@ const DOMAIN_SCAFFOLDS: DomainScaffoldEntry[] = [
   { path: ".ori/domain/context-map.md", title: "Context Map", phase: "ori-ddd-4-context-map" },
   { path: ".ori/domain/aggregates.md", title: "Aggregates", phase: "ori-ddd-5-aggregates" },
   { path: ".ori/domain/domain-events.md", title: "Domain Events", phase: "ori-ddd-6-domain-events" },
+  { path: ".ori/domain/validation.md", title: "Validation", phase: "ori-ddd-7-validation" },
   { path: ".ori/domain/glossary.md", title: "Glossary", phase: "ori-ddd-8-glossary" },
+  { path: ".ori/domain/workflows/index.md", title: "Workflows Index", phase: "ori-ddd-9-workflows" },
   { path: ".ori/domain/types.md", title: "Types Index", phase: "ori-ddd-10-types" },
+  { path: ".ori/domain/code/index.md", title: "Code Index", phase: "ori-ddd-10-types" },
+  { path: ".ori/domain/ui-fields/index.md", title: "UI Fields Index", phase: "ori-ddd-11a-ui-fields" },
 ];
 
 function scaffoldBody(entry: DomainScaffoldEntry): string {
