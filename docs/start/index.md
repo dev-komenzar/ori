@@ -2,7 +2,7 @@
 
 ori 自体は言語非依存です。プロジェクトの実装スタックに応じて **テンプレート**
 と **アーキテクチャ adapter** を組み合わせ、`ori init --template <name>` の
-1 コマンドで feature-sliced DDD scaffold を立ち上げます。
+1 コマンドで slice ベース DDD scaffold を立ち上げます。
 
 このページは「自分のスタック向けの開始ガイド」へ誘導するインデックスです。
 
@@ -39,10 +39,10 @@ mkdir my-app && cd my-app
 ori init --template <template-name>
 pnpm install
 
-# 3. 最初の feature を AI と対話で派生
-/ori-distill                  # phase 1-11 を対話実行 → .ori/domain/ が埋まる
-ori feature new <feature-id>  # workflow から feature を切り出す
-/ori-flow <feature-id>        # 7-phase TDD を回す
+# 3. 最初の slice を AI と対話で派生
+/ori-distill                # phase 1-11 を対話実行 → .ori/domain/ が埋まる
+ori slice new <slice-id>    # workflow から slice を切り出す
+/ori-flow <slice-id>        # 7-phase TDD を回す
 ```
 
 `<template-name>` 部分が違うだけで、生成物の構造とその後のワークフローは
