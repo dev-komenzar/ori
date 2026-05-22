@@ -1,6 +1,6 @@
 {
   "name": "@ori-ori/arch-adapter-generic",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Language-neutral regex fallback adapter for ori arch (ts/js/py/rs/go)",
   "license": "MIT",
   "repository": {

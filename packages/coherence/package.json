@@ -1,6 +1,6 @@
 {
   "name": "@ori-ori/coherence",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Propagation graph and change detection for ori",
   "license": "MIT",
   "repository": {
