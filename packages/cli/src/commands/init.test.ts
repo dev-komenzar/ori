@@ -118,6 +118,13 @@ describe("init command", () => {
     expect(second.skipped).toEqual(DOMAIN_SCAFFOLD_PATHS);
   });
 
+  it("places .gitkeep in empty directories for VCS tracking", async () => {
+    await runInit(tmp);
+    expect(await fileExists(join(tmp, ".ori/slices/.gitkeep"))).toBe(true);
+    expect(await fileExists(join(tmp, ".ori/pages/.gitkeep"))).toBe(true);
+    expect(await fileExists(join(tmp, ".ori/proposals/.gitkeep"))).toBe(true);
+  });
+
   it("seeds validation.md and workflows/index.md with the expected phase pointer", async () => {
     await runInit(tmp);
     const validation = await readFile(join(tmp, ".ori/domain/validation.md"), "utf8");

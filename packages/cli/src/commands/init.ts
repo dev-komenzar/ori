@@ -45,6 +45,14 @@ export const initCommand = defineCommand({
       await mkdir(join(cwd, dir), { recursive: true });
     }
 
+    const gitkeepDirs = [".ori/slices", ".ori/pages", ".ori/proposals"];
+    for (const dir of gitkeepDirs) {
+      const gitkeepPath = join(cwd, dir, ".gitkeep");
+      if (!(await exists(gitkeepPath))) {
+        await writeFile(gitkeepPath, "", "utf8");
+      }
+    }
+
     const configPath = join(cwd, ".ori/config.yaml");
     const configExists = await exists(configPath);
     if (configExists && !args.force) {
