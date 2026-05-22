@@ -31,30 +31,30 @@ function isAllowed(
   rules: CrossLayerRule[],
   matchers: LayerMatcher[],
 ): { ok: boolean; reason?: string } {
-  // Same feature, same layer: governed by feature_internal rules
+  // Same slice, same layer: governed by slice_internal rules
   // (not enforced by the generic adapter in v0.1).
   if (
-    importer.kind === "feature" &&
-    target.kind === "feature" &&
+    importer.kind === "slice" &&
+    target.kind === "slice" &&
     importer.layerId === target.layerId &&
-    importer.featureName != null &&
-    importer.featureName === target.featureName
+    importer.sliceName != null &&
+    importer.sliceName === target.sliceName
   ) {
     return { ok: true };
   }
 
-  // Cross-feature direct imports are a more specific failure than the
+  // Cross-slice direct imports are a more specific failure than the
   // generic cross-layer rule miss. Check it first so the error message
   // names the right problem.
   if (
-    importer.kind === "feature" &&
-    target.kind === "feature" &&
+    importer.kind === "slice" &&
+    target.kind === "slice" &&
     importer.layerId === target.layerId &&
-    importer.featureName !== target.featureName
+    importer.sliceName !== target.sliceName
   ) {
     return {
       ok: false,
-      reason: `cross-feature direct import: ${importer.featureName} → ${target.featureName} (use shared/contracts or shared/events)`,
+      reason: `cross-slice direct import: ${importer.sliceName} → ${target.sliceName} (use shared/contracts or shared/events)`,
     };
   }
 
@@ -86,12 +86,12 @@ const adapter: OriArchAdapter = {
         id: root.id,
         path: root.path,
         language: root.language,
-        feature_root: root.feature_root,
+        slice_root: root.slice_root,
         public_entry: root.public_entry,
       },
       layer_matchers: matchers,
       cross_layer_rules: rules.map((r) => ({ from: r.from, allow: [...r.allow] })),
-      cross_feature: spec.cross_feature,
+      cross_slice: spec.cross_slice,
     };
 
     return {
@@ -149,7 +149,7 @@ const adapter: OriArchAdapter = {
             file: rel,
             line: imp.line,
             rule: "cross-layer",
-            message: `import "${imp.target}" (→ ${targetHit.layerId}${targetHit.featureName ? `:${targetHit.featureName}` : ""}): ${verdict.reason}`,
+            message: `import "${imp.target}" (→ ${targetHit.layerId}${targetHit.sliceName ? `:${targetHit.sliceName}` : ""}): ${verdict.reason}`,
           });
         }
       }

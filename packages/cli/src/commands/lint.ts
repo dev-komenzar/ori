@@ -70,7 +70,7 @@ async function lintFile(path: string): Promise<LintIssue[]> {
 export const lintCommand = defineCommand({
   meta: {
     name: "lint",
-    description: "Validate ori convention compliance on domain/feature docs",
+    description: "Validate ori convention compliance on domain / slice / page docs",
   },
   args: {
     path: {

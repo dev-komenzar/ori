@@ -1,110 +1,1091 @@
-# ori 設計概要
+# ori 設計 — MVP v0.1 SSoT
 
-このドキュメントは 2026-05-13 の grill-me セッションで合意した設計事項のスナップショットです。詳細議論は git log + .claude/projects/.../memory/ を参照。
+> AI ハーネスで動作する、ドメイン駆動かつ仕様変更追従可能な開発フレームワーク。
+> 開発者が「適切なアーキテクチャ上で開発している」ことを意識せずに済むよう、AI とドメインと設計とコードを織り合わせる。
 
-## 設計原則
+このドキュメントは ori MVP v0.1 の **設計 SSoT** です。ここに反映された決定は実装の根拠であり、変更時は本ドキュメントから先に更新します。
 
-1. **DDD ドキュメントが Single Source of Truth** — feature・コードは派生
-2. **構造から自動抽出** — Phase 9 (workflows) と Phase 11 (ui-fields) から feature を生成
+詳細議論ログは git log + `.claude/projects/.../memory/` 参照。
+
+---
+
+## 目次
+
+1. [ビジョンと設計原則](#1-ビジョンと設計原則)
+2. [関連プロジェクト](#2-関連プロジェクト)
+3. [MVP v0.1 スコープ](#3-mvp-v01-スコープ)
+4. [中核概念 — slice と page](#4-中核概念--slice-と-page)
+5. [DDD pipeline(Phase 1-11)](#5-ddd-pipelinephase-1-11)
+6. [Architecture pattern](#6-architecture-pattern)
+7. [Stack — dynamic axes と tech catalog](#7-stack--dynamic-axes-と-tech-catalog)
+8. [Skill inventory](#8-skill-inventory)
+9. [/ori-flow — 7-phase slice/page 実装](#9-ori-flow--7-phase-slicepage-実装)
+10. [変更伝播 — hook と queue と /ori-sync](#10-変更伝播--hook-と-queue-と-ori-sync)
+11. [Manifest schema(slice + page)](#11-manifest-schemaslice--page)
+12. [.ori/architecture.md schema(v1)](#12-oriarchitecturemd-schemav1)
+13. [Cross-cutting concerns](#13-cross-cutting-concerns)
+14. [失敗モードと resume](#14-失敗モードと-resume)
+15. [配布 — APM single package](#15-配布--apm-single-package)
+16. [Curated content の置き場](#16-curated-content-の置き場)
+17. [Repository layout](#17-repository-layout)
+18. [用語集](#18-用語集)
+19. [v0.2+ ロードマップ](#19-v02-ロードマップ)
+
+---
+
+## 1. ビジョンと設計原則
+
+### ビジョン
+AI ハーネス(Claude Code, OpenCode, Codex, Gemini CLI, GitHub Copilot, Cursor, Windsurf)で動く skill 集として、**DDD ドキュメントを完成させればコードについて心配する必要がない** ハーネスを目指す。
+
+### 設計原則
+1. **DDD ドキュメントが Single Source of Truth** — slice/page・コードは派生
+2. **構造から自動抽出** — Phase 9 (workflows) と Phase 11b (page-grouping) から slice/page を生成
 3. **単一伝播アルゴリズム + edit-time SSoT guardrail** — `--force` で派生側編集を許可、proposal を自動生成
 4. **CLI = 決定的重処理 / AI = 創造的判断** の責務分離
-5. **multi-CLI 中立** — APM で全 AI ツールへ配布、capability-role で model 抽象化
+5. **multi-harness 中立** — APM で全 AI ツールへ配布、capability-role で model 抽象化
+6. **markdown-driven 拡張** — pattern / tech / schema は markdown で curate、TS adapter は最小化
 
-## ディレクトリ規約（対象プロジェクト側）
+---
+
+## 2. 関連プロジェクト
+
+| プロジェクト | URL | ori との関係 |
+|---|---|---|
+| **CoDD** | https://github.com/yohey-w/codd-dev | frontmatter ベースの traceability に着想 |
+| **VCSDD** | https://github.com/sc30gsw/vcsdd-claude-code | Coherence Engine + 自律実装 flow に着想 |
+| **distill-ddd** | https://github.com/tango238/distill-ddd | 11 phase DDD pipeline を ori に **再実装**(依存しない、参照のみ) |
+| **cc-sdd** | https://github.com/gotalab/cc-sdd | 軽量化、autonomous implementation |
+| **APM** | https://microsoft.github.io/apm/ | ori の配布手段(Microsoft Agent Package Manager) |
+| **Beads** | https://github.com/gastownhall/beads | タスク管理基盤(MVP は直接 CLI 呼出、formal adapter なし) |
+
+---
+
+## 3. MVP v0.1 スコープ
+
+### 含むもの
+
+#### Distribution
+- **APM single package**(npm `@ori-ori/*` は全 soft-deprecate)
+- Node 20+ runtime
+- per-skill esbuild bundle in `.apm/skills/<name>/scripts/`
+- 開発 source は monorepo(`src/`、ビルド時に各 skill bundle 化)
+
+#### Architecture
+- **1 curated pattern**: `ddd-vsa-hex`
+- **動的 axes stack**(curated `axes-vocabulary.md`、初期 5 core + 4 optional)
+- **12 initial tech catalog**(tauri, nextjs, sveltekit, nuxt, vite-react, hono, axum, supabase, cloudflare-pages, sqlite, postgresql, prisma, drizzle)
+- 各 tech に `variants` + `phase_hooks` フィールド
+- Multi-root + cross-root(Tauri 対応)
+
+#### Skills(32 個、3-tier 分類は実装時に確定)
+- DDD phase 1-11(`ori-ddd-1-discovery` 〜 `ori-ddd-11b-ui-grouping`、12 個)
+- Setup: `ori-init`
+- Architecture: `ori-arch`
+- Flow: `ori-flow` + 7 phases(verify→plan→test-red→impl-green→refactor→review→finalize)
+- Proposal: `ori-propose`, `ori-review-proposals`
+- Maintenance: `ori-sync`, `ori-feature-status`, `ori-doctor`, `ori-model`, `ori-graph`, `ori-bug`, `ori-migrate`, `ori-distill`
+
+#### 中核概念
+- **Slice**(1 use case = 1 handler、`.ori/slices/<id>/`)
+- **Page**(N slice の宿主、`.ori/pages/<id>/`、slice と同 manifest schema + `type` discriminator)
+- Manifest enrich(`derives_from` + `inputs[].hash` + `outputs[].hash` + `flow_state.history`)
+- `spec.md` 廃止、phase 1 = verify(file 出力なし)
+- Aggregate **hybrid placement**(BC 共有 domain + slice 内 command DTO)
+- Event-bus 自動生成 + manifest-driven subscriptions
+
+#### Cross-cutting concerns
+- **Always-on**(default 組み込み): error handling, logging, trace ID
+- **DDD-driven**(MVP は auth のみ): `validation.md` `## Authorization rules` 空 → guard code 生成なし
+
+#### Iteration / propagation
+- PostToolUse hook(APM 自動配備、`.apm/hooks/sync-trigger.json` + scripts/)
+- Queue-based 疎結合(`.ori/state/sync-queue.jsonl`)
+- /ori-sync が drain → dirty 伝播 → beads issue
+- /ori-flow verify が fail-safe
+- OpenCode fallback(手動 /ori-sync、APM が hook 配備を silent skip)
+
+#### Traceability
+- 6-layer(no static analysis、`source_type: static` は placeholder)
+- doc-to-code: frontmatter `depends_on` + manifest `derives_from` / `inputs` / `outputs`
+- markers: `@ori-generated`, `@ori-imported`, `@ori-stub`, `@ori-operation` / `@ori-status`
+
+#### Task management
+- **Beads only**(`bd` CLI を skill から直接呼出、formal adapter 化なし)
+
+### 含まないもの(v0.2+)
+
+| 項目 | 理由 |
+|---|---|
+| `/ori-rules`(machine-checkable invariants) | 複雑、後回し |
+| 追加 pattern(現在 1 個) | MVP は単一 pattern で哲学を実証 |
+| Brownfield support(/ori-extract 等) | 既存コードからの逆生成 |
+| Layer 1 hard lock(OpenCode 以外) | best-effort |
+| Static analysis 由来 edge | placeholder のみ |
+| AI 自動 polling | 安全側 |
+| Rate limiting / audit trail / i18n / caching / metrics | DDD-driven 追加 |
+| Concurrent /ori-flow | flow-lock で禁止 |
+| 分散 event bus | in-process のみ |
+| 追加 task adapter(Linear / GitHub Issues / Jira) | Beads で検証後 |
+| Curated content の semver + migration helper | pin 運用 |
+
+---
+
+## 4. 中核概念 — slice と page
+
+### Slice
+
+**定義**: 1 slice = 1 use case = 1 handler(command または query)
+
+**1:1 対応**:
+- Slice ↔ Phase 9 workflow step(完全 1:1)
+- Slice ↔ DDD docs(`derives_from` で論理依存を declare)
+
+**所在**: `.ori/slices/<slice-id>/`
+- `manifest.yaml`(SSoT)
+- `tests/`(phase 3 test-red 出力)
+- `notes.md`(実装ログ、任意)
+- `status.yaml`(beads 派生キャッシュ)
+
+### Page
+
+**定義**: 1 page = N slice の **宿主**(UI composition unit)
+
+**生成元**: Phase 11b (page-grouping) 出力
+
+**所在**: `.ori/pages/<page-id>/`
+- `manifest.yaml`(slice manifest と同 schema、`type: page` discriminator)
+- `tests/`(主に E2E、Phase 7 scenario.scope=page 由来)
+
+### slice と page の関係
+
+- slice manifest に `page: <page-id>` field(任意、UI 関連 slice のみ)
+- page manifest に `slices: [<slice-id>, ...]` field(双方向参照)
+- /ori-flow は **slice / page 両方を 7-phase で処理**(content templates が type で切替)
+- Page の verify phase は「hosted slice が全部 generated」を要求 → beads dep で順序強制
+
+### 命名規約
+
+| 概念 | naming |
+|---|---|
+| slice ID | kebab-case 動詞-名詞(例: `register-user`, `change-email`)、workflow step ID と完全一致 |
+| page ID | kebab-case(例: `registration`, `user-settings`) |
+| BC | kebab-case 概念名(例: `user-management`, `order`) |
+
+---
+
+## 5. DDD pipeline(Phase 1-11)
+
+distill-ddd の 11 phase を ori に再実装。各 phase が `.ori/domain/` 配下に doc を生成。
+
+### Phase 一覧と出力
+
+| # | Phase | Skill | 出力 |
+|---|---|---|---|
+| 1 | discovery | `/ori-ddd-1-discovery` | `.ori/domain/discovery.md`(+ personas) |
+| 2 | event-storming | `/ori-ddd-2-event-storming` | `.ori/domain/event-storming.md` |
+| 3 | bounded-contexts | `/ori-ddd-3-bounded-contexts` | `.ori/domain/bounded-contexts.md`(H2 = BC) |
+| 4 | context-map | `/ori-ddd-4-context-map` | `.ori/domain/context-map.md` |
+| 5 | aggregates | `/ori-ddd-5-aggregates` | `.ori/domain/aggregates.md`(H2 = Aggregate, `{#id}` 必須) |
+| 6 | domain-events | `/ori-ddd-6-domain-events` | `.ori/domain/domain-events.md`(H3 = Event, `{#id}` 必須) |
+| 7 | validation | `/ori-ddd-7-validation` | `.ori/domain/validation.md`(scenarios + auth rules) |
+| 8 | glossary | `/ori-ddd-8-glossary` | `.ori/domain/glossary.md` |
+| 9 | workflows | `/ori-ddd-9-workflows` | `.ori/domain/workflows/<id>.md`(1:1 で分割) |
+| 10 | types | `/ori-ddd-10-types` | `<bc>/domain/`, `<bc>/shared/contracts/events/`(generated) |
+| 11a | ui-fields | `/ori-ddd-11a-ui-fields` | `.ori/domain/ui-fields/screen-N.md` |
+| 11b | page-grouping | `/ori-ddd-11b-ui-grouping` | `.ori/architecture.md` の `## Page Map` section + `.ori/pages/<id>/manifest.yaml`(planned) |
+
+### Phase 10 の特殊性
+
+- 出力は **DDD doc ではなく code**(Phase 10 = types generation)
+- 出力先: `<bc>/domain/<Aggregate>.{ts,rs}`, `<bc>/shared/contracts/events/<Event>.{ts,rs}`
+- 生成内容: **型定義 + 操作シグネチャ + stub body**
+  - Body 実装は /ori-flow の各 slice が impl-green で行う
+  - `@ori-stub` marker で「未実装」明示
+  - `@ori-operation: <name>` + `@ori-status: implemented` で operation 単位の SSoT 保護
+- Tech bridge(tauri-specta 等)は phase_hooks で別 step として実行
+
+### Frontmatter 規約
+
+各 doc / generated node に統一 frontmatter:
+
+```yaml
+---
+ori:
+  node_id: <type>:<name>             # 必須、globally unique
+  type: <controlled-vocabulary>      # 必須
+  depends_on:                        # 上流 node の node_id リスト
+    - <node-id>
+  modules:                           # 任意、code との関連
+    - <module-path>
+---
+```
+
+主要 doc-type と node_id 規約:
+
+| Phase | Type | node_id 例 |
+|---|---|---|
+| 1 | `discovery`, `persona` | `discovery:overview`, `persona:end-user` |
+| 2 | `event-storming` | `event-storming:timeline` |
+| 3 | `bounded-context` | `bounded-context:user-management` |
+| 4 | `context-map`, `relationship` | `context-map:map`, `relationship:user-to-order` |
+| 5 | `aggregate` | `aggregate:User` |
+| 6 | `event` | `event:UserRegistered` |
+| 7 | `scenario` | `scenario:registration-happy-path` |
+| 8 | `glossary-term` | `glossary-term:User` |
+| 9 | `workflow` | `workflow:user-registration` |
+| 11a | `ui-field` | `ui-field:registration-form` |
+| 11b | `page-grouping` | `page-grouping:registration` |
+| curated | `pattern`, `tech` | `pattern:ddd-vsa-hex`, `tech:tauri` |
+
+---
+
+## 6. Architecture pattern
+
+MVP は **`ddd-vsa-hex` 1 個** のみ curated。複数 pattern は v0.2+。
+
+### Pattern 構成
 
 ```
-.ori/
-├── domain/
-│   ├── discovery.md            Phase 1
-│   ├── event-storming.md       Phase 2
-│   ├── bounded-contexts.md     Phase 3 (H2 = BC)
-│   ├── context-map.md          Phase 4
-│   ├── aggregates.md           Phase 5 (H2 = Aggregate, {#id} 必須)
-│   ├── domain-events.md        Phase 6 (H3 = Event, {#id} 必須)
-│   ├── validation.md           Phase 7
-│   ├── glossary.md             Phase 8
-│   ├── workflows/              Phase 9 (1:1 で分割される唯一の phase)
-│   │   ├── index.md            一覧表 + 未解決の問い
-│   │   ├── <workflow-id>.md
-│   │   └── ...
-│   ├── ui-fields/              Phase 11a (画面単位で分割)
-│   │   ├── index.md            横断的事項
-│   │   ├── screen-N.md
-│   │   └── ...
-│   └── code/                   Phase 10 生成型
-├── features/
-│   └── <feature-id>/
-│       ├── manifest.yaml       derives_from / type / implementation
-│       ├── spec.md             phase 1 (derive) 出力。SSoT 保護対象
-│       ├── tests/              phase 3 (test-red) 出力
-│       ├── notes.md            実装中の発見ログ
-│       └── status.yaml         beads 派生キャッシュ
-├── proposals/                  --force 由来の上流提案
-├── state/                      snapshot.json (git なし時のフォールバック、gitignore)
-├── architecture.md             feature-sliced 層・依存規則 SSoT（docs/architecture-schema.md 参照）
-└── config.yaml                 モデル選択など
+.apm/contexts/patterns/ddd-vsa-hex/
+├── pattern.md       # 概念定義(Summary, When, Tradeoffs, Layer, Dependency, Naming, Cross-cutting placement)
+└── ai-notes.md      # AI 行動指示(AI considerations, Test strategy, Migration)
 ```
 
-## 7-phase per-feature workflow
+### Pattern.md の必須 sections
 
-| # | phase | output | model role |
-|---|-------|--------|------|
-| 1 | derive | spec.md | deep |
-| 2 | plan | beads issue descriptions | deep |
-| 3 | test-red | tests/* | deep |
-| 4 | impl-green | source code | deep |
-| 5 | refactor | source diffs | fast |
-| 6 | review | beads comments | **reasoning (fresh)** |
-| 7 | sync | dirty 解除 + proposal | fast |
+```
+## Summary
+## When to use
+## When NOT to use
+## Tradeoffs
+## Conceptual structure       (stack-agnostic ディレクトリ構成図)
+## Layer responsibilities
+## Dependency rules           (machine-checkable に変換可能)
+## Naming conventions
+## Cross-cutting concerns placement
+```
 
-- 各 phase 内で失敗時 1 回 self-fix → それでも失敗なら停止
-- subtask は impl-green issue 内の `- [ ]` checklist。別 issue は作らない
+### Pattern.md frontmatter
 
-## アーキテクチャ enforcement
+```yaml
+---
+ori:
+  node_id: pattern:ddd-vsa-hex
+  type: pattern
+  version: 1.0.0
+  applicable_when:
+    - "domain complexity: medium-high"
+    - "bounded contexts: multiple"
+    - "test-first development desired"
+  not_applicable_when:
+    - "domain complexity: trivial (CRUD only)"
+    - "single-developer prototype"
+  default_layer_set: ddd-vsa-hex-ts
+  alternate_layer_sets: [ddd-vsa-hex-rs]
+  cross_cutting_concerns: [auth, error-handling, logging]
+---
+```
 
-`.ori/architecture.md` は feature-sliced 設計（backend layers + FSD UI layers）の
-SSoT。フロントマターでレイヤー・許可される cross-layer 依存・public entry を宣言し、
-`@ori-ori/arch-adapter-*` パッケージが native linter config（eslint /
-dependency-cruiser / import-linter / arch-adapter-rust / regex fallback）へコンパイル。
-schema 仕様は [architecture-schema.md](./architecture-schema.md) を参照。
+### Layer 構造(概略、詳細は architecture-md-schema.md)
 
-## 変更伝播
+Top-level layers:
+- `shared`(kind: shared)
+- `domain`(kind: slice — each child is a slice)
+- `ui-widget`(kind: ui-layer, order: 1) — cross-slice composition、optional
+- `ui-page`(kind: ui-layer, order: 2) — page = N slice 宿主
 
-- **node**: file（workflows/<id>.md 等）または section（{#id}-anchored H2/H3）
-- **edge type**: `derives_from`（SSoT 保護）/ `references`（弱通知）
-- **propagate()**: 単一関数。隣接ノード全てに `dirty` 通知（CoDD の forward/backward を統一）
-- **検知**: git blob 比較が主軸、`.ori/state/snapshot.json` がフォールバック
-- **SSoT 保護**: derive_from の target を編集する時 `--force` 必須、自動で `.ori/proposals/` 生成
+Slice-internal sub-layers: `[domain, application, infrastructure, presentation, tests]`
 
-## モデル選択（capability-role 抽象）
+Cross-slice rules:
+- `prohibited_direct: true`
+- `via: [shared/contracts, shared/events]`
 
-3 role: `fast` / `deep` / `reasoning`
+---
 
-| Agent | fast | deep | reasoning |
-|-------|------|------|-----------|
-| claude | claude-haiku-4-5 | claude-sonnet-4-6 | **claude-opus-4-7** |
-| codex | gpt-4o-mini | gpt-4o | o1 |
-| **opencode** | deepseek/deepseek-v4-flash | deepseek/deepseek-v4-pro | deepseek/deepseek-v4-pro |
-| gemini | gemini-2.0-flash | gemini-2.0-pro | gemini-2.0-pro-thinking |
-| cursor | claude-haiku-4.5 | claude-sonnet-4.6 | claude-opus-4.7 |
-| copilot | gpt-4o-mini | gpt-4o | claude-3.5-sonnet |
+## 7. Stack — dynamic axes と tech catalog
 
-review phase は **fresh_context: true** で別 session を spawn。
+### Axes は固定でなく動的
 
-## 配布
+/ori-arch が DDD docs を読んで project 性質を推論し、必要な axes 群を **proposal-confirmation** で確定。
 
-- **CLI**: `npm i -g @ori-ori/cli` — 決定的重処理
-- **APM パッケージ**: `apm install dev-komenzar/ori` — instructions / skills / agents / hooks
-- APM が harness 固有形式に変換（.claude/、.cursor/、.codex/、.opencode/、.windsurf/、.github/）
+### Curated vocabulary
 
-## 参照リポジトリ
+```
+.apm/contexts/axes-vocabulary.md
+```
 
-- [distill-ddd](https://github.com/tango238/distill-ddd) — DDD phase 1-11 ベース
-- [VCSDD](https://github.com/sc30gsw/vcsdd-claude-code) — workflow 概念、adversarial review
-- [CoDD](https://github.com/yohey-w/codd-dev) — coherence graph、change propagation
-- [cc-sdd](https://github.com/gotalab/cc-sdd) — 軽量化、autonomous implementation
-- [APM](https://github.com/microsoft/apm) — multi-harness 配布
+**Core axes(頻出)**:
+- `host` — デプロイ・実行先
+- `frontend` — UI render lib
+- `framework` — meta-framework
+- `backend` — API layer
+- `datastore` — 永続化
 
-## 関連リポジトリ
+**Optional axes(必要時のみ提案)**:
+- `runtime`(node / bun / deno)
+- `type-bridge`(tauri-specta / trpc / openapi-codegen)
+- `auth`(auth0 / clerk / supabase-auth / lucia / custom)
+- `api-protocol`(rest / trpc / graphql / rpc)
 
-- dogfooding 先: [promptnotes-vcsdd](../../promptnotes-vcsdd) — 3 BC、9 workflow、5 UI feature のサンプル
+### Tech catalog(初期 12)
+
+```
+.apm/skills/ori-arch/references/tech/
+├── tauri.md            (variants: version v1|v2)
+├── nextjs.md           (variants: rendering, router, runtime)
+├── sveltekit.md        (variants: adapter)
+├── nuxt.md             (variants: rendering)
+├── vite-react.md
+├── hono.md             (variants: runtime)
+├── axum.md
+├── supabase.md         (features: auth, realtime, storage, vector)
+├── cloudflare-pages.md
+├── sqlite.md           (driver variants)
+├── postgresql.md       (version + extensions)
+├── prisma.md           (engine variants)
+└── drizzle.md
+```
+
+### tech/<tech>.md schema
+
+```yaml
+---
+ori:
+  tech_id: <id>
+  axes:                          # この tech がカバーする axis 群
+    <axis>: <value>
+  variants:                      # variant 定義
+    <name>:
+      type: enum
+      values: [...]
+      default: <value>
+      affects: [...]
+      description: "..."
+      incompatibilities:
+        <variant-value>:
+          - <other-axis>: <value>  # 組合せ不可
+  variant_inference_hints:       # /ori-arch AI 推論用
+    <variant-name>:
+      - "<hint>"
+  phase_hooks:                   # phase 後処理 hook
+    - phase: <phase-name>
+      timing: pre | post
+      description: "..."
+      command: "<bash>"
+      verify:
+        type: file-exists | exit-code | grep | regex
+        ...
+      on_failure: stop | continue-with-warning
+      applicable_when:
+        variants:
+          <name>: [<value>, ...]
+---
+```
+
+### 実行 flow(/ori-arch)
+
+```
+1. DDD docs を読む(discovery, workflows, ui-fields)
+2. AI が project 性質を推論
+3. tech/ から関連 tech をピック、proposal 構築
+   "framework: tauri, frontend: tauri-react を推奨します"
+4. ユーザーに proposal 提示 + 質問
+5. Variant proposal(tech が variants 持つ場合)
+   "tauri の version は v2(default)で良いですか?"
+6. ユーザー確定後、各 tech の手順を実行
+   tech/<id>.md の reference に従って bash 実行
+7. stack.md 書き出し(動的 N フィールド + variants)
+8. pattern.md 書き出し(decision record)
+9. .ori/architecture.md update(layer 構造 = pattern + tech から導出)
+```
+
+---
+
+## 8. Skill inventory
+
+MVP v0.1 = **32 skills**、3-tier 分類で組織(tier 詳細は実装時に確定)。
+
+### 概略 tier 分類
+
+**Tier 1 — Core(必須)**:
+- `ori-init`(setup)
+- `ori-ddd-{1..11b}`(12 個)
+- `ori-arch`
+- `ori-flow`
+- `ori-sync`
+
+**Tier 2 — Workflow components(`/ori-flow` から呼ばれる)**:
+- `ori-derive`(現名、verify に rename) `ori-plan`, `ori-test-red`, `ori-impl-green`, `ori-refactor`, `ori-review`, `ori-finalize`
+
+**Tier 3 — Utility(随時実行)**:
+- `ori-feature-status`, `ori-doctor`, `ori-graph`, `ori-model`
+- `ori-propose`, `ori-review-proposals`
+- `ori-bug`, `ori-migrate`, `ori-distill`
+
+詳細は `.apm/skills/<name>/SKILL.md` 参照。
+
+---
+
+## 9. /ori-flow — 7-phase slice/page 実装
+
+### Phase 一覧
+
+| # | Phase | output | model role | failure 時 |
+|---|---|---|---|---|
+| 1 | **verify** | (なし、`notes.md` ログのみ任意) | deep | derives_from 不完全 → `.ori/proposals/` 生成 + 停止 |
+| 2 | plan | beads issue 起票 | deep | retry 1 回、fail なら停止 |
+| 3 | test-red | `tests/`(slice は unit、page は E2E + smoke + a11y) | deep | self-fix 1 回、fail なら停止 |
+| 4 | impl-green | source code | deep | self-fix 1 回、fail なら停止(test green になるまで) |
+| 5 | refactor | source diffs | fast | rollback、skip 扱い |
+| 6 | review | beads comments | **reasoning (fresh)** | critical → 停止、minor → continue |
+| 7 | finalize | manifest hash 更新 + dirty 解除 + proposals | fast | retry 3 回 |
+
+### 共通ルール
+
+- 各 phase 内で失敗時 **1 回 self-fix** → それでも失敗なら停止
+- Subtask は impl-green issue 内の `- [ ]` checklist(別 issue 作らない)
+- 停止時の責務 5 項目:
+  1. 明示的 stop(silent skip しない)
+  2. bd issue に状態反映(`bd update <id> --notes`)
+  3. manifest `flow_state` 更新
+  4. user に明確な next action 提示
+  5. flow-lock 保持(stale 検出可能)
+
+### Slice と page で content が異なる
+
+| Phase | Slice 文脈 | Page 文脈 |
+|---|---|---|
+| verify | derives_from(workflow step, aggregate, ui-field)の completeness | hosted slices が全部 generated + page-grouping doc 完全 + scenario doc 解決可能 |
+| plan | bd issue: handler 実装、unit test | bd issue: layout 実装、UI tests、E2E from scenarios |
+| test-red | handler の unit/integration test | UI tests + a11y + scenario 駆動 E2E |
+| impl-green | handler 実装 | layout + slice composition + routing wiring |
+| refactor | handler refactor | layout refactor、styles 整理 |
+| review | handler logic review | UX review、a11y 監査、scenario カバレッジ |
+| finalize | dirty 解除 | dirty 解除 + 上流提案(scenario 不完全時) |
+
+### Test 生成の責務分担
+
+- **決定論的(template から)**: smoke, composition, a11y, visual baseline
+- **AI 駆動(scenario から)**: E2E, integration test
+- test-red phase で **両方生成**(template 起動 + AI による scenario→test 変換)
+
+### Tech phase_hooks
+
+各 phase の `post` timing で、stack.md の tech 群について tech/<tech>.md の `phase_hooks` を discover & 実行:
+- `flow-impl-green-post` → `cargo check`, `pnpm build` 等
+- `ddd-10-types-post` → `tauri-specta build`, `prisma generate` 等
+
+### Resume と smart skip
+
+詳細は §14。基本:
+- `flow_state.history` に全 transition を記録
+- Re-entry 時に file hash 比較 → 手動修正検出時はユーザーに 4 択提示
+- Phase の **success criteria** を満たせば smart skip(`manually completed`)
+
+---
+
+## 10. 変更伝播 — hook と queue と /ori-sync
+
+### Hook(APM 自動配備)
+
+```
+.apm/hooks/sync-trigger.json     # APM standard 形式
+.apm/hooks/scripts/sync-trigger.js  # Node self-contained ~30 行
+```
+
+APM が各 harness の settings に **自動 merge**(`.claude/settings.json`, `.cursor/hooks.json`, etc.)。OpenCode は silent skip。
+
+### Hook script の責務
+
+```javascript
+// SSoT 対象ファイル(.ori/domain/*.md 等)を編集 → queue 追記のみ
+// .ori/state/sync-queue.jsonl に { ts, file } append
+// 常に exit 0(agent flow を止めない)
+```
+
+### /ori-sync の責務(APM skill)
+
+```
+1. queue を drain(.ori/state/sync-queue.jsonl 読み込み + 処理 + truncate)
+2. 各 file の hash 比較 → 変化検知
+3. derives_from の reverse 参照を辿り、影響 slice/page を dirty マーク
+4. dirty slice/page の beads issue 起票
+5. 全 manifest の hash 整合性 fail-safe check
+6. `--force` 編集された SSoT の `.ori/proposals/` 生成
+```
+
+### Fail-safe path
+
+| 経路 | 詳細 |
+|---|---|
+| Hook(primary) | 編集即時 queue 追記、低レイテンシ |
+| /ori-flow verify phase | 全 phase 開始時に /ori-sync 呼び出し、hook なしの harness も catch |
+| /ori-sync 手動 | troubleshoot 用 |
+| /ori-doctor | 「hook 動いていない可能性」を warning |
+
+---
+
+## 11. Manifest schema(slice + page)
+
+### 共通 schema(type discriminator で slice/page を弁別)
+
+```yaml
+slice_id: register-user                       # または page_id
+bc: user-management
+type: command                                 # command | query | page
+status: generated                             # planned | generated | dirty | stale | manually_edited
+
+# slice 固有
+workflow: user-registration                   # 派生元 workflow
+use_case: register-user
+page: registration                            # 任意、宿主 page
+trigger:                                      # event-driven slice の場合
+  - type: api
+    route: /commands/register-user
+  - type: event-subscription
+    event: event:UserRegistered
+emits:
+  - event:UserRegistered
+
+# page 固有
+route: /register                              # 任意
+slices: [register-user, check-username]       # 宿主する slice 群
+layout:
+  type: form-with-validation
+
+# 共通(SSoT 派生)
+derives_from:
+  - workflow:user-registration#step-1
+  - aggregate:User
+  - ui-field:registration-form
+
+# 共通(change detection 用 hash)
+inputs:
+  - {node: workflow:user-registration, step: 1, hash: sha256:...}
+  - {node: aggregate:User, hash: sha256:...}
+  - {node: pattern:ddd-vsa-hex, hash: sha256:...}
+  - {node: architecture:stack, hash: sha256:...}
+
+outputs:
+  - {path: src/<bc>/slices/register-user/application/handler.ts, hash: sha256:...}
+
+timestamps:
+  generated_at: 2026-05-17T10:30:00Z
+  last_modified_at: 2026-05-17T10:30:00Z
+
+implementation:
+  bd_issues: [bd-a1b2, bd-c3d4]
+
+flow_state:                                   # 7-phase 進行状況
+  current: refactor
+  current_since: 2026-05-17T22:00:30Z
+  history:
+    - {from: null, to: verify, timestamp: "..."}
+    - {from: verify, to: plan, timestamp: "..."}
+    - {from: plan, to: test-red, timestamp: "...", bd_issue: "bd-x"}
+    - ...
+  flow_lock:                                  # 進行中のみ
+    pid: 12345
+    acquired_at: "..."
+    last_heartbeat: "..."
+```
+
+### State 命名規約(`flow_state.history.to`)
+
+| 種別 | State 名 |
+|---|---|
+| Phase 名 | `verify`, `plan`, `test-red`, `impl-green`, `refactor`, `review`, `finalize` |
+| Initial | `null`(history 1 番目の from のみ) |
+| 終了 | `done` |
+| 異常 | `failed`, `aborted` |
+
+### Hash 計算
+
+- Inputs: doc 本体(frontmatter 除く)の SHA-256
+- Outputs: ファイル全体の SHA-256
+
+### Status 遷移
+
+- `planned` — workflow/page-grouping から auto-generated 未着手
+- `generated` — /ori-flow 完走
+- `dirty` — inputs.hash 変化、再生成候補
+- `stale` — dirty 長期放置
+- `manually_edited` — outputs.hash 不一致(手動編集)
+
+---
+
+## 12. .ori/architecture.md schema(v1)
+
+詳細は `.apm/contexts/architecture-md-schema.md` 参照。要点:
+
+### Top-level
+
+```yaml
+---
+version: 1
+default_root: src
+roots:
+  - id: ts
+    path: src
+    language: typescript
+    layer_set: ddd-vsa-hex-ts
+    adapter: eslint
+    slice_root: <bc>                           # slice は <bc>/slices/<id>/
+    public_entry: index.ts
+  - id: rs
+    path: src-tauri/src
+    language: rust
+    layer_set: ddd-vsa-hex-rs
+    adapter: rust
+    slice_root: <bc>
+    public_entry: mod.rs
+cross_root:                                    # Tauri 言語境界
+  - from: { root: rs, path: shared/contracts }
+    to:   { root: ts, path: <bc>/types }
+    generator: tauri-specta
+    auto_generated: true
+layer_sets: { ... }
+slice_internal: { ... }
+cross_slice:
+  prohibited_direct: true
+  via: [shared/contracts, shared/events]
+cross_bc:                                      # cross-BC bridge
+  via: [src/shared/contracts, src/shared/events]
+  same_event_bus: true                         # MVP は単一 bus
+page_map_marker: phase-11b                     # phase 11b auto-managed section
+---
+```
+
+### Layer set 例(ddd-vsa-hex-ts)
+
+```yaml
+layer_sets:
+  ddd-vsa-hex-ts:
+    layers:
+      - { id: shared,    kind: shared }
+      - { id: domain,    kind: slice, slice_internal: slice-internal-ts }
+      - { id: ui-widget, kind: ui-layer, order: 1 }
+      - { id: ui-page,   kind: ui-layer, order: 2 }
+    rules:
+      cross_layer:
+        - { from: ui-page,    allow: [ui-widget, shared, domain] }
+        - { from: ui-widget,  allow: [shared, domain] }
+        - { from: domain,     allow: [shared] }
+        - { from: shared,     allow: [] }
+      same_layer: prohibited
+      public_entry_required: true
+
+slice_internal:
+  slice-internal-ts:
+    sub_layers: [domain, application, infrastructure, presentation, tests]
+    rules:
+      - { from: presentation,   allow: [application, domain] }
+      - { from: application,    allow: [domain] }
+      - { from: infrastructure, allow: [domain] }
+      - { from: domain,         allow: [] }
+      - { from: tests,          allow: [domain, application, infrastructure, presentation] }
+```
+
+### Page Map(phase 11b auto-managed)
+
+```markdown
+## Page Map
+
+<!-- BEGIN ori-distill phase-11b auto-generated; do not edit between markers -->
+- ui-widget:
+  - prompt-workspace (depends_on: [prompt-list-slice, prompt-editor-slice])
+- ui-page:
+  - registration (depends_on: [register-user, check-username])
+- ui-page:
+  - home (depends_on: [prompt-workspace])
+<!-- END ori-distill phase-11b auto-generated -->
+```
+
+### Adapter
+
+| Adapter ID | Language(s) | Output |
+|---|---|---|
+| eslint | TS / JS | `eslint.config.ori.js`(eslint-plugin-boundaries) |
+| rust | Rust | `tests/arch.rs` または `cargo-modules` config |
+| generic | any | `.ori/arch-rules.json` + tiny CLI checker(regex) |
+
+Adapter は APM bundle 内に統合(`.apm/skills/ori-arch/scripts/adapters/`)。@ori-ori npm package は廃止。
+
+---
+
+## 13. Cross-cutting concerns
+
+### 2 分類
+
+| 分類 | Concerns | 性質 |
+|---|---|---|
+| **Always-on** | error handling, logging, trace ID | DDD doc 言及不要、ori default 生成 |
+| **DDD-driven** | auth(MVP)、rate limiting / audit trail / i18n / metrics(v0.2+) | DDD doc に declare されたら生成、空なら code ゼロ |
+
+### Always-on
+
+#### Error handling
+- Layer 別:
+  - `<bc>/domain/`: `Result<T, DomainError>`
+  - `<bc>/slices/<slice>/application/`: `Result<T, AppError>`
+  - `<bc>/slices/<slice>/infrastructure/`: `throw InfraError`(handler が catch & convert)
+  - `<bc>/slices/<slice>/presentation/`: UI 用 message 変換
+- DomainError は Phase 5 invariants から、AppError は Phase 9 step error case から派生
+- Error 型: `src/shared/errors/`(`@ori-generated`)
+
+#### Logging
+- Auto-log: handler entry / success / error、domain event emit
+- Logger interface: `src/shared/logger.ts`(`@ori-generated`)、tech 依存実装
+- Manual log は user が補助的に追加可能
+
+#### Trace ID
+- Handler context で auto-attach、log child binding に含む
+- Distributed tracing は v0.2+
+
+### DDD-driven(auth)
+
+`.ori/domain/validation.md` の `## Authorization rules` section に declare:
+
+```markdown
+## Authorization rules
+
+### slice:register-user
+- access: anonymous
+
+### slice:change-email
+- access: authenticated
+- require-role: user
+- ownership-check: user.id == ctx.userId
+```
+
+- 空 / 「認証を必要としません」 → guard code 一切生成なし
+- declare あり → handler 冒頭に `ensureAuthenticated` / `ensureRole` / `ensureOwnership` 注入
+- Helpers: `src/shared/guards/`(`@ori-generated`、declare あり時のみ存在)
+
+### 方針変更時の自動追従
+
+```
+validation.md 編集 → /ori-sync 検出 → 全 slice dirty → /ori-flow --regenerate で auth 適用
+```
+
+---
+
+## 14. 失敗モードと resume
+
+### Manifest `flow_state.history` SSoT
+
+全 phase transition を `from`/`to`/`timestamp` で記録。`completed_phases` / `failed_phases` 等は history から導出。
+
+### Entry schema
+
+| Field | 必須? | 説明 |
+|---|---|---|
+| `from` | ✅ | 直前 state(初回のみ `null`) |
+| `to` | ✅ | 新 state |
+| `timestamp` | ✅ | ISO8601 UTC |
+| `event` | optional | 補助 event type |
+| `reason` | optional | failed/aborted 理由 |
+| `note` | optional | 人間向け補足 |
+| `failed_phase` | optional | `to: failed` の時の失敗 phase |
+| `bd_issue` | optional | 関連 bd issue ID |
+| `files_written` | optional | 書かれた file path |
+| `files_user_modified` | optional | 手動編集を検出した file path |
+| `criteria_check` | optional | smart skip 時の結果 |
+
+### Re-entry 判定 4 path
+
+| Path | 条件 | 挙動 |
+|---|---|---|
+| **Fresh** | history なし or `to: done` | phase 1 から通常起動 |
+| **Clean resume** | 失敗 phase あり + 全 file hash match | 「resume / restart?」(default: resume) |
+| **Manual fix detected** | file hash mismatch | 4 択(Skip / Re-generate / Proposal / Abort)、default = **Skip**(ユーザー意思尊重) |
+| **Stale lock** | flow-lock heartbeat > 30 min | 「Continue / Restart / Abort」 |
+
+### Smart skip(success criteria check)
+
+各 phase は success criteria 持つ。Resume 時に criteria 既に満たせば re-run せず skip:
+- verify: derives_from resolve 可 + DDD doc complete
+- plan: bd issue 存在
+- test-red: 期待された assertion で fail
+- impl-green: all green
+- refactor: type check + green 維持
+- review: critical issue なし
+- finalize: hash 整合 + dirty 解除済
+
+### `--regenerate` フラグ
+
+`/ori-flow <id>` 中断 resume(default)
+`/ori-flow <id> --restart` phase 1 から
+`/ori-flow <id> --from=<phase>` 指定 phase から
+`/ori-flow <id> --regenerate` input 変更時の re-run(全 phase)
+
+### Scenario B(dirty + manually_edited 衝突)
+
+両 status 並列保持。`/ori-flow --regenerate` 時に default = **Proposal**(`.ori/proposals/` に AI 版書き、user 手動 merge)。
+
+### 人間先行 file(Scenario D)
+
+`/ori-flow` 初回起動時、target file が存在 + `@ori-generated` marker なし →
+「Import / Overwrite / Abort」を提示。Import 選択 → `@ori-imported` marker 追加。
+
+### Concurrent /ori-flow
+
+MVP は flow-lock で禁止。v0.2+ で aggregate-level lock 検討。
+
+---
+
+## 15. 配布 — APM single package
+
+### 構造
+
+```
+ori/                               # APM package source
+├── apm.yml
+├── README.md
+├── LICENSE
+├── .apm/
+│   ├── hooks/
+│   │   ├── sync-trigger.json
+│   │   └── scripts/sync-trigger.js
+│   ├── skills/
+│   │   ├── ori-init/SKILL.md
+│   │   ├── ori-ddd-1-discovery/SKILL.md
+│   │   ├── ...(32 個)
+│   │   └── ori-arch/
+│   │       ├── SKILL.md
+│   │       ├── scripts/         # esbuild bundle(per-skill)
+│   │       └── references/
+│   │           └── tech/        # 12 tech catalog
+│   ├── contexts/                # cross-skill shared SSoT
+│   │   ├── architecture-md-schema.md
+│   │   ├── slice-manifest-schema.md
+│   │   ├── page-manifest-schema.md
+│   │   ├── axes-vocabulary.md
+│   │   ├── phase-hook-names.md
+│   │   ├── phase-hook-schema.md
+│   │   ├── marker-format.md
+│   │   └── patterns/
+│   │       └── ddd-vsa-hex/
+│   │           ├── pattern.md
+│   │           └── ai-notes.md
+│   └── agents/                  # cross-harness subagents(Layer 1)
+└── docs/                        # ori repo 内部 doc(deploy 対象外)
+    ├── design.md                # ★ 本ファイル
+    └── contributing/
+        ├── adding-pattern.md
+        ├── adding-tech.md
+        ├── adding-adapter.md
+        └── adding-task-adapter.md
+```
+
+### 開発 source は別 directory monorepo
+
+```
+src/                             # TS monorepo(開発時 SSoT)
+├── parser/
+├── coherence/
+├── arch-adapter-eslint/
+├── arch-adapter-generic/
+├── arch-adapter-rust/
+├── slice-runner/                # slice/page 生成本体
+└── skills/                      # skill ごとの bundle entry
+    ├── ori-arch/index.ts
+    ├── ori-sync/index.ts
+    └── ...
+```
+
+ビルド時に esbuild が各 skill bundle を `.apm/skills/<name>/scripts/` に書き出す。CI で `pnpm build && git diff --exit-code .apm/` で stale check。
+
+### npm package 戦略
+
+- **`@ori-ori/cli` を含む全 packages を soft-deprecate**
+  ```bash
+  npm deprecate @ori-ori/<name>@'*' \
+    "Reserved for future use. Currently distributed via APM: apm install ori"
+  ```
+- 配布は APM 単独
+- CI 用途: APM-installed skill scripts を直接 node で実行
+  ```bash
+  node <APM-installed-path>/.apm/skills/ori-sync/scripts/drain-queue.js --check-only
+  ```
+
+### Harness 対応
+
+| Harness | Skills | Hooks | Agents |
+|---|---|---|---|
+| Claude Code | ✅ | ✅ | ✅ |
+| OpenCode | ✅ | ✗(手動 /ori-sync) | ✅ |
+| Cursor | ✅ | ✅ | ✅ |
+| Gemini | ✅ | ✅ | ✗ |
+| Copilot | ✅ | ✅ | ✅ |
+| Codex | ✅ | ✅(TOML) | ✅ |
+| Windsurf | ✅ | partial | partial |
+
+---
+
+## 16. Curated content の置き場
+
+| 種別 | 場所 | 用途 |
+|---|---|---|
+| Schema 仕様 | `.apm/contexts/<name>-schema.md` | cross-skill 共有 SSoT |
+| Pattern | `.apm/contexts/patterns/<name>/` | cross-skill(arch, types, flow が参照) |
+| Tech catalog | `.apm/skills/ori-arch/references/tech/<id>.md` | ori-arch 専属 |
+| Vocabulary | `.apm/contexts/axes-vocabulary.md`, `phase-hook-names.md` | controlled vocabulary |
+| Hook scripts | `.apm/hooks/scripts/` | APM auto-deploy |
+| Skill scripts | `.apm/skills/<name>/scripts/` | per-skill esbuild bundle |
+| Adapter | `.apm/skills/ori-arch/scripts/adapters/<name>.js` | adapter 統合 |
+| Contributor docs | `docs/contributing/*.md` | ori 開発者向け |
+
+### Cross-skill 共有 schema list
+
+```
+.apm/contexts/
+├── architecture-md-schema.md          # .ori/architecture.md の形式
+├── slice-manifest-schema.md           # .ori/slices/<id>/manifest.yaml
+├── page-manifest-schema.md            # .ori/pages/<id>/manifest.yaml(slice schema + type:page)
+├── doc-frontmatter-schema.md          # 全 DDD doc 共通 frontmatter
+├── axes-vocabulary.md                 # stack axes controlled vocabulary
+├── phase-hook-names.md                # tech phase_hooks の phase 名前空間
+├── phase-hook-schema.md               # phase_hooks の verify schema
+├── marker-format.md                   # @ori-generated 等 marker 形式
+└── patterns/
+    └── ddd-vsa-hex/
+        ├── pattern.md
+        └── ai-notes.md
+```
+
+---
+
+## 17. Repository layout
+
+### Per-project(対象プロジェクト側、/ori-init が作る最小構成)
+
+```
+<project>/
+├── .ori/
+│   ├── config.yml                          # ori_version, task_manager: beads, models
+│   ├── domain/                             # DDD phase 出力(空、phase 進行で populate)
+│   │   └── .gitkeep
+│   ├── slices/                             # /ori-flow 出力
+│   │   └── .gitkeep
+│   ├── pages/                              # /ori-flow + page-grouping 出力
+│   │   └── .gitkeep
+│   ├── proposals/                          # SSoT 違反時 auto-generated
+│   │   └── .gitkeep
+│   ├── state/                              # snapshot + queue(gitignore)
+│   │   └── .gitignore
+│   └── architecture.md                     # /ori-arch で populate
+├── .gitignore
+├── README.md
+└── AGENTS.md                               # AI-aware conventions stub
+```
+
+`/ori-init` は **silent** で .ori/ skeleton のみ作成。Template copy / scaffold は **しない**(/ori-arch の framework init で project code は生成される)。
+
+### /ori-arch 後の構造(ddd-vsa-hex + Tauri 例)
+
+```
+<project>/
+├── .ori/                                    # SSoT(上記)
+├── docs/architecture/
+│   ├── pattern.md                          # /ori-arch 決定記録
+│   └── stack.md                            # /ori-arch interview 結果
+├── src-tauri/src/                          # Rust(framework init 出力 + ori overlay)
+│   └── <bc>/
+│       ├── domain/                         # Phase 10 types(BC 共有)
+│       ├── shared/contracts/events/        # Phase 6 events
+│       ├── shared/events/event-bus.rs      # @ori-generated
+│       ├── slices/
+│       │   └── <slice-id>/
+│       │       ├── domain/                 # slice 固有(command DTO)
+│       │       ├── application/handler.rs
+│       │       ├── infrastructure/
+│       │       └── tests/
+│       └── mod.rs
+└── src/                                     # TS frontend
+    └── <bc>/
+        ├── types/                          # tauri-specta auto-generated
+        ├── slices/<slice-id>/presentation/ # UI fragment
+└── src/pages/                              # page 単位 layout
+    └── <page-id>/
+        ├── Page.tsx
+        ├── route.ts
+        └── e2e/<scenario>.spec.ts
+└── src/shared/
+    ├── errors/                             # @ori-generated
+    ├── logger.ts                           # @ori-generated
+    ├── guards/                             # @ori-generated(auth declare 時)
+    ├── contracts/events/                   # cross-BC events
+    └── events/global-event-bus.ts          # @ori-generated
+```
+
+---
+
+## 18. 用語集
+
+| 用語 | 説明 |
+|---|---|
+| **slice** | 1 use case = 1 handler = 1 vertical slice。`.ori/slices/<id>/` に manifest。 |
+| **page** | N slice の宿主(UI composition unit)。`.ori/pages/<id>/`。Phase 11b 由来。 |
+| **BC** | Bounded Context。DDD strategic 概念。code 上の top-level module。 |
+| **DDD-VSA-Hex** | DDD + Vertical Slice + Hexagonal pattern。MVP 唯一の curated pattern。 |
+| **node** | graph 上のノード(doc または code file)。`<type>:<name>` 形式の node_id。 |
+| **node_id** | グローバルユニーク識別子(例: `aggregate:User`, `scenario:registration-happy-path`)。 |
+| **manifest** | slice/page の generation メタデータ。`.ori/{slices,pages}/<id>/manifest.yaml`。 |
+| **derives_from** | manifest の論理依存宣言(SSoT 保護対象)。 |
+| **inputs** | manifest の物理依存 + hash(change detection 用)。 |
+| **flow_state** | manifest 内の 7-phase 進行状況(history-based)。 |
+| **Confidence bands** | edge 信頼度。Green (≥0.90) / Amber (≥0.50) / Gray (<0.50)。MVP は Green declared edge のみ。 |
+| **status** | slice/page status。`planned | generated | dirty | stale | manually_edited`。 |
+| **@ori-generated** | ori が生成した file の marker(手動編集検出用)。 |
+| **@ori-imported** | 人間先行 file を ori 管理下に取り込んだ marker。 |
+| **@ori-stub** | 操作 signature 宣言済、body 未実装の marker。 |
+| **@ori-operation / @ori-status** | aggregate 内 operation 単位の SSoT 保護 marker。 |
+| **tech catalog** | curated tech 集合(`.apm/skills/ori-arch/references/tech/<id>.md`)。 |
+| **variants** | tech doc 内の sub-選択肢(例: nextjs の rendering: ssr/ssg/isr)。 |
+| **phase_hooks** | tech doc 内の phase 後処理 hook 宣言。 |
+| **axes-vocabulary** | stack axis 名の controlled vocabulary。 |
+| **dynamic axes** | /ori-arch が DDD docs から推論して、必要な axis 群を proposal する方式。 |
+| **APM** | Microsoft Agent Package Manager。ori の配布手段。 |
+| **Beads** | 分散グラフ issue tracker。ori MVP の task management。 |
+| **harness** | AI ハーネス(Claude Code, OpenCode, etc.)。 |
+| **curated** | ori repo で contributor が PR で追加するリソース。 |
+| **always-on / DDD-driven** | cross-cutting concerns の 2 分類(default 生成 vs DDD doc declare で生成)。 |
+
+---
+
+## 19. v0.2+ ロードマップ
+
+### v0.2 候補
+
+- `/ori-rules`(machine-checkable invariants 生成)
+- 追加 pattern(2 個目を入れて pluggability 実証)
+- Codex CLI の Layer 1 対応
+- Tests 体系の整備
+- Curated content の semver + migration helper
+
+### v0.3 候補
+
+- 追加 task manager adapter(Linear / GitHub Issues / Jira)
+- Static analysis による code-to-code edge 自動検出
+- Brownfield support(`/ori-extract` 等)
+- 分散 event bus
+- Concurrent /ori-flow(aggregate-level lock)
+
+### 検討中
+
+- DDD-driven concerns: rate limiting / audit trail / i18n / caching / metrics
+- AI 自動 polling(`/ori-work --auto`)
+- frontmatter `confidence:` field の手動指定許可
+- Aggregate-level vs slice-level lock 戦略
+- Distributed tracing(OpenTelemetry)
+
+---
+
+## 補足: 設計プロセス記録
+
+- 旧設計 doc: `ori-design.md`(2026-05-17 sketch、本ファイルに merge 後削除)
+- grill-me セッション: Q1-Q20(2026-05-19)で確定した決定を本ファイルに反映
+- 議論言語: 日本語
+- 議論スタイル: 1 質問ずつ、推奨つき、最終決定はユーザー

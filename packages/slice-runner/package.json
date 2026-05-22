@@ -1,0 +1,35 @@
+{
+  "name": "@ori-ori/slice-runner",
+  "version": "0.0.1",
+  "description": "7-phase per-slice workflow runner + beads bridge",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dev-komenzar/ori",
+    "directory": "packages/slice-runner"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "files": ["dist"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ori-ori/coherence": "workspace:*",
+    "@ori-ori/parser": "workspace:*",
+    "yaml": "^2.5.0",
+    "zod": "^3.23.0"
+  }
+}

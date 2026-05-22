@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { parseFrontmatter } from "./frontmatter.js";
 
-const LayerKindSchema = z.enum(["shared", "feature", "ui-layer"]);
+const LayerKindSchema = z.enum(["shared", "slice", "ui-layer"]);
 
 const LayerSchema = z
   .object({
     id: z.string(),
     kind: LayerKindSchema,
     order: z.number().int().optional(),
-    feature_internal: z.string().optional(),
+    slice_internal: z.string().optional(),
   })
   .passthrough();
 
@@ -41,17 +41,17 @@ const LayerSetSchema = z
   })
   .passthrough();
 
-const FeatureInternalRuleSchema = z
+const SliceInternalRuleSchema = z
   .object({
     from: z.string(),
     allow: z.array(z.string()),
   })
   .passthrough();
 
-const FeatureInternalSchema = z
+const SliceInternalSchema = z
   .object({
     sub_layers: z.array(z.string()).min(1),
-    rules: z.array(FeatureInternalRuleSchema).default([]),
+    rules: z.array(SliceInternalRuleSchema).default([]),
   })
   .passthrough();
 
@@ -62,7 +62,7 @@ const RootSchema = z
     language: z.string(),
     layer_set: z.string(),
     adapter: z.string(),
-    feature_root: z.string(),
+    slice_root: z.string(),
     public_entry: z.string(),
   })
   .passthrough();
@@ -76,7 +76,7 @@ const CrossRootSchema = z
   })
   .passthrough();
 
-const CrossFeatureSchema = z
+const CrossSliceSchema = z
   .object({
     prohibited_direct: z.boolean().default(true),
     via: z.array(z.string()).default([]),
@@ -91,9 +91,9 @@ const FrontmatterSchema = z
     roots: z.array(RootSchema).optional(),
     cross_root: z.array(CrossRootSchema).optional(),
     layer_sets: z.record(LayerSetSchema),
-    feature_internal: z.record(FeatureInternalSchema).optional(),
-    cross_feature: CrossFeatureSchema,
-    ui_layer_map_marker: z.string().optional(),
+    slice_internal: z.record(SliceInternalSchema).optional(),
+    cross_slice: CrossSliceSchema,
+    page_map_marker: z.string().optional(),
   })
   .passthrough()
   .refine((v) => v.root != null || (v.roots != null && v.roots.length > 0), {
@@ -103,8 +103,8 @@ const FrontmatterSchema = z
 export type RootConfig = z.infer<typeof RootSchema> & { id: string };
 export type LayerSet = z.infer<typeof LayerSetSchema>;
 export type ForbiddenImportRule = z.infer<typeof ForbiddenImportRuleSchema>;
-export type FeatureInternal = z.infer<typeof FeatureInternalSchema>;
-export type CrossFeature = z.infer<typeof CrossFeatureSchema>;
+export type SliceInternal = z.infer<typeof SliceInternalSchema>;
+export type CrossSlice = z.infer<typeof CrossSliceSchema>;
 export type CrossRoot = z.infer<typeof CrossRootSchema>;
 
 export interface ArchitectureSpec {
@@ -113,9 +113,9 @@ export interface ArchitectureSpec {
   roots: RootConfig[];
   cross_root: CrossRoot[];
   layer_sets: Record<string, LayerSet>;
-  feature_internal: Record<string, FeatureInternal>;
-  cross_feature: CrossFeature;
-  ui_layer_map_marker?: string;
+  slice_internal: Record<string, SliceInternal>;
+  cross_slice: CrossSlice;
+  page_map_marker?: string;
   body: string;
 }
 
@@ -140,9 +140,9 @@ export function parseArchitectureSpec(raw: string): ArchitectureSpec {
     roots,
     cross_root: fm.cross_root ?? [],
     layer_sets: fm.layer_sets,
-    feature_internal: fm.feature_internal ?? {},
-    cross_feature: fm.cross_feature,
-    ui_layer_map_marker: fm.ui_layer_map_marker,
+    slice_internal: fm.slice_internal ?? {},
+    cross_slice: fm.cross_slice,
+    page_map_marker: fm.page_map_marker,
     body: content,
   };
 }

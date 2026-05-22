@@ -2,17 +2,17 @@ import type { ArchitectureSpec, LayerSet, RootConfig } from "@ori-ori/parser";
 
 export interface LayerMatcher {
   layerId: string;
-  kind: "shared" | "feature" | "ui-layer";
+  kind: "shared" | "slice" | "ui-layer";
   /** Path prefix (POSIX-normalized, no leading slash, ends with /). */
   prefix: string;
-  /** For feature layers: which path segment after the prefix is the feature name. 0 = first */
-  featureSegment?: number;
+  /** For slice layers: which path segment after the prefix is the slice name. 0 = first */
+  sliceSegment?: number;
 }
 
 export interface LayerHit {
   layerId: string;
-  kind: "shared" | "feature" | "ui-layer";
-  featureName?: string;
+  kind: "shared" | "slice" | "ui-layer";
+  sliceName?: string;
 }
 
 function toPosix(p: string): string {
@@ -23,16 +23,16 @@ function ensureTrailingSlash(p: string): string {
   return p.endsWith("/") ? p : `${p}/`;
 }
 
-function featureBase(root: RootConfig): string {
-  return root.feature_root === "."
+function sliceBase(root: RootConfig): string {
+  return root.slice_root === "."
     ? ensureTrailingSlash(root.path)
-    : ensureTrailingSlash(`${root.path}/${root.feature_root}`);
+    : ensureTrailingSlash(`${root.path}/${root.slice_root}`);
 }
 
 /**
  * Build the ordered list of layer matchers for a given root.
  * Order is important: more-specific (longer) prefixes are checked first so
- * that e.g. `src/lib/shared/` wins over `src/lib/<feature>/` for a path
+ * that e.g. `src/lib/shared/` wins over `src/lib/<slice>/` for a path
  * under `src/lib/shared/contracts/`.
  */
 export function buildMatchers(spec: ArchitectureSpec, root: RootConfig): LayerMatcher[] {
@@ -40,7 +40,7 @@ export function buildMatchers(spec: ArchitectureSpec, root: RootConfig): LayerMa
   if (!set) {
     throw new Error(`layer_set "${root.layer_set}" not found`);
   }
-  const featBase = featureBase(root);
+  const base = sliceBase(root);
   const matchers: LayerMatcher[] = [];
 
   for (const layer of set.layers) {
@@ -48,7 +48,7 @@ export function buildMatchers(spec: ArchitectureSpec, root: RootConfig): LayerMa
       matchers.push({
         layerId: layer.id,
         kind: "shared",
-        prefix: `${featBase}${layer.id}/`,
+        prefix: `${base}${layer.id}/`,
       });
     } else if (layer.kind === "ui-layer") {
       matchers.push({
@@ -59,13 +59,13 @@ export function buildMatchers(spec: ArchitectureSpec, root: RootConfig): LayerMa
     }
   }
   for (const layer of set.layers) {
-    if (layer.kind === "feature") {
-      // The feature pattern is the broadest; place it last so shared/ui win.
+    if (layer.kind === "slice") {
+      // The slice pattern is the broadest; place it last so shared/ui win.
       matchers.push({
         layerId: layer.id,
-        kind: "feature",
-        prefix: featBase,
-        featureSegment: 0,
+        kind: "slice",
+        prefix: base,
+        sliceSegment: 0,
       });
     }
   }
@@ -78,14 +78,14 @@ export function classify(relPath: string, matchers: LayerMatcher[]): LayerHit | 
   for (const m of matchers) {
     if (!p.startsWith(m.prefix)) continue;
     const tail = p.slice(m.prefix.length);
-    if (m.kind === "feature") {
+    if (m.kind === "slice") {
       const segments = tail.split("/").filter(Boolean);
-      // A feature folder must have at least one file inside it; a file
-      // directly under feature_root is not a feature.
+      // A slice folder must have at least one file inside it; a file
+      // directly under slice_root is not a slice.
       if (segments.length < 2) continue;
-      const featureName = segments[m.featureSegment ?? 0];
-      if (!featureName) continue;
-      return { layerId: m.layerId, kind: m.kind, featureName };
+      const sliceName = segments[m.sliceSegment ?? 0];
+      if (!sliceName) continue;
+      return { layerId: m.layerId, kind: m.kind, sliceName };
     }
     return { layerId: m.layerId, kind: m.kind };
   }

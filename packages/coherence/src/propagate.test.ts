@@ -6,14 +6,14 @@ describe("propagate", () => {
   it("notifies the SSoT when a derived doc changes", () => {
     const graph = buildGraph([
       {
-        from: { path: ".ori/features/ui-editor/spec.md", sectionId: null },
+        from: { path: ".ori/pages/ui-editor/spec.md", sectionId: null },
         to: { path: ".ori/domain/aggregates.md", sectionId: "note-aggregate" },
         type: "derives_from",
       },
     ]);
 
     const marks = propagate(graph, {
-      path: ".ori/features/ui-editor/spec.md",
+      path: ".ori/pages/ui-editor/spec.md",
       sectionId: null,
     }, "force");
 
@@ -25,12 +25,12 @@ describe("propagate", () => {
   it("notifies derived docs when SSoT changes", () => {
     const graph = buildGraph([
       {
-        from: { path: ".ori/features/ui-editor/spec.md", sectionId: null },
+        from: { path: ".ori/pages/ui-editor/spec.md", sectionId: null },
         to: { path: ".ori/domain/aggregates.md", sectionId: "note-aggregate" },
         type: "derives_from",
       },
       {
-        from: { path: ".ori/features/capture-auto-save/spec.md", sectionId: null },
+        from: { path: ".ori/slices/capture-auto-save/spec.md", sectionId: null },
         to: { path: ".ori/domain/aggregates.md", sectionId: "note-aggregate" },
         type: "derives_from",
       },
@@ -44,8 +44,8 @@ describe("propagate", () => {
     expect(marks).toHaveLength(2);
     const paths = marks.map((m) => m.node.path).sort();
     expect(paths).toEqual([
-      ".ori/features/capture-auto-save/spec.md",
-      ".ori/features/ui-editor/spec.md",
+      ".ori/pages/ui-editor/spec.md",
+      ".ori/slices/capture-auto-save/spec.md",
     ]);
   });
 });

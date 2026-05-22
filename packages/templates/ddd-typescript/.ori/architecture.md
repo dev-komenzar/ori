@@ -5,13 +5,13 @@ root:
   language: typescript
   layer_set: feature-sliced-ts
   adapter: eslint
-  feature_root: lib
+  slice_root: lib
   public_entry: index.ts
 layer_sets:
   feature-sliced-ts:
     layers:
       - { id: shared,     kind: shared }
-      - { id: domain,     kind: feature, feature_internal: feature-internal-ts }
+      - { id: domain,     kind: slice, slice_internal: slice-internal-ts }
       - { id: ui-entity,  kind: ui-layer, order: 1 }
       - { id: ui-feature, kind: ui-layer, order: 2 }
       - { id: ui-widget,  kind: ui-layer, order: 3 }
@@ -26,15 +26,15 @@ layer_sets:
         - { from: shared,     allow: [] }
       same_layer: prohibited
       public_entry_required: true
-feature_internal:
-  feature-internal-ts:
+slice_internal:
+  slice-internal-ts:
     sub_layers: [presentation, application, domain, infrastructure]
     rules:
       - { from: presentation, allow: [application, domain] }
       - { from: application,  allow: [domain, infrastructure] }
       - { from: domain,       allow: [] }
       - { from: infrastructure, allow: [domain] }
-cross_feature:
+cross_slice:
   prohibited_direct: true
   via: [shared/contracts, shared/events]
 ---
@@ -51,12 +51,12 @@ just spreads it.
 ```
 src/
 ├── lib/
-│   ├── shared/              # cross-feature primitives (types, events, contracts)
+│   ├── shared/              # cross-slice primitives (types, events, contracts)
 │   │   ├── types/           # Result, branded types, etc.
 │   │   ├── events/          # base DomainEvent shape
-│   │   └── contracts/       # cross-feature ports / event payload contracts
-│   └── <feature>/           # one folder per domain feature — `tasks/` is the worked example
-│       ├── index.ts         # PUBLIC API — the only file other features may import
+│   │   └── contracts/       # cross-slice ports / event payload contracts
+│   └── <slice>/             # one folder per domain slice — `tasks/` is the worked example
+│       ├── index.ts         # PUBLIC API — the only file other slices may import
 │       ├── domain/
 │       ├── application/
 │       ├── infrastructure/
@@ -65,7 +65,7 @@ src/
 ├── ui-entity/               # FSD layer 1 — display models / atomic visuals
 │   └── <slice>/index.ts     # may import only from shared
 ├── ui-feature/              # FSD layer 2 — user-facing actions
-│   └── <slice>/index.ts     # may import lib/<feature>/index.ts (domain public API)
+│   └── <slice>/index.ts     # may import lib/<slice>/index.ts (domain public API)
 ├── ui-widget/               # FSD layer 3 — composed UI blocks
 │   └── <slice>/index.ts     # may import ui-feature, ui-entity, shared
 └── ui-page/                 # FSD layer 4 — top-level screens
@@ -74,14 +74,14 @@ src/
 
 ## Rules
 
-### Backend (domain) features
+### Backend (domain) slices
 
-- **Cross-feature direct imports are prohibited.** If feature A needs something
-  from feature B, declare the shape in `shared/contracts/` (or emit a domain
+- **Cross-slice direct imports are prohibited.** If slice A needs something
+  from slice B, declare the shape in `shared/contracts/` (or emit a domain
   event via `shared/events/`) and have both sides depend on the contract.
-- **Each feature has exactly one public entry**: `index.ts`. Importing
-  `tasks/domain/task.js` from outside the `tasks/` feature is a violation.
-- **`shared/` may not import from any feature** — it sits below everything.
+- **Each slice has exactly one public entry**: `index.ts`. Importing
+  `tasks/domain/task.js` from outside the `tasks/` slice is a violation.
+- **`shared/` may not import from any slice** — it sits below everything.
 
 ### UI layers (FSD)
 
@@ -90,8 +90,8 @@ The four UI layers form a strict one-way pipeline
 never import from higher layers, and **same-layer imports are prohibited**
 (e.g., one `ui-widget` slice may not import from another `ui-widget` slice).
 
-- **`ui-feature` is the only UI layer permitted to import a domain feature**
-  (`lib/<feature>/index.ts`). Other UI layers stay UI-pure and receive view
+- **`ui-feature` is the only UI layer permitted to import a domain slice**
+  (`lib/<slice>/index.ts`). Other UI layers stay UI-pure and receive view
   models from `ui-feature` outputs.
 - **Each UI slice exposes one public entry**: `index.ts`. Cross-slice imports
   must hit the slice's `index.ts`, never an internal file.

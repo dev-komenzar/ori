@@ -16,12 +16,12 @@ provides:
     - instructions/ddd-test.instructions.md
     - instructions/ddd-rust.instructions.md
   skills:
-    - skills/ori-init.md
-    - skills/ori-flow.md
-    - skills/ori-sync.md
-    - skills/ori-propose.md
-    - skills/ori-review-proposals.md
-    - skills/ori-distill.md
+    - skills/ori-init/SKILL.md
+    - skills/ori-flow/SKILL.md
+    - skills/ori-sync/SKILL.md
+    - skills/ori-propose/SKILL.md
+    - skills/ori-review-proposals/SKILL.md
+    - skills/ori-distill/SKILL.md
   agents:
     - agents/ori-reviewer.md
   hooks:

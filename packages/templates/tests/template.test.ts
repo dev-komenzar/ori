@@ -13,8 +13,8 @@ describe("ddd-typescript template", () => {
     const raw = await readFile(join(TEMPLATE_ROOT, ".ori/architecture.md"), "utf8");
     const spec = parseArchitectureSpec(raw);
     expect(spec.version).toBe(1);
-    expect(spec.cross_feature.prohibited_direct).toBe(true);
-    expect(spec.roots[0]?.feature_root).toBe("lib");
+    expect(spec.cross_slice.prohibited_direct).toBe(true);
+    expect(spec.roots[0]?.slice_root).toBe("lib");
   });
 
   it("produces an eslint config via the eslint adapter", async () => {

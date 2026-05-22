@@ -1,7 +1,7 @@
 {
   "name": "@ori-ori/cli",
   "version": "0.0.1",
-  "description": "ori CLI — DDD-driven feature scaffolding with CoDD coherence",
+  "description": "ori CLI — DDD-driven slice/page scaffolding with CoDD coherence",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -23,7 +23,7 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "templates"],
+  "files": ["dist"],
   "scripts": {
     "build": "tsup src/bin.ts src/index.ts --format esm --dts --clean",
     "test": "vitest run",
@@ -33,9 +33,8 @@
   },
   "dependencies": {
     "@ori-ori/coherence": "workspace:*",
-    "@ori-ori/feature-runner": "workspace:*",
+    "@ori-ori/slice-runner": "workspace:*",
     "@ori-ori/parser": "workspace:*",
-    "@ori-ori/templates": "workspace:*",
     "citty": "^0.1.6",
     "consola": "^3.2.0",
     "yaml": "^2.5.0",

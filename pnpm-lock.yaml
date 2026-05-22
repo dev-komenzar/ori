@@ -50,15 +50,12 @@ importers:
       '@ori-ori/coherence':
         specifier: workspace:*
         version: link:../coherence
-      '@ori-ori/feature-runner':
-        specifier: workspace:*
-        version: link:../feature-runner
       '@ori-ori/parser':
         specifier: workspace:*
         version: link:../parser
-      '@ori-ori/templates':
+      '@ori-ori/slice-runner':
         specifier: workspace:*
-        version: link:../templates
+        version: link:../slice-runner
       citty:
         specifier: ^0.1.6
         version: 0.1.6
@@ -74,21 +71,6 @@ importers:
 
   packages/coherence:
     dependencies:
-      '@ori-ori/parser':
-        specifier: workspace:*
-        version: link:../parser
-      yaml:
-        specifier: ^2.5.0
-        version: 2.9.0
-      zod:
-        specifier: ^3.23.0
-        version: 3.25.76
-
-  packages/feature-runner:
-    dependencies:
-      '@ori-ori/coherence':
-        specifier: workspace:*
-        version: link:../coherence
       '@ori-ori/parser':
         specifier: workspace:*
         version: link:../parser
@@ -120,6 +102,21 @@ importers:
       '@types/mdast':
         specifier: ^4.0.0
         version: 4.0.4
+
+  packages/slice-runner:
+    dependencies:
+      '@ori-ori/coherence':
+        specifier: workspace:*
+        version: link:../coherence
+      '@ori-ori/parser':
+        specifier: workspace:*
+        version: link:../parser
+      yaml:
+        specifier: ^2.5.0
+        version: 2.9.0
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
 
   packages/templates:
     devDependencies:
