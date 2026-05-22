@@ -8,7 +8,7 @@ description: 人間が見つけたバグを README の 4 ケース（domain / im
 ## 役割
 
 - **triage 担当**：4 つの質問でバグを 4 ケース（domain / impl / spec / cross-slice）に分類
-- **動線案内人**：各ケースに対応する CLI コマンド列を提示
+- **動線案内人**：各ケースに対応するスキル呼び出しを提示
 - **実行禁止者**：fix は他スキル / 人間の責務。このスキルは類型化と案内のみ
 
 ## バグの 4 ケース（README より）
@@ -56,9 +56,9 @@ description: 人間が見つけたバグを README の 4 ケース（domain / im
 分類：ドメインバグ。.ori/domain/ の編集が必要。
 
 推奨動線：
-  1. vim .ori/domain/aggregates.md   ← 不変条件を追加 / 修正
-  2. ori sync                         ← dirty 化された slice を一覧表示
-  3. /ori-flow <dirty-slice-1>        ← 影響 slice を順次再走
+  1. Read / Edit .ori/domain/aggregates.md  ← 不変条件を追加 / 修正
+  2. `/ori-sync`                         ← dirty 化された slice を一覧表示
+  3. `/ori-flow <dirty-slice-1>`        ← 影響 slice を順次再走
 
 ヒント：複数 slice が dirty 化される可能性が高い。最も影響の大きい
 slice から /ori-flow で再 derive することを推奨。
@@ -72,8 +72,8 @@ slice から /ori-flow で再 derive することを推奨。
 推奨動線：
   1. .ori/slices/<id>/tests/ に失敗テストを追加（whitespace / unicode 等）
   2. pnpm test                      ← RED 確認
-  3. ori slice run <id> --phase impl-green --reason "manual bug: <概要>"
-  4. ori slice run <id> --phase review (推奨)
+  3. `/ori-impl-green <id> --reason "manual bug: <概要>"`
+  4. `/ori-review <id>` (推奨)
 
 ヒント：ドメインには触らない。テストを先に書いて修正範囲を局所化する。
 ```
@@ -84,13 +84,13 @@ slice から /ori-flow で再 derive することを推奨。
 分類：spec バグ。domain は正しいが派生が悪い。
 
 推奨動線：
-  1. vim .ori/slices/<id>/spec.md
-  2. ori sync                       ← guardrail がブロックする
-     エラー：spec.md is derived. Edit blocked.
-       [1] Edit domain source
-       [2] Force edit + upstream proposal: ori sync --force <path>
+  1. Read / Edit .ori/slices/<id>/spec.md
+  2. `/ori-sync`                       ← guardrail がブロックする
+      エラー：spec.md is derived. Edit blocked.
+        [1] Edit domain source
+        [2] Force edit + upstream proposal: `/ori-sync --force <path>`
   3. オプション [2] を選んだ場合：proposal が .ori/proposals/ に生成される
-  4. /ori-review-proposals          ← 人間レビューで accept/reject
+  4. `/ori-review-proposals`          ← 人間レビューで accept/reject
 
 ヒント：多くの場合 domain を直すのが正解（ケース 1 への昇格）。
 spec で局所決定したい時のみ --force を使う。
@@ -102,9 +102,9 @@ spec で局所決定したい時のみ --force を使う。
 分類：統合バグ。複数 slice にまたがる。
 
 推奨動線：
-  1. /ori-distill phase=workflows   ← Phase 9 に戻り欠落シナリオを追加
-  2. ori slice new <integration-slice-id>
-  3. /ori-flow <integration-slice-id>
+  1. `/ori-distill phase=workflows`   ← Phase 9 に戻り欠落シナリオを追加
+  2. 新規 slice を作成
+  3. `/ori-flow <integration-slice-id>`
 
 ヒント：既存 slice を編集せず、新規 slice として境界を明確にする。
 「ドメインモデルにシナリオが欠けていた」とほぼ同義。
@@ -120,8 +120,8 @@ spec で局所決定したい時のみ --force を使う。
 
 triage 結果に応じて以下を案内（実行はしない）：
 
-- **ケース 1 と分類された場合**：`.ori/domain/<file>.md` の編集 → `ori sync` → `/ori-flow <dirty-id>`
+- **ケース 1 と分類された場合**：`.ori/domain/<file>.md` の編集 → `/ori-sync` → `/ori-flow <dirty-id>`
 - **ケース 2 と分類された場合**：失敗テスト追加 → `/ori-impl-green <id> --reason "bug fix"` → `/ori-review <id>`
-- **ケース 3 と分類された場合**：`ori sync --force <spec>` で proposal 生成 → `/ori-review-proposals`
-- **ケース 4 と分類された場合**：`/ori-ddd-9-workflows` 再走 → `ori slice new` → `/ori-flow`
+- **ケース 3 と分類された場合**：`/ori-sync --force <spec>` で proposal 生成 → `/ori-review-proposals`
+- **ケース 4 と分類された場合**：`/ori-ddd-9-workflows` 再走 → 新規 slice 作成 → `/ori-flow`
 - **どれにも分類できないパス**：症状情報が不足。ユーザにヒアリング継続、難しければ `bd human` で人間判断 flag

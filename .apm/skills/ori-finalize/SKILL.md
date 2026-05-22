@@ -45,17 +45,17 @@ description: /ori-flow phase 7。当該 slice の dirty 解除・proposal の浮
 1. **前提確認**：
    - phase 6（review）が close されているか（`bd show ori-review-<id>`）
    - `pnpm -F <slice-pkg> test` GREEN を最終確認
-2. **CLI に委譲**：
+2. **slice の締め処理**：
    ```bash
-   ori slice run <slice-id> --phase finalize
+   bash scripts/clear-dirty.sh <slice-id>
+   bash scripts/update-hash.sh <slice-id>
    ```
-   CLI が以下を機械的に実行：
    - `status.yaml.dirty[]` を空に
-   - 当該 slice の hash を最新の派生元 hash に更新
+   - `spec.md` の `hash:` を最新に更新
    - 残り phase issue の close（既に close 済みのものは no-op）
 3. **proposal の浮上**：
    ```bash
-   ori proposals --by slices/<slice-id>
+   ls .ori/proposals/ 2>/dev/null
    ```
    - 結果が空 → 通常終了
    - 1 件以上ある → ユーザに通知：
@@ -71,11 +71,8 @@ description: /ori-flow phase 7。当該 slice の dirty 解除・proposal の浮
    - `review.md` の `Findings` が全て disposition 済みか確認
    - 未対応があれば停止し phase 6 へ差し戻し
 5. **次手の提示**：
-   - 他に dirty な slice が残っているなら一覧表示：
-     ```bash
-     ori slice list --dirty
-     ```
-   - 次の `/ori-flow <next-id>` 候補を提示
+    - 他に dirty な slice が残っているなら `.ori/slices/*/status.yaml` の `dirty` 欄で一覧
+    - 次の `/ori-flow <next-id>` 候補を提示
 6. **完了**：
    ```bash
    bd close ori-finalize-<slice-id> --reason="slice complete; status cleared; <N> proposals surfaced"
@@ -86,7 +83,7 @@ description: /ori-flow phase 7。当該 slice の dirty 解除・proposal の浮
 - **scope は 1 slice**：他の slice の dirty には触らない
 - **proposal を勝手に accept しない**：人間判断のため `/ori-review-proposals` を案内
 - **review 指摘の未対応で finalize しない**：sloppy finalize はバグの温床
-- **CLI が決定的処理を担当**：このスキルはオーケストレーションと通知
+- **スキルが決定的処理を担当**：このスキルはオーケストレーションと通知
 
 ## 次のアクション
 

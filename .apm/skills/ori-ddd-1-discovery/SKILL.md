@@ -34,7 +34,7 @@ description: distill-ddd Phase 1（Discovery）。Core Domain と business drive
    - 「競合と差別化する point は core 側にあるか」
    - 「業務指標と実装活動の対応はどうか」
 4. **文書生成**：合意した内容のみ `.ori/domain/discovery.md` に Markdown で記述
-5. **`ori lint .ori/domain/discovery.md` を実行**して schema 検証（H2/H3 の anchor 有無、frontmatter 必須キー）
+5. `bash scripts/lint-domain.sh .ori/domain/discovery.md` を実行して自己検証
 6. lint 失敗時は **1 回だけ** AI 側で自動修正を試み、それでも失敗ならユーザに判断を委ねる
 
 ## 出力テンプレート

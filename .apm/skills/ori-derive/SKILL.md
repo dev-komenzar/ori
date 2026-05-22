@@ -13,7 +13,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
 
 - **派生器**：`manifest.yaml` の `derives_from:` に列挙されたドメイン section を読み、slice 単位の spec に再構成
 - **整合性チェッカー**：複数 upstream に矛盾があれば停止し、`/ori-propose` を促す
-- **記録係**：spec.md は **derived** ファイル。`coherence.source: derived` で書き、人間が直接編集すると `ori sync --force` が要求される
+- **記録係**：spec.md は **derived** ファイル。`coherence.source: derived` で書き、人間が直接編集すると `/ori-sync --force` が要求される
 
 ## 入力 / 出力
 
@@ -40,25 +40,27 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
 
 1. **slice 存在確認**：
    ```bash
-   ori slice exists <slice-id>
+   bash scripts/check-slice-exists.sh <slice-id>
    ```
-   - 存在しない場合、**自動で scaffold しない**。代わりに type-recovery を試す：
-     ```bash
-     ori slice suggest <slice-id>
-     ```
-     近い既存 id（fuzzy match）があればユーザに「これですか？」と問い、Yes なら正しい id で再開、No なら `ori slice new` の実行をユーザに**確認**してから進める
-2. **manifest.yaml の読み込み**：`.ori/slices/<id>/manifest.yaml` を Read。`derives_from:` が空ならエラー停止し「先に `ori-ddd-*` で domain を整備するか、manifest に upstream を追記してください」と案内
-3. **upstream section の取得**：`ori coherence resolve <slice-id>` を Bash で実行し、派生元 section のテキスト＋ハッシュを取得
+   - exit 0: 存在 → 次のステップへ
+   - exit 2: 類似候補あり → ユーザに「これですか？」と確認、Yes なら正しい id で再開
+   - exit 1: 未発見 → 新規 slice 作成を**ユーザに確認**してから進める
+2. **manifest.yaml の読み込み**：`.ori/slices/<id>/manifest.yaml` を Read。`derives_from:` が空ならエラー停止し「先に DDD phase で domain を整備するか、manifest に upstream を追記してください」と案内
+3. **upstream section の取得**：
+   ```bash
+   bash scripts/resolve-upstream.sh <slice-id>
+   ```
+   派生元 section のパスとハッシュを取得
 4. **矛盾検出**：複数 upstream が同じ概念について異なる規定を持つ場合、停止して `/ori-propose` を促す（自動マージしない）
 5. **spec.md の synthesis**：
    - 上記 5 セクションを必須として埋める
    - 不明な事項は **推測で埋めず** `**TBD**` マーカーを残し、後段で人間に問う
    - 上流 section の文言を引用する際は `> domain/aggregates.md#note-aggregate より:` の出典を残す
-6. **`ori lint .ori/slices/<id>/spec.md` を実行**：
-   - 必須 H2 5 種が揃っているか
-   - 全 H2/H3 に `{#id}` があるか
+6. **spec.md の自己検証**：
+   - 必須 H2 5 種が揃っているか（`## 概要`、`## 入出力`、`## 不変条件`、`## テスト観点`、`## 実装ノート`）
+   - 全 H2/H3 に `{#id}` があるか（grep: `^###? [^{]+$`）
    - frontmatter `coherence.source: derived` と `upstream:` の有無
-7. lint 失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
+7. 検証失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
 8. **beads issue 更新**：
    ```bash
    bd update ori-derive-<slice-id> --status=closed --notes="spec.md generated from <N> upstream sections"
@@ -113,8 +115,8 @@ coherence:
 
 ## 注意
 
-- **自動 scaffold は禁止**：slice が存在しなくても勝手に `ori slice new` を呼ばない（ユーザ確認必須）
-- **spec.md は派生ファイル**：直接編集には `ori sync --force` が必要（README ケース 3 参照）
+- **自動 scaffold は禁止**：slice が存在しなくても勝手に新規作成を呼ばない（ユーザ確認必須）
+- **spec.md は派生ファイル**：直接編集には `/ori-sync --force` が必要
 - **推測で埋めない**：`TBD` を残し、人間判断に委ねる箇所を明示
 - このスキルは test や impl を書かない。**phase 1 = spec 派生のみ**
 

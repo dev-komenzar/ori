@@ -111,7 +111,7 @@ graph LR
 - **`.ori/graph.mmd` を作るなら commit すべきか**：機械生成なので gitignore も選択肢
   - **推奨**：commit する。docs サイトで render するため
 - **read-only**：このスキル自体は副作用なし（`--save` 時のみファイル生成）
-- **CI 統合**：将来 `ori graph --format=svg` で PR に貼る想定
+- **CI 統合**：将来 `/ori-graph --format=svg` 相当の出力で PR に貼る想定
 
 ## 次のアクション
 

@@ -41,10 +41,10 @@ description: ori 独自 Phase 11b（Page Grouping）。ui-fields の依存関係
 6. **書き戻し**：
    - `screen-*.md` の frontmatter `coherence.depended_by:` を更新
    - `page-groups.md` を新規生成
-7. **`ori arch sync-page-map` を実行**：
-   - 確定した `depended_by` から `.ori/architecture.md` の `## Page Map` section を自動生成
-   - マーカー（`<!-- BEGIN ori-distill phase-11b auto-generated; do not edit between markers -->` ～ `<!-- END ori-distill phase-11b auto-generated -->`）の外側は保持される
-8. **`ori lint .ori/domain/ui-fields/` を実行**して整合性検証
+7. **page ↔ slice マッピングを `.ori/pages/<id>/manifest.yaml` に反映**：
+    - 確定した `depended_by` から `.ori/architecture.md` の `## Page Map` section を自動生成
+    - マーカー（`<!-- BEGIN ori-distill phase-11b auto-generated; do not edit between markers -->` ～ `<!-- END ori-distill phase-11b auto-generated -->`）の外側は保持される
+8. `for f in .ori/domain/ui-fields/*.md; do bash scripts/lint-domain.sh "$f"; done` を実行して自己検証
 9. lint 失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
 
 ### Phase 完了時：page の一括 scaffold 提案
@@ -57,17 +57,12 @@ description: ori 独自 Phase 11b（Page Grouping）。ui-fields の依存関係
   - capture-form    (screen-1)
   - note-browser    (screen-2, screen-3)
 
-[1] 一括で作成（ori page new <id> を順次実行）
+[1] 一括で作成（各 page の新規作成を提案）
 [2] 個別に選択
-[3] スキップ（後から手動で `ori page new` を呼ぶ）
+[3] スキップ（後から手動で page を作成）
 ```
 
-ユーザの選択に応じて Bash で実行：
-
-```bash
-ori page new capture-form
-ori page new note-browser
-```
+ユーザの選択に応じて page の新規作成を提案する。
 
 ## 出力テンプレート
 
@@ -131,7 +126,7 @@ coherence:
 ## 注意
 
 - **これは ori 独自 phase**：distill-ddd 上流には存在しない（ori README 参照）
-- **grouping は再変更可能**：後から `coherence.depended_by:` を編集して `ori sync` すれば伝播
+- **grouping は再変更可能**：後から `coherence.depended_by:` を編集して `/ori-sync` すれば伝播
 - このスキルは workflow を回さない。実装は `/ori-flow` の責務
 - slice（`/ori-ddd-9-workflows` で作成）と page は独立。両方を持つ場合は dep を貼る
 
@@ -141,6 +136,6 @@ coherence:
 
 - **メインパス**：`/ori-flow <first-id>` — 1 slice / page を 7 phase で実装開始
   - 推奨：slice → page の順（domain ロジック先行）
-- **scaffold だけ済ませて休む**：`ori page new <id>` で beads issue だけ作っておく
+- **scaffold だけ済ませて休む**：page の新規作成を提案し beads issue だけ作っておく
 - **戻る**：grouping が決まらない場合、`/ori-ddd-9-workflows` で workflow 境界を見直す
 - **未確定なら**：`page-groups.md` の `open questions` に残し、次セッションで再開

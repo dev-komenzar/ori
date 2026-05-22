@@ -32,7 +32,7 @@ description: distill-ddd Phase 10（Types）。aggregate / workflow を言語別
 ## 手順
 
 1. **前提確認**：
-   - 対象言語をユーザに確認（`ori model show` で project lang 設定を見る）
+   - 対象言語をユーザに確認（project lang 設定を見る）
    - `.ori/domain/code/<lang>/` が既にあれば一覧表示し「追記 / 上書き / 中断」を選ばせる
 2. **集約 → 型**：
    - aggregate の 構成要素 / 不変条件 / 公開操作 を型として表現
@@ -50,7 +50,7 @@ description: distill-ddd Phase 10（Types）。aggregate / workflow を言語別
    |-----------|-----------|------|
    | Note | code/typescript/note.ts | code/rust/note.rs |
    ```
-7. **`ori lint .ori/domain/types.md` を実行**
+7. `bash scripts/lint-domain.sh .ori/domain/types.md` を実行して自己検証
 8. lint 失敗時は **1 回だけ** 自動修正、それでもダメなら人間判断
 
 ## 出力テンプレート（TypeScript）

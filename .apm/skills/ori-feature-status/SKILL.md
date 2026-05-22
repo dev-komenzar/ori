@@ -3,7 +3,7 @@ name: ori-feature-status
 description: slice / page の進捗を一覧 or 個別で要約表示。status.yaml + beads issue 状態 + dirty マーク を統合した俯瞰ビュー
 ---
 
-ユーザが `/ori-feature-status [slice-id]` を呼んだ際、**slice / page の現在地を at-a-glance で表示**します。`ori slice list` / `ori page list` / `bd show ori-slice-<id>` / `status.yaml` の Read を統合し、見やすい形に整形。
+ユーザが `/ori-feature-status [slice-id]` を呼んだ際、**slice / page の現在地を at-a-glance で表示**します。`.ori/slices/` と `.ori/pages/` のファイル一覧、`status.yaml`、`bd show` の結果を統合し、見やすい形に整形。
 
 ## 役割
 
@@ -82,14 +82,15 @@ Next action:
 1. **引数判定**：
    - 引数なし → 全 slice / page を列挙
    - 引数あり → 個別 slice (or page) を詳細表示
-2. **データ収集**（Bash + Read）：
-   - `ori slice list --format=json` と `ori page list --format=json` で一覧
-   - 各 slice / page について `.ori/slices/<id>/status.yaml` または `.ori/pages/<id>/status.yaml` を Read
-   - `bd list --label=slice:<id>` で関連 issue（または epic 経由）
-   - `ori proposals --by slices/<id> --count`
+2. **データ収集**：
+   ```bash
+   bash scripts/list-slices.sh
+   bash scripts/list-pages.sh
+   ```
+   - `--dirty` オプションで dirty な slice のみ表示も可能
 3. **dirty マーク検出**：
    - `status.yaml.dirty[]` の件数
-   - `ori coherence diff <slice-id>` で hash 不一致を確認
+   - 派生元ファイルの hash 不一致を確認
 4. **last activity 算出**：
    - `git log -1 --format=%ai .ori/slices/<id>/`
    - or beads issue の最新 updated_at

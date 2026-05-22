@@ -1,6 +1,6 @@
 ---
 name: ori-model
-description: `ori model show` / `ori model set` の対話ラッパー。capability-role × phase × agent から具体 model への割当をユーザと対話で決める
+description: capability-role × phase × agent から具体 model への割当をユーザと対話で決める
 ---
 
 ユーザが `/ori-model` を呼んだ際、**現在の model 割当を表示し、必要に応じて変更**します。ori の capability-role モデル（capability = reasoning / deep / fast 等の役割名、それを具体 model に解決）と phase 別 / agent 別 override を扱います。
@@ -8,7 +8,7 @@ description: `ori model show` / `ori model set` の対話ラッパー。capabili
 ## 役割
 
 - **状態表示者**：現在の割当を見やすく整形
-- **意図翻訳者**：「review をもっと安く」「fast を deepseek にしたい」などの自然言語を CLI コマンドに翻訳
+- **意図翻訳者**：「review をもっと安く」「fast を deepseek にしたい」などの自然言語を config 変更に翻訳
 - **影響説明者**：変更前に「これでコストは N 倍になる / レビュー精度が低下する」等を説明
 
 ## capability-role モデル（前提）
@@ -19,7 +19,7 @@ description: `ori model show` / `ori model set` の対話ラッパー。capabili
 | deep | 派生・実装（コード生成） |
 | fast | refactor・整理（規則的変換） |
 
-各 capability は config（`ori model show` で表示）で具体 model に解決される。例：
+各 capability は `.apm/agents/` の config で具体 model に解決される。例：
 
 ```
 reasoning → claude-opus-4-7
@@ -41,9 +41,7 @@ agent=ori-reviewer override: capability=reasoning
 ユーザが「現状を見せて」と言ったら：
 
 ```bash
-ori model show
-ori model show --by phase
-ori model show --by agent
+bash scripts/show-config.sh
 ```
 
 を Bash で実行し結果を整形提示。
@@ -60,17 +58,12 @@ ori model show --by agent
    - cost down（安い model に下げる）— トレードオフ：精度低下
    - quality up（より強力な model）— トレードオフ：コスト増
    - vendor 切替（Anthropic → DeepSeek 等）
-3. **実行コマンドの提案**：
-   ```bash
-   ori model set reasoning claude-opus-4-7
-   ori model set --phase review --model o1-pro
-   ori model set --agent ori-reviewer --capability reasoning
-   ```
+3. **config ファイルを編集**：agent の frontmatter（`name`, `model`）を更新
 4. **影響の説明**：
    - phase 別コスト見積を簡易表示
    - 「review を haiku に下げると adversarial 視点が弱くなる」等の警告
-5. **ユーザ承認後に Bash 実行**
-6. **設定確認**：`ori model show` で再表示し変更を確認
+5. **ユーザ承認後に file write**
+6. **設定確認**：agent の frontmatter を再読み込みして変更を確認
 
 ## 出力例
 
@@ -98,12 +91,12 @@ ori model show --by agent
 
 ## よくある依頼パターン
 
-| ユーザ依頼 | 翻訳先コマンド |
-|----------|--------------|
-| 「review を deepseek にしたい」 | `ori model set --phase review --model deepseek-v4-pro` |
-| 「全部 fast を haiku に統一」 | `ori model set fast claude-haiku-4-5` |
+| ユーザ依頼 | 操作内容 |
+|----------|---------|
+| 「review を deepseek にしたい」 | `ori-reviewer` agent の model を `deepseek-v4-pro` に更新 |
+| 「全部 fast を haiku に統一」 | `fast` capability の解決先を `claude-haiku-4-5` に |
 | 「コスト 30% 削減したい」 | refactor / impl-green を一段下げる案を提案 |
-| 「reviewer を別 vendor にしたい（adversarial 多様化）」 | `ori model set --agent ori-reviewer --model <他社 reasoning>` |
+| 「reviewer を別 vendor にしたい（adversarial 多様化）」 | `ori-reviewer` agent の model を他社 reasoning model に変更 |
 
 ## 注意
 
@@ -117,6 +110,6 @@ ori model show --by agent
 設定変更後、ユーザに以下を提示：
 
 - **試運転パス**：`/ori-flow <small-slice>` で小さい slice を 1 つ回し、コスト・品質を確認
-- **元に戻すパス**：`git diff` で `.apm/agents/*.md` の変更を確認。問題あれば `git checkout HEAD -- .apm/agents/`
+- **元に戻すパス**：`git diff` で agent ファイルの変更を確認。問題あれば `git checkout HEAD -- .apm/agents/`
 - **doctor 確認パス**：`/ori-doctor` で全体に影響が出ていないか
 - **commit 推奨**：model 設定は session 跨ぎで重要。`git add .apm/agents && git commit` を案内

@@ -1,6 +1,6 @@
 ---
 name: ori-doctor
-description: ori プロジェクトの健康診断。.ori/ を歩き ori lint / status.yaml ⇔ beads / cross-reference 整合性を検査。報告のみで自動修復はしない
+description: ori プロジェクトの健康診断。.ori/ を歩き schema / status.yaml ⇔ beads / cross-reference 整合性を検査。報告のみで自動修復はしない
 ---
 
 ユーザが `/ori-doctor` を呼んだ際、**ori プロジェクト全体の健康状態を診断**します。**report-only**：自動修復はしない（domain は人間判断、code は他 phase の責務）。
@@ -20,10 +20,10 @@ description: ori プロジェクトの健康診断。.ori/ を歩き ori lint / 
 
 ### 1. ドメイン文書の schema 健全性
 
-- `ori lint .ori/domain/` を実行
+- `.ori/domain/` 配下の全ファイルを Read し手動検証
 - 全 H2/H3 に `{#id}` があるか
 - frontmatter `coherence:` ブロックがあるか
-- 必須セクション（slice / page ごと / phase ごと）の有無
+- 必須セクション（slice / page / phase ごと）の有無
 
 ### 2. 派生文書の hash 一致
 
@@ -58,18 +58,16 @@ description: ori プロジェクトの健康診断。.ori/ を歩き ori lint / 
 ## 手順
 
 1. **`.ori/` 存在確認**：なければ「`/ori-init` で初期化してください」と返す
-2. **各検査を順次実行**：それぞれ `Bash` で：
+2. **スクリプトで全検査を実行**：
    ```bash
-   ori lint .ori/domain/
-   ori lint .ori/slices/
-   ori lint .ori/pages/
-   ori doctor --check=hash
-   ori doctor --check=status-sync
-   ori doctor --check=cross-ref
-   ori proposals --count
-   bd doctor
-   bd orphans
+   bash scripts/run-checks.sh
    ```
+   個別検査は以下で構成：
+   - `check-domain-schema.sh` — ドメイン文書の frontmatter + anchor 検証
+   - `check-slice-schema.sh` — slice の manifest/status ファイル存在確認
+   - `check-hash-consistency.sh` — 派生ファイルの upstream 参照実在確認
+   - `check-cross-ref.sh` — derives_from / upstream の cross-reference 検証
+   - `check-proposals.sh` — pending proposal カウント
 3. **結果を集約**してレポートを生成
 4. **報告 only**：自動修復は行わない
 
@@ -115,7 +113,7 @@ recommended action: fix broken cross-ref first (blocks /ori-flow on edit-past-no
 
 - **自動修復しない**：domain 文書の手入れ・spec の再 derive はそれぞれ別スキル
 - **read-only**：このスキル自体は何もファイルを変更しない（副作用ゼロ）
-- **CI 統合可能**：将来 `ori doctor --json` をパイプして CI gate に使う想定
+- **CI 統合可能**：将来 `/ori-doctor --json` 相当の出力をパイプして CI gate に使う想定
 
 ## 次のアクション
 
