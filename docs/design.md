@@ -1057,19 +1057,33 @@ src/                             # TS monorepo(開発時 SSoT)
 
 ## 19. v0.2+ ロードマップ
 
-### v0.2 候補
+### Phase B → Phase C 移行(2026-05-22 更新)
 
-- `/ori-rules`(machine-checkable invariants 生成)
-- 追加 pattern(2 個目を入れて pluggability 実証)
-- Codex CLI の Layer 1 対応
-- Tests 体系の整備
-- Curated content の semver + migration helper
+Phase B(MVP v0.1 dogfooding on promptnotes-vcsdd, epic = `ori-qzq`)で 2 slice(capture-auto-save / edit-past-note)を /ori-flow で完走させた結果、`/ori-rules` や追加 pattern よりも前に「`/ori-flow` を skill 手動代替なしで動かす」ことが最優先と判明した。v0.2 は **"close the /ori-flow execution gap"** に絞る(Phase C epic 起票予定)。
 
-### v0.3 候補
+実摩擦から導いた v0.2 採用判断:
 
+- **採用昇格**: `ori slice run` runner 実装 / APM package 配布(`apm install dev-komenzar/ori` を動かす)/ test infra auto-scaffold / brownfield migration helper(既存 `docs/domain` → `.ori/domain` + `.ddd-session.json` 取り込み)/ `--setup-issues` 実装
+- **v0.2 据え置き**: Tests 体系の整備(test infra auto-scaffold としてサブセット採用)
+- **v0.3 降格**: `/ori-rules`(実摩擦なし) / 追加 pattern(同上) / Codex CLI Layer 1(検証なし) / Curated content semver(users 0)
+
+### v0.2 候補(2026-05-22 改訂)
+
+- `ori slice run` runner 実装(7-phase MVP stub の解消、Phase B 最大 blocker)
+- APM package 配布(`@ori-ori/ori` を apm registry に登録、scripts/ unresolved を解消)
+- `/ori-test-red` 用 test infra auto-scaffold(package.json / vitest install 自動化)
+- Brownfield migration helper(`/ori-migrate-domain` 等、ori-6us 解消含む)
+- `--setup-issues` 実装(`/ori-plan` から beads issue 自動 create)
+
+### v0.3 候補(2026-05-22 改訂)
+
+- `/ori-rules`(machine-checkable invariants 生成、v0.2 から降格)
+- 追加 pattern(2 個目を入れて pluggability 実証、v0.2 から降格)
+- Codex CLI の Layer 1 対応(v0.2 から降格)
+- Curated content の semver + migration helper(v0.2 から降格)
 - 追加 task manager adapter(Linear / GitHub Issues / Jira)
 - Static analysis による code-to-code edge 自動検出
-- Brownfield support(`/ori-extract` 等)
+- Brownfield support(`/ori-extract` 等、v0.2 の migration helper の上位)
 - 分散 event bus
 - Concurrent /ori-flow(aggregate-level lock)
 

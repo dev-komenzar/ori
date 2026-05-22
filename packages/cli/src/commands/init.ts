@@ -88,8 +88,8 @@ export const initCommand = defineCommand({
     }
 
     const steps = [
-      "apm install dev-komenzar/ori   # install skills/instructions/hooks",
-      "/ori-distill                   # AI-guided DDD phase 1-11",
+      "apm install dev-komenzar/ori   # install skills/instructions/hooks  (coming in v0.2)",
+      "/ori-distill                   # AI-guided DDD phase 1-11  (requires step 1)",
       "/ori-arch                      # decide pattern & framework, scaffold project code",
       "ori slice new <id>             # bootstrap a slice (1 use case = 1 handler)",
       "ori page new <id>              # bootstrap a page (UI composition of N slices)",
@@ -100,6 +100,10 @@ export const initCommand = defineCommand({
       "",
       "Next steps:",
       ...steps.map((s, i) => `  ${i + 1}. ${s}`),
+      "",
+      "Note: APM distribution is not yet published (v0.1.x).",
+      "For now, clone https://github.com/dev-komenzar/ori and",
+      "copy .apm/skills/ + scripts/ into .claude/ manually.",
     ];
     consola.box(nextSteps.join("\n"));
   },
