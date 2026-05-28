@@ -1,6 +1,6 @@
-# `.apm/` — ori APM Package
+# `.apm/` — ori APM Package Assets
 
-This directory makes the ori repository installable as an [APM](https://github.com/microsoft/apm) package:
+ori ships as an [APM](https://github.com/microsoft/apm) package. The manifest (`apm.yml`) lives at the repo root; this directory holds the primitives APM distributes.
 
 ```bash
 apm install dev-komenzar/ori
@@ -12,11 +12,10 @@ APM resolves the contents below into each AI harness's native format (`.claude/`
 
 | Path | Type | Purpose |
 |------|------|---------|
-| `apm.yml` | manifest | package metadata, dependencies, requirements |
-| `instructions/` | Instructions | 7 file-glob-scoped rule files applied automatically when AI touches matching paths |
-| `skills/` | Skills | user-invocable workflows: `ori-init`, `ori-flow`, `ori-sync`, `ori-distill`, `ori-propose`, `ori-review-proposals` |
-| `agents/` | Agents | `ori-reviewer` — fresh-context adversarial reviewer for phase 6 |
-| `hooks/` | Hooks | `post-write-domain` — auto-trigger `/ori-sync` after domain/feature edits |
+| `instructions/` | Instructions | file-glob-scoped rule files applied automatically when AI touches matching paths |
+| `skills/` | Skills | user-invocable workflows (`/ori-init`, `/ori-flow`, `/ori-sync`, `/ori-derive`, …) — each carries its own `scripts/` for relative-path lookup |
+| `agents/` | Agents | `ori-reviewer` — fresh-context adversarial reviewer for review phase |
+| `contexts/` | Contexts | shared schema fragments referenced by skills (e.g., `architecture-md-schema.md`) |
 
 ## Architecture
 
