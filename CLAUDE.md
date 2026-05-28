@@ -1,6 +1,6 @@
 # Project Instructions for AI Agents
 
-**言語ポリシー**: 思考は英語でよいが、応答は日本語で行うこと。
+**言語ポリシー**: 思考は英語でよいが、応答は日本語で行うこと。PR の title / description も日本語で書くこと（コード内の専門用語は英語のまま混在 OK）。
 
 This file provides instructions and context for AI coding agents working on this project.
 
