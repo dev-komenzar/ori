@@ -12,15 +12,15 @@
     "access": "public"
   },
   "type": "module",
-  "files": ["ddd-typescript", "ddd-typescript-tauri"],
+  "files": ["ddd-vsa-hex-typescript", "ddd-vsa-hex-typescript-tauri"],
   "exports": {
-    "./ddd-typescript/*": "./ddd-typescript/*",
-    "./ddd-typescript-tauri/*": "./ddd-typescript-tauri/*"
+    "./ddd-vsa-hex-typescript/*": "./ddd-vsa-hex-typescript/*",
+    "./ddd-vsa-hex-typescript-tauri/*": "./ddd-vsa-hex-typescript-tauri/*"
   },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p ddd-typescript/tsconfig.json && tsc --noEmit -p ddd-typescript-tauri/tsconfig.json"
+    "typecheck": "tsc --noEmit -p ddd-vsa-hex-typescript/tsconfig.json && tsc --noEmit -p ddd-vsa-hex-typescript-tauri/tsconfig.json"
   },
   "devDependencies": {
     "@ori-ori/arch-adapter-eslint": "workspace:*",

@@ -29,6 +29,14 @@ function rootBase(root: RootConfig): string {
   return ensureTrailingSlash(base);
 }
 
+function sliceSubdirPrefix(root: RootConfig): string {
+  // When slice_subdir is set, slices live one level deeper (e.g. "<bc>/slices/<slice>/")
+  // matching design.md §17. Defaults to "" for backwards compatibility.
+  const sub = root.slice_subdir;
+  if (!sub || sub === "" || sub === ".") return "";
+  return ensureTrailingSlash(sub);
+}
+
 function buildElements(spec: ArchitectureSpec, root: RootConfig): Element[] {
   const set = spec.layer_sets[root.layer_set];
   if (!set) {
@@ -54,12 +62,13 @@ function buildElements(spec: ArchitectureSpec, root: RootConfig): Element[] {
       });
     }
   }
+  const sliceSubdir = sliceSubdirPrefix(root);
   for (const layer of set.layers) {
     if (layer.kind === "slice") {
       // Captures the slice folder name so cross-slice rules can compare it.
       elements.push({
         type: layer.id,
-        pattern: `${sliceBase}*/**`,
+        pattern: `${sliceBase}${sliceSubdir}*/**`,
         capture: ["sliceName"],
       });
     }
@@ -112,7 +121,8 @@ function layerFileGlob(
     return `${root.path}/${layer.id}/**/*.${PATTERN_EXT}`;
   }
   if (layer.kind === "slice") {
-    return `${sliceBase}*/**/*.${PATTERN_EXT}`;
+    const sliceSubdir = sliceSubdirPrefix(root);
+    return `${sliceBase}${sliceSubdir}*/**/*.${PATTERN_EXT}`;
   }
   return null;
 }

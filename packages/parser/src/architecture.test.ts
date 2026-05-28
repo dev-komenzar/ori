@@ -253,6 +253,46 @@ cross_slice: { prohibited_direct: true, via: [] }
     });
   });
 
+  describe("slice_subdir", () => {
+    it("is optional and absent in the default spec", () => {
+      const spec = parseArchitectureSpec(SINGLE_ROOT_SPEC);
+      expect(spec.roots[0]?.slice_subdir).toBeUndefined();
+    });
+
+    it("parses slice_subdir when provided (design.md §17 layout)", () => {
+      const raw = `---
+version: 1
+workspace:
+  apps_root: apps
+  apps:
+    - name: template-app
+      path: apps/template-app
+root:
+  app: template-app
+  path: apps/template-app/src
+  language: typescript
+  layer_set: ddd-vsa-hex-ts
+  adapter: eslint
+  slice_root: task-management
+  slice_subdir: slices
+  public_entry: index.ts
+layer_sets:
+  ddd-vsa-hex-ts:
+    layers: [{ id: shared, kind: shared }]
+    rules:
+      cross_layer: []
+      same_layer: prohibited
+      public_entry_required: true
+cross_slice: { prohibited_direct: true, via: [shared/contracts, shared/events] }
+---
+`;
+      const spec = parseArchitectureSpec(raw);
+      expect(spec.roots[0]?.slice_subdir).toBe("slices");
+      expect(spec.roots[0]?.slice_root).toBe("task-management");
+      expect(spec.roots[0]?.app).toBe("template-app");
+    });
+  });
+
   it("rejects default_root that does not match any root id", () => {
     const raw = `---
 version: 1

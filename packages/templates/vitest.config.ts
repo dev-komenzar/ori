@@ -4,8 +4,8 @@ export default defineConfig({
   test: {
     include: [
       "tests/**/*.test.ts",
-      "ddd-typescript/src/**/*.test.ts",
-      "ddd-typescript-tauri/src/**/*.test.ts",
+      "ddd-vsa-hex-typescript/apps/**/*.test.ts",
+      "ddd-vsa-hex-typescript-tauri/apps/**/*.test.ts",
     ],
   },
 });
