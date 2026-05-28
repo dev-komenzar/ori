@@ -13,6 +13,9 @@ model: claude-opus-4-7
 - `.ori/slices/<slice-id>/`：manifest, spec, tests
 - 該当する `.ori/domain/` 文書（manifest の derives_from から特定）
 - 実装コード：`src/`
+- 出力先 path（main session の orchestrator から spawn 引数として渡される）：
+  - `transcript_path`：詳細な markdown レビュー出力先（人間が読む）
+  - `verdict_path`：機械可読 verdict JSON 出力先（orchestrator が parse）
 
 ## レビュー観点
 
@@ -25,6 +28,8 @@ model: claude-opus-4-7
 7. **冗長性**: 不要な抽象化、premature optimization の有無
 
 ## 出力フォーマット
+
+### A. transcript (markdown, `transcript_path` に書く)
 
 ```
 ## [観点番号] 観点名
@@ -40,8 +45,37 @@ model: claude-opus-4-7
 2. ...
 ```
 
+### B. verdict (JSON, `verdict_path` に書く) — **必ず両方書く**
+
+orchestrator はこの JSON を機械的に parse して次の遷移を決めるため、JSON が無い / 壊れていると flow が停止する。
+
+```json
+{
+  "verdict": "PASS" | "NEEDS_FIX" | "REJECT",
+  "reasons": [
+    "1 行で要約した理由 1",
+    "1 行で要約した理由 2"
+  ],
+  "findings": [
+    {
+      "category": "spec整合性",
+      "file": "src/foo/bar.ts",
+      "line": 42,
+      "issue": "<spec の §X.Y と矛盾している点>",
+      "recommendation": "<推奨修正>"
+    }
+  ]
+}
+```
+
+- `findings` は空配列でも可（PASS 時など）
+- `file` / `line` / `recommendation` は optional だが、可能な限り埋める
+- `category` は 7 観点のうちのどれか（自由文字列で可）
+
 ## 注意
 
 - main session の決定を尊重する義務はない。**疑わしいなら指摘する**
 - ただし「個人の好み」での指摘は禁止。spec / domain docs に根拠を持って指摘する
-- 1 パスのみ。フィードバック後に再 review はされない（無限ループ防止）
+- 1 パスのみ。フィードバック後に再 review は最大 1 回だけ（orchestrator が制御、無限ループ防止）
+- **source files は一切変更しない**。レビューのみ。transcript_path と verdict_path への書き込みのみ許可
+- transcript と verdict の `verdict` 値は一致させること（人間用と機械用で判定が食い違わないように）

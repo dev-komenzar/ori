@@ -51,7 +51,7 @@ export function resolveModel(
  * Default phase → capability mapping. Users may override via .ori/config.yaml.
  * Rationale:
  *   - derive/plan/test-red/impl-green need design judgement → deep
- *   - refactor/sync are mechanical with brief AI commentary → fast
+ *   - refactor/finalize are mechanical with brief AI commentary → fast
  *   - review is adversarial reasoning → reasoning (Opus/o1/etc.), fresh context
  */
 export const DEFAULT_PHASE_CONFIG: Record<Phase, PhaseConfig> = {
@@ -61,7 +61,7 @@ export const DEFAULT_PHASE_CONFIG: Record<Phase, PhaseConfig> = {
   "impl-green": { capability: "deep" },
   refactor: { capability: "fast" },
   review: { capability: "reasoning", fresh_context: true },
-  sync: { capability: "fast" },
+  finalize: { capability: "fast" },
 };
 
 /**

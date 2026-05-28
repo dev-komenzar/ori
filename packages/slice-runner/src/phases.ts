@@ -7,7 +7,7 @@
  * 4. impl-green — implement source code until tests pass
  * 5. refactor   — tidy up
  * 6. review     — fresh-context adversarial review (default: reasoning / Opus)
- * 7. sync       — clear dirty marks + emit proposals as needed
+ * 7. finalize   — clear dirty marks, update status hash, emit proposals as needed
  */
 export const PHASES = [
   "derive",
@@ -16,7 +16,7 @@ export const PHASES = [
   "impl-green",
   "refactor",
   "review",
-  "sync",
+  "finalize",
 ] as const;
 
 export type Phase = (typeof PHASES)[number];
@@ -27,5 +27,16 @@ export interface PhaseRecord {
   state: PhaseStatus;
   started_at?: string;
   completed_at?: string;
+  fix_attempts?: number;
   notes?: string;
+}
+
+export function nextPhase(current: Phase): Phase | null {
+  const idx = PHASES.indexOf(current);
+  if (idx < 0 || idx === PHASES.length - 1) return null;
+  return PHASES[idx + 1] ?? null;
+}
+
+export function isValidPhase(value: string): value is Phase {
+  return (PHASES as readonly string[]).includes(value);
 }

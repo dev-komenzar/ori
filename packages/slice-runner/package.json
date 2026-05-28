@@ -22,7 +22,9 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean",
+    "build": "pnpm run build:lib && pnpm run build:bundle",
+    "build:lib": "tsup src/index.ts --format esm --dts --clean",
+    "build:bundle": "tsup src/flow.ts --format esm --target node20 --platform node --out-dir ../../.apm/skills/ori-flow/scripts --no-dts --no-splitting",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
