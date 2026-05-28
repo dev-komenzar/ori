@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
 import { consola } from "consola";
 import { mkdir, writeFile, access } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { stringify as yamlStringify } from "yaml";
 import { DEFAULT_AGENTS, DEFAULT_PHASE_CONFIG } from "@ori-ori/slice-runner";
 import { seedDomainScaffolds } from "../utils/domain-scaffold.js";
@@ -15,6 +15,19 @@ const DIRS = [
   ".ori/proposals",
   ".ori/state",
 ];
+
+function deriveAppName(cwd: string): string {
+  const folder = basename(cwd);
+  // Sanitize: lowercase, replace non-alphanumeric (except hyphen) with hyphen,
+  // collapse consecutive hyphens, trim leading/trailing hyphens.
+  // Fallback to "app" if the result is empty.
+  const sanitized = folder
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return sanitized || "app";
+}
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -58,16 +71,28 @@ export const initCommand = defineCommand({
     if (configExists && !args.force) {
       consola.warn(".ori/config.yaml already exists. Use --force to overwrite.");
     } else {
+      const appName = deriveAppName(cwd);
       const config = {
         ori: {
           version: 1,
+          workspace: {
+            apps_root: "apps",
+            apps: [
+              {
+                name: appName,
+                path: `apps/${appName}`,
+              },
+            ],
+          },
           workflow: { phases: DEFAULT_PHASE_CONFIG },
           agents: DEFAULT_AGENTS,
           current_agent: "claude",
         },
       };
       await writeFile(configPath, yamlStringify(config), "utf8");
-      consola.success("Wrote .ori/config.yaml with defaults (current_agent: claude)");
+      consola.success(
+        `Wrote .ori/config.yaml with defaults (app: ${appName}, current_agent: claude)`,
+      );
     }
 
     const gitignorePath = join(cwd, ".ori/.gitignore");

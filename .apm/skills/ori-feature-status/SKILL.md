@@ -69,8 +69,8 @@ Beads (epic ori-slice-capture-auto-save):
 Proposals: 0 pending
 
 Files (git diff vs main):
-  src/contexts/note-capture/      18 files changed (+520 / -12)
-  .ori/slices/capture-auto-save/  6 files changed
+  apps/<app>/src/note-capture/slices/capture-auto-save/  18 files changed (+520 / -12)
+  .ori/slices/capture-auto-save/                          4 files changed (manifest/spec/status/review)
 
 Next action:
   Complete /ori-review capture-auto-save (in progress)

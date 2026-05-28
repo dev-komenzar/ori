@@ -26,27 +26,39 @@ should fail loudly rather than be silently ignored.
 ```yaml
 ---
 version: 1                    # schema version; required
-default_root: src             # optional. used when 'roots' is absent
+workspace:                    # apps directory 構成(/ori-init が repo folder 名から自動導出)
+  apps_root: apps             # project root から見た apps directory
+  apps:
+    - name: <project-folder>  # /ori-init が repo folder 名を sanitize して導出
+      path: apps/<project-folder>
+default_root: ts              # optional. used when 'roots' is absent。値は roots[].id
 roots:                        # optional in v0.1; required for multi-root projects
   - id: ts
-    path: src
+    app: <project-folder>     # この root が属する app(workspace.apps の name と一致)
+    path: apps/<project-folder>/src
     language: typescript
     layer_set: ddd-vsa-hex-ts
     adapter: eslint           # adapter ID (eslint | rust | generic | dependency-cruiser | import-linter)
     slice_root: <bc>          # slices live under <path>/<bc>/slices/<slice-id>/
     public_entry: index.ts    # file that exposes the slice's public API
   - id: rs
-    path: src-tauri/src
+    app: <project-folder>     # Tauri は同一 app 内の言語境界
+    path: apps/<project-folder>/src-tauri/src
     language: rust
     layer_set: ddd-vsa-hex-rs
     adapter: rust
     slice_root: <bc>
     public_entry: mod.rs
-cross_root:                   # optional; declares published-language bridges (Tauri 等)
+cross_root:                   # optional; 同一 app 内の published-language bridges (Tauri 等)
   - from: { root: rs, path: shared/contracts }
     to:   { root: ts, path: <bc>/types }
     generator: tauri-specta
     auto_generated: true      # the 'to' side is generated; manual edits forbidden
+cross_app:                    # optional; monorepo の app 間 contract 同期
+  - from: { app: backend,  path: src/<bc>/shared/contracts/events }
+    to:   { app: frontend, path: src/<bc>/shared/contracts/events }
+    generator: copy-or-publish
+    auto_generated: true
 layer_sets:
   ddd-vsa-hex-ts: { ... }     # see "Layer set" below
 slice_internal:
@@ -54,9 +66,9 @@ slice_internal:
 cross_slice:
   prohibited_direct: true
   via: [shared/contracts, shared/events]
-cross_bc:                     # cross-BC bridge(MVP は単一 event-bus 経由)
-  via: [src/shared/contracts, src/shared/events]
-  same_event_bus: true        # MVP: in-process 単一 bus、分散 bus は v0.2+
+cross_bc:                     # cross-BC bridge(app 内、MVP は単一 event-bus 経由)
+  via: [apps/<app>/src/shared/contracts, apps/<app>/src/shared/events]
+  same_event_bus: true        # MVP: in-process 単一 bus(app 内)、分散 bus は v0.2+
 page_map_marker: phase-11b    # opt-in: enables phase 11b auto-update of UI layer section
 ---
 ```
@@ -68,8 +80,14 @@ When the project has exactly one root, omit `roots` and use top-level fields:
 ```yaml
 ---
 version: 1
+workspace:
+  apps_root: apps
+  apps:
+    - name: <project-folder>
+      path: apps/<project-folder>
 root:                         # singular form — equivalent to roots[0]
-  path: src
+  app: <project-folder>
+  path: apps/<project-folder>/src
   language: typescript
   layer_set: ddd-vsa-hex-ts
   adapter: eslint
@@ -148,7 +166,7 @@ slice_internal:
 ```
 
 The slice-internal sub-layers are **physical directories** under the slice folder
-(e.g., `src/<bc>/slices/register-user/{domain,application,infrastructure,presentation,tests}`).
+(e.g., `apps/<app>/src/<bc>/slices/register-user/{domain,application,infrastructure,presentation,tests}`).
 Adapters resolve them via the layer's `slice_internal` reference.
 
 ---
@@ -172,12 +190,14 @@ the event bus).
 
 ```yaml
 cross_bc:
-  via: [src/shared/contracts, src/shared/events]   # global bridges, relative to root.path
-  same_event_bus: true                              # MVP: 単一 event-bus、分散 bus は v0.2+
+  via: [apps/<app>/src/shared/contracts, apps/<app>/src/shared/events]   # global bridges (app-scoped)
+  same_event_bus: true                              # MVP: 単一 event-bus(app 内)、分散 bus は v0.2+
 ```
 
-BC を跨ぐ場合の bridge は `<root>/shared/contracts/` と `<root>/shared/events/` を経由。
-v0.1 MVP は全 BC が同じ in-process event-bus を共有。v0.2+ で分散 bus、message queue 連携。
+BC を跨ぐ場合の bridge は `<root>/shared/contracts/` と `<root>/shared/events/` を経由
+(`<root>` は `roots[].path`、apps/ 反映後は `apps/<app>/src` 等)。
+v0.1 MVP は同一 app 内の全 BC が同じ in-process event-bus を共有。app をまたぐ場合は
+`cross_app:` を declare(monorepo)。v0.2+ で分散 bus、message queue 連携。
 
 ---
 
@@ -196,8 +216,8 @@ by `generator` from the `from` side. When `auto_generated: true`, adapters on th
 root MUST treat the path as read-only and ignore lint errors that originate inside
 generated files (they are the source root's problem).
 
-Typical use: Tauri projects where Rust types in `src-tauri/src/<bc>/shared/contracts/`
-become TS types in `src/<bc>/types/` via `tauri-specta`.
+Typical use: Tauri projects where Rust types in `apps/<app>/src-tauri/src/<bc>/shared/contracts/`
+become TS types in `apps/<app>/src/<bc>/types/` via `tauri-specta`(同一 app 内の cross-root)。
 
 ---
 
@@ -290,8 +310,14 @@ Contributing new adapter は `docs/contributing/adding-adapter.md` 参照。
 ```yaml
 ---
 version: 1
+workspace:
+  apps_root: apps
+  apps:
+    - name: my-app
+      path: apps/my-app
 root:
-  path: src
+  app: my-app
+  path: apps/my-app/src
   language: typescript
   layer_set: ddd-vsa-hex-ts
   adapter: eslint
@@ -325,7 +351,7 @@ cross_slice:
   prohibited_direct: true
   via: [shared/contracts, shared/events]
 cross_bc:
-  via: [src/shared/contracts, src/shared/events]
+  via: [apps/my-app/src/shared/contracts, apps/my-app/src/shared/events]
   same_event_bus: true
 page_map_marker: phase-11b
 ---
@@ -335,7 +361,7 @@ page_map_marker: phase-11b
 DDD-VSA-Hex with one-way UI pipeline from pages down to shared. Same-layer imports are
 prohibited so widgets can be composed without fearing hidden dependencies. Cross-slice
 traffic flows through `<bc>/shared/events` (event-bus) or `<bc>/shared/contracts` (typed
-messages) only. Cross-BC bridges live at `src/shared/`.
+messages) only. Cross-BC bridges live at `apps/<app>/src/shared/`.
 
 ## Page Map
 
@@ -344,21 +370,28 @@ messages) only. Cross-BC bridges live at `src/shared/`.
 <!-- END ori-distill phase-11b auto-generated -->
 ```
 
-## Worked example 2 — multi-root Tauri
+## Worked example 2 — multi-root Tauri(同一 app 内の TS/Rust 言語境界)
 
 ```yaml
 ---
 version: 1
+workspace:
+  apps_root: apps
+  apps:
+    - name: my-tauri-app
+      path: apps/my-tauri-app
 roots:
   - id: ts
-    path: src
+    app: my-tauri-app
+    path: apps/my-tauri-app/src
     language: typescript
     layer_set: ddd-vsa-hex-ts
     adapter: eslint
     slice_root: <bc>
     public_entry: index.ts
   - id: rs
-    path: src-tauri/src
+    app: my-tauri-app
+    path: apps/my-tauri-app/src-tauri/src
     language: rust
     layer_set: ddd-vsa-hex-rs
     adapter: rust
@@ -402,10 +435,10 @@ cross_bc:
 Each root selects its own adapter; `cross_root` makes the published-language bridge
 explicit so adapters know which generated paths to skip.
 
-**Tauri specifics**:
-- Rust source: `src-tauri/src/<bc>/{domain,shared/contracts,slices/<slice>/...,mod.rs}`
-- TS generated: `src/<bc>/types/` (tauri-specta auto-gen)
-- TS source (presentation only): `src/<bc>/slices/<slice>/presentation/`
+**Tauri specifics**(同一 app 内の言語境界):
+- Rust source: `apps/<app>/src-tauri/src/<bc>/{domain,shared/contracts,slices/<slice>/...,mod.rs}`
+- TS generated: `apps/<app>/src/<bc>/types/` (tauri-specta auto-gen)
+- TS source (presentation only): `apps/<app>/src/<bc>/slices/<slice>/presentation/`
 
 ---
 
