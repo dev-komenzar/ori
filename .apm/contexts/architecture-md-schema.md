@@ -39,7 +39,8 @@ roots:                        # optional in v0.1; required for multi-root projec
     language: typescript
     layer_set: ddd-vsa-hex-ts
     adapter: eslint           # adapter ID (eslint | rust | generic | dependency-cruiser | import-linter)
-    slice_root: <bc>          # slices live under <path>/<bc>/slices/<slice-id>/
+    slice_root: <bc>          # BC namespace directory (one level under <path>)
+    slice_subdir: slices      # optional. nested dir under slice_root holding slices (design.md §17)
     public_entry: index.ts    # file that exposes the slice's public API
   - id: rs
     app: <project-folder>     # Tauri は同一 app 内の言語境界
@@ -48,6 +49,7 @@ roots:                        # optional in v0.1; required for multi-root projec
     layer_set: ddd-vsa-hex-rs
     adapter: rust
     slice_root: <bc>
+    slice_subdir: slices
     public_entry: mod.rs
 cross_root:                   # optional; 同一 app 内の published-language bridges (Tauri 等)
   - from: { root: rs, path: shared/contracts }
@@ -92,6 +94,7 @@ root:                         # singular form — equivalent to roots[0]
   layer_set: ddd-vsa-hex-ts
   adapter: eslint
   slice_root: <bc>
+  slice_subdir: slices       # optional. when set, slices live at <path>/<bc>/<slice_subdir>/<slice-id>/
   public_entry: index.ts
 layer_sets: { ... }
 slice_internal: { ... }
@@ -100,6 +103,17 @@ cross_slice: { prohibited_direct: true, via: [shared/contracts, shared/events] }
 ```
 
 Adapters MUST treat `root:` and a single-element `roots:` identically.
+
+### `slice_subdir` semantics
+
+`slice_subdir` is optional. When omitted, slices live one directory below
+`<root.path>/<slice_root>/<slice-id>/` (the v0.1 layout used by older
+templates). When set (typically `slices`), slices descend one more level
+to `<root.path>/<slice_root>/<slice_subdir>/<slice-id>/` — this matches
+the `apps/<app>/src/<bc>/slices/<slice-id>/` layout declared in
+`docs/design.md` §17. BC-internal shared (`kind: shared`) stays at
+`<root.path>/<slice_root>/shared/`, i.e. a sibling of `slices/`, not
+below it.
 
 ---
 

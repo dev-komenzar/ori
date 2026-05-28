@@ -27,8 +27,18 @@ function sliceBase(root: RootConfig): string {
     : ensureTrailingSlash(`${root.path}/${root.slice_root}`);
 }
 
+function slicePrefix(root: RootConfig): string {
+  // When slice_subdir is set, slices live one level deeper (design.md §17).
+  // Returns the prefix used to match slice files relative to root.path.
+  const base = sliceBase(root);
+  const sub = root.slice_subdir;
+  if (!sub || sub === "" || sub === ".") return base;
+  return ensureTrailingSlash(`${base.replace(/\/$/, "")}/${sub}`);
+}
+
 function buildMatchers(set: LayerSet, root: RootConfig): RustMatcher[] {
   const base = sliceBase(root);
+  const slicePref = slicePrefix(root);
   const matchers: RustMatcher[] = [];
   for (const layer of set.layers) {
     if (layer.kind === "shared") {
@@ -52,7 +62,7 @@ function buildMatchers(set: LayerSet, root: RootConfig): RustMatcher[] {
       matchers.push({
         layerId: layer.id,
         kind: "slice",
-        prefix: base,
+        prefix: slicePref,
         slice: true,
       });
     }

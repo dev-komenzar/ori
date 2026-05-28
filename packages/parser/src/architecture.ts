@@ -58,11 +58,13 @@ const SliceInternalSchema = z
 const RootSchema = z
   .object({
     id: z.string().optional(),
+    app: z.string().optional(),
     path: z.string(),
     language: z.string(),
     layer_set: z.string(),
     adapter: z.string(),
     slice_root: z.string(),
+    slice_subdir: z.string().optional(),
     public_entry: z.string(),
   })
   .passthrough();

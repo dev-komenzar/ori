@@ -93,6 +93,66 @@ describe("@ori-ori/arch-adapter-eslint", () => {
     expect(result.notes?.join("\n")).toMatch(/skipped/);
   });
 
+  describe("slice_subdir (design.md §17 — <bc>/slices/<slice>/)", () => {
+    const SPEC_WITH_SUBDIR = `---
+version: 1
+workspace:
+  apps_root: apps
+  apps:
+    - name: template-app
+      path: apps/template-app
+root:
+  app: template-app
+  path: apps/template-app/src
+  language: typescript
+  layer_set: ddd-vsa-hex-ts
+  adapter: eslint
+  slice_root: task-management
+  slice_subdir: slices
+  public_entry: index.ts
+layer_sets:
+  ddd-vsa-hex-ts:
+    layers:
+      - { id: shared,    kind: shared }
+      - { id: domain,    kind: slice, slice_internal: slice-internal-ts }
+      - { id: ui-widget, kind: ui-layer, order: 1 }
+      - { id: ui-page,   kind: ui-layer, order: 2 }
+    rules:
+      cross_layer:
+        - { from: ui-page,   allow: [ui-widget, shared, domain] }
+        - { from: ui-widget, allow: [shared, domain] }
+        - { from: domain,    allow: [shared] }
+        - { from: shared,    allow: [] }
+      same_layer: prohibited
+      public_entry_required: true
+cross_slice:
+  prohibited_direct: true
+  via: [shared/contracts, shared/events]
+---
+`;
+
+    it("emits slice pattern with the subdir level (apps/<app>/src/<bc>/slices/*/**)", async () => {
+      const spec = parseArchitectureSpec(SPEC_WITH_SUBDIR);
+      const result = await adapter.export(spec, spec.roots[0]!);
+      const content = result.files[0]!.content;
+      // BC-internal shared sits beside slices/ — no subdir
+      expect(content).toContain(
+        "\"pattern\": \"apps/template-app/src/task-management/shared/**\"",
+      );
+      // slice element matches one level below slices/
+      expect(content).toContain(
+        "\"pattern\": \"apps/template-app/src/task-management/slices/*/**\"",
+      );
+      // ui-layer patterns stay at root path
+      expect(content).toContain(
+        "\"pattern\": \"apps/template-app/src/ui-widget/**\"",
+      );
+      expect(content).toContain(
+        "\"pattern\": \"apps/template-app/src/ui-page/**\"",
+      );
+    });
+  });
+
   describe("forbidden_imports → no-restricted-imports", () => {
     const SPEC_WITH_FORBIDDEN = `---
 version: 1
