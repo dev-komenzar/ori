@@ -141,11 +141,15 @@ AI ハーネス(Claude Code, OpenCode, Codex, Gemini CLI, GitHub Copilot, Cursor
 - Slice ↔ Phase 9 workflow step(完全 1:1)
 - Slice ↔ DDD docs(`derives_from` で論理依存を declare)
 
-**所在**: `.ori/slices/<slice-id>/`
+**所在(SSoT メタ)**: `.ori/slices/<slice-id>/`
 - `manifest.yaml`(SSoT)
-- `tests/`(phase 3 test-red 出力)
+- `spec.md` / `plan.md` / `review.md`(各 phase 出力)
 - `notes.md`(実装ログ、任意)
 - `status.yaml`(beads 派生キャッシュ)
+
+**所在(code + tests)**: `apps/<app>/src/<bc>/slices/<slice-id>/`
+- `domain/` `application/` `infrastructure/` `presentation/` `tests/`
+- tests は impl と co-locate(sibling import、vitest default が効く)
 
 ### Page
 
@@ -533,6 +537,7 @@ APM が各 harness の settings に **自動 merge**(`.claude/settings.json`, `.
 ```yaml
 slice_id: register-user                       # または page_id
 bc: user-management
+app: frontend                                 # 配置先 app(single-app では省略可、N-app では必須)
 type: command                                 # command | query | page
 status: generated                             # planned | generated | dirty | stale | manually_edited
 
@@ -568,7 +573,7 @@ inputs:
   - {node: architecture:stack, hash: sha256:...}
 
 outputs:
-  - {path: src/<bc>/slices/register-user/application/handler.ts, hash: sha256:...}
+  - {path: apps/<app>/src/<bc>/slices/register-user/application/handler.ts, hash: sha256:...}
 
 timestamps:
   generated_at: 2026-05-17T10:30:00Z
@@ -613,6 +618,18 @@ flow_state:                                   # 7-phase 進行状況
 - `stale` — dirty 長期放置
 - `manually_edited` — outputs.hash 不一致(手動編集)
 
+### `app:` field の解決ロジック(skill 共通)
+
+slice/page manifest の `app:` field を skill が解決する順序:
+
+1. manifest に `app:` field があれば優先採用
+2. なければ `.ori/config.yaml` の `workspace.apps:` を参照
+   - **要素 1 個**(single-app: 最頻ケース) → その entry を使用、`app:` 省略可
+   - **要素 N 個**(monorepo) → manifest に `app:` 必須、なければ skill 停止 + bd issue にエラー記録
+3. config なし → `/ori-init` 未実行エラー
+
+slice 出力 path は `apps/<app>/src/<bc>/slices/<slice-id>/...`(BC top-level の `domain/` と `shared/contracts/events/` も `apps/<app>/src/<bc>/` 配下)。
+
 ---
 
 ## 12. .ori/architecture.md schema(v1)
@@ -624,23 +641,30 @@ flow_state:                                   # 7-phase 進行状況
 ```yaml
 ---
 version: 1
-default_root: src
+workspace:
+  apps_root: apps                              # project root から見た apps directory
+  apps:                                        # /ori-init が repo folder 名から自動導出
+    - name: <project-folder>                   # 例: promptnotes
+      path: apps/<project-folder>              # apps_root/name
+default_root: ts                               # roots[].id を指定
 roots:
   - id: ts
-    path: src
+    app: <project-folder>                      # この root がどの app に属するか
+    path: apps/<project-folder>/src            # slice は apps/<app>/src/<bc>/slices/<id>/
     language: typescript
     layer_set: ddd-vsa-hex-ts
     adapter: eslint
-    slice_root: <bc>                           # slice は <bc>/slices/<id>/
+    slice_root: <bc>
     public_entry: index.ts
   - id: rs
-    path: src-tauri/src
+    app: <project-folder>                      # Tauri は同一 app 内の言語境界
+    path: apps/<project-folder>/src-tauri/src
     language: rust
     layer_set: ddd-vsa-hex-rs
     adapter: rust
     slice_root: <bc>
     public_entry: mod.rs
-cross_root:                                    # Tauri 言語境界
+cross_root:                                    # Tauri 言語境界(同一 app 内)
   - from: { root: rs, path: shared/contracts }
     to:   { root: ts, path: <bc>/types }
     generator: tauri-specta
@@ -650,12 +674,48 @@ slice_internal: { ... }
 cross_slice:
   prohibited_direct: true
   via: [shared/contracts, shared/events]
-cross_bc:                                      # cross-BC bridge
-  via: [src/shared/contracts, src/shared/events]
-  same_event_bus: true                         # MVP は単一 bus
+cross_bc:                                      # cross-BC bridge(app 内)
+  via: [apps/<app>/src/shared/contracts, apps/<app>/src/shared/events]
+  same_event_bus: true                         # MVP は単一 bus(app 内)
+cross_app:                                     # monorepo の app 間契約
+  via: [contracts-package, shared-events-bus]  # publish/subscribe またはコード共有
 page_map_marker: phase-11b                     # phase 11b auto-managed section
 ---
 ```
+
+### Monorepo の場合(N-app)
+
+`workspace.apps:` と `roots:` を app 単位で複数 declare:
+
+```yaml
+workspace:
+  apps_root: apps
+  apps:
+    - {name: frontend, path: apps/frontend}
+    - {name: backend,  path: apps/backend}
+roots:
+  - id: ts-frontend
+    app: frontend
+    path: apps/frontend/src
+    language: typescript
+    layer_set: ddd-vsa-hex-ts
+    slice_root: <bc>
+    public_entry: index.ts
+  - id: ts-backend
+    app: backend
+    path: apps/backend/src
+    language: typescript
+    layer_set: ddd-vsa-hex-ts
+    slice_root: <bc>
+    public_entry: index.ts
+cross_app:                                     # frontend↔backend の event/contract 同期
+  - from: { app: backend,  path: src/<bc>/shared/contracts/events }
+    to:   { app: frontend, path: src/<bc>/shared/contracts/events }
+    generator: copy-or-publish
+    auto_generated: true
+```
+
+`.ori/domain/` は **1 set** で全 app 共有(monorepo = 1 DDD doc)。各 BC がどの app に住むかは `bounded-contexts.md` frontmatter または architecture.md `roots[].bc_assignments:` で declare(詳細は §13 検討中)。
 
 ### Layer set 例(ddd-vsa-hex-ts)
 
@@ -959,15 +1019,23 @@ src/                             # TS monorepo(開発時 SSoT)
 
 ## 17. Repository layout
 
+### 原則: project root はメタ artifact 専用、code は `apps/<app>/` 配下
+
+Project root には ori / harness / contributor 向けメタ artifact(`.ori/`, `.claude/`, `README.md` 等)のみ置き、実行 code は `apps/<app>/src/...` 配下に集約する。これにより:
+
+- single-app: `apps/<project-folder>/` 1 個(`/ori-init` が repo folder 名から自動導出)
+- monorepo(N-app): `apps/frontend/`, `apps/backend/` 等を user が `.ori/config.yaml` `workspace.apps:` に追加
+- Tauri 等の言語境界 cross-root は **同一 app 内**(`apps/<app>/{src,src-tauri}/`)で扱い、app 境界とは直交
+
 ### Per-project(対象プロジェクト側、/ori-init が作る最小構成)
 
 ```
 <project>/
 ├── .ori/
-│   ├── config.yml                          # ori_version, task_manager: beads, models
+│   ├── config.yaml                         # ori_version, workspace.apps, task_manager, models
 │   ├── domain/                             # DDD phase 出力(空、phase 進行で populate)
 │   │   └── .gitkeep
-│   ├── slices/                             # /ori-flow 出力
+│   ├── slices/                             # /ori-flow 出力(全 app 共通)
 │   │   └── .gitkeep
 │   ├── pages/                              # /ori-flow + page-grouping 出力
 │   │   └── .gitkeep
@@ -981,9 +1049,9 @@ src/                             # TS monorepo(開発時 SSoT)
 └── AGENTS.md                               # AI-aware conventions stub
 ```
 
-`/ori-init` は **silent** で .ori/ skeleton のみ作成。Template copy / scaffold は **しない**(/ori-arch の framework init で project code は生成される)。
+`/ori-init` は **silent** で .ori/ skeleton のみ作成。`apps/` directory も生成 **しない**(/ori-arch の framework init が apps/<app>/ を populate)。`.ori/config.yaml` には repo folder 名から導出した default app entry を書き込む。
 
-### /ori-arch 後の構造(ddd-vsa-hex + Tauri 例)
+### /ori-arch 後の構造(single-app + Tauri 例)
 
 ```
 <project>/
@@ -991,34 +1059,72 @@ src/                             # TS monorepo(開発時 SSoT)
 ├── docs/architecture/
 │   ├── pattern.md                          # /ori-arch 決定記録
 │   └── stack.md                            # /ori-arch interview 結果
-├── src-tauri/src/                          # Rust(framework init 出力 + ori overlay)
-│   └── <bc>/
-│       ├── domain/                         # Phase 10 types(BC 共有)
-│       ├── shared/contracts/events/        # Phase 6 events
-│       ├── shared/events/event-bus.rs      # @ori-generated
-│       ├── slices/
-│       │   └── <slice-id>/
-│       │       ├── domain/                 # slice 固有(command DTO)
-│       │       ├── application/handler.rs
-│       │       ├── infrastructure/
-│       │       └── tests/
-│       └── mod.rs
-└── src/                                     # TS frontend
-    └── <bc>/
-        ├── types/                          # tauri-specta auto-generated
-        ├── slices/<slice-id>/presentation/ # UI fragment
-└── src/pages/                              # page 単位 layout
-    └── <page-id>/
-        ├── Page.tsx
-        ├── route.ts
-        └── e2e/<scenario>.spec.ts
-└── src/shared/
-    ├── errors/                             # @ori-generated
-    ├── logger.ts                           # @ori-generated
-    ├── guards/                             # @ori-generated(auth declare 時)
-    ├── contracts/events/                   # cross-BC events
-    └── events/global-event-bus.ts          # @ori-generated
+└── apps/
+    └── <app>/                              # /ori-init が repo folder 名から導出
+        ├── src-tauri/src/                  # Rust(framework init 出力 + ori overlay)
+        │   └── <bc>/
+        │       ├── domain/                 # Phase 10 types(BC 共有)
+        │       ├── shared/contracts/events/ # Phase 6 events
+        │       ├── shared/events/event-bus.rs  # @ori-generated
+        │       ├── slices/
+        │       │   └── <slice-id>/
+        │       │       ├── domain/         # slice 固有(command DTO)
+        │       │       ├── application/handler.rs
+        │       │       ├── infrastructure/
+        │       │       └── tests/
+        │       └── mod.rs
+        ├── src/                            # TS frontend
+        │   ├── <bc>/
+        │   │   ├── types/                  # tauri-specta auto-generated
+        │   │   └── slices/<slice-id>/presentation/
+        │   ├── pages/
+        │   │   └── <page-id>/
+        │   │       ├── Page.tsx
+        │   │       ├── route.ts
+        │   │       └── e2e/<scenario>.spec.ts
+        │   └── shared/
+        │       ├── errors/                 # @ori-generated
+        │       ├── logger.ts               # @ori-generated
+        │       ├── guards/                 # @ori-generated(auth declare 時)
+        │       ├── contracts/events/       # cross-BC events
+        │       └── events/global-event-bus.ts  # @ori-generated
+        └── package.json                    # app 固有 manifest
 ```
+
+### /ori-arch 後の構造(monorepo: frontend + backend 例)
+
+```
+<project>/
+├── .ori/                                    # SSoT(1 set、全 app 共通)
+│   ├── domain/                             # 1 DDD doc set
+│   ├── slices/                             # slice manifest が app: で配置先を指定
+│   └── architecture.md                     # roots を app 単位で複数 declare
+├── apps/
+│   ├── frontend/
+│   │   ├── src/
+│   │   │   ├── <bc>/                       # BC が frontend に住む場合
+│   │   │   │   ├── domain/
+│   │   │   │   ├── shared/contracts/events/
+│   │   │   │   └── slices/<slice-id>/...   # slice.app: frontend
+│   │   │   ├── pages/<page-id>/
+│   │   │   └── shared/...
+│   │   └── package.json
+│   └── backend/
+│       ├── src/
+│       │   ├── <bc>/                       # 同じ BC が backend にも住みうる(別 slice 群)
+│       │   │   ├── domain/
+│       │   │   ├── shared/contracts/events/
+│       │   │   └── slices/<slice-id>/...   # slice.app: backend
+│       │   └── shared/...
+│       └── package.json
+└── package.json                            # workspace root(pnpm-workspaces 等)
+```
+
+monorepo では:
+- `.ori/domain/` は **1 set** で全 app 共有(BC は domain 概念であり deployment 単位ではないため)
+- 同じ BC が複数 app に住みうる(frontend の UI workflow と backend の handler が同じ `order` BC を共有)
+- slice manifest の `app:` field で配置先 app を明示(N-app では必須)
+- cross-app の event/contract 同期は `architecture.md` の `cross_app:` で declare
 
 ---
 

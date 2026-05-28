@@ -1,7 +1,8 @@
 import { mkdtemp, rm, readFile, writeFile, mkdir, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { parse as yamlParse } from "yaml";
 import { initCommand } from "./init.js";
 import { DOMAIN_SCAFFOLD_PATHS, seedDomainScaffolds } from "../utils/domain-scaffold.js";
 
@@ -116,6 +117,34 @@ describe("init command", () => {
     const second = await seedDomainScaffolds({ cwd: tmp, force: false });
     expect(second.written).toEqual([]);
     expect(second.skipped).toEqual(DOMAIN_SCAFFOLD_PATHS);
+  });
+
+  it("writes workspace.apps with a default app derived from the cwd folder name", async () => {
+    await runInit(tmp);
+    const config = yamlParse(await readFile(join(tmp, ".ori/config.yaml"), "utf8")) as {
+      ori: {
+        workspace: {
+          apps_root: string;
+          apps: Array<{ name: string; path: string }>;
+        };
+      };
+    };
+    expect(config.ori.workspace.apps_root).toBe("apps");
+    expect(config.ori.workspace.apps).toHaveLength(1);
+    const sanitized = basename(tmp)
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+    expect(config.ori.workspace.apps[0]).toEqual({
+      name: sanitized,
+      path: `apps/${sanitized}`,
+    });
+  });
+
+  it("does NOT create apps/ directory at init time (delegated to /ori-arch)", async () => {
+    await runInit(tmp);
+    expect(await fileExists(join(tmp, "apps"))).toBe(false);
   });
 
   it("places .gitkeep in empty directories for VCS tracking", async () => {
