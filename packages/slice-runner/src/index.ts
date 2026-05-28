@@ -1,4 +1,4 @@
-export { PHASES, type Phase, type PhaseStatus } from "./phases.js";
+export { PHASES, type Phase, type PhaseRecord, type PhaseStatus, isValidPhase, nextPhase } from "./phases.js";
 export {
   type AgentSpec,
   type CapabilityRole,
