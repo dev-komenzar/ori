@@ -45,11 +45,14 @@ fi
 DEST="$(cd "$DEST" && pwd)"
 
 # pick runner: prefer `ori` on PATH; fall back to `pnpm dlx` / `npx`.
+# pnpm dlx parses the first non-flag arg as the package and forwards the rest
+# to the package's bin (here `ori`), so `pnpm dlx @ori-ori/cli init` ⇒ `ori init`.
+# npx accepts `-p <pkg> <bin>` to run a bin whose name differs from the package.
 declare -a CMD=()
 if command -v ori >/dev/null 2>&1; then
   CMD=(ori init)
 elif command -v pnpm >/dev/null 2>&1; then
-  CMD=(pnpm dlx -p @ori-ori/cli ori init)
+  CMD=(pnpm dlx @ori-ori/cli init)
 elif command -v npx >/dev/null 2>&1; then
   CMD=(npx --yes -p @ori-ori/cli ori init)
 else
@@ -58,7 +61,7 @@ else
     echo ""
     echo "Install one of:"
     echo "  - npm install -g @ori-ori/cli   (then 'ori' is on PATH)"
-    echo "  - pnpm (provides 'pnpm dlx @ori-ori/cli')"
+    echo "  - pnpm (provides 'pnpm dlx @ori-ori/cli init')"
     echo "  - npx  (provides 'npx -p @ori-ori/cli ori init')"
   } >&2
   exit 1
