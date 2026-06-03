@@ -29,7 +29,7 @@
 16. [Curated content の置き場](#16-curated-content-の置き場)
 17. [Repository layout](#17-repository-layout)
 18. [用語集](#18-用語集)
-19. [v0.2+ ロードマップ](#19-v02-ロードマップ)
+19. [ロードマップ](#19-ロードマップ)
 
 ---
 
@@ -1161,37 +1161,46 @@ monorepo では:
 
 ---
 
-## 19. v0.2+ ロードマップ
+## 19. ロードマップ
 
-### Phase B → Phase C 移行(2026-05-22 更新)
+### v0.2 — close the /ori-flow execution gap(epic = `ori-5mi`)
 
-Phase B(MVP v0.1 dogfooding on promptnotes-vcsdd, epic = `ori-qzq`)で 2 slice(capture-auto-save / edit-past-note)を /ori-flow で完走させた結果、`/ori-rules` や追加 pattern よりも前に「`/ori-flow` を skill 手動代替なしで動かす」ことが最優先と判明した。v0.2 は **"close the /ori-flow execution gap"** に絞る(Phase C epic 起票予定)。
+Phase B(MVP v0.1 dogfooding on promptnotes-vcsdd, epic = `ori-qzq`)で 2 slice(capture-auto-save / edit-past-note)を /ori-flow で完走させた結果、最大 friction は「`/ori-flow` が skill 内手動代替なしでは動かない」と判明。v0.2 は **execution gap close** に絞る。
 
-実摩擦から導いた v0.2 採用判断:
+採用済み:
 
-- **採用昇格**: `ori slice run` runner 実装 / APM package 配布(`apm install dev-komenzar/ori` を動かす)/ test infra auto-scaffold / brownfield migration helper(既存 `docs/domain` → `.ori/domain` + `.ddd-session.json` 取り込み)/ `--setup-issues` 実装
-- **v0.2 据え置き**: Tests 体系の整備(test infra auto-scaffold としてサブセット採用)
-- **v0.3 降格**: `/ori-rules`(実摩擦なし) / 追加 pattern(同上) / Codex CLI Layer 1(検証なし) / Curated content semver(users 0)
+- ✓ APM package 配布(`apm install dev-komenzar/ori` で skill scripts が target に展開、`ori-ix4`)
+- ✓ `ori slice run` MVP 実装(7-phase runner stub の解消、`ori-bdx`)
+- `/ori-plan` SKILL.md 改訂 — AI が下流 beads issue を idempotent に bd create(`ori-zds`、進行中)
 
-### v0.2 候補(2026-05-22 改訂)
+v0.2 スコープ外として deferred(2026-06-03 決定):
 
-- `ori slice run` runner 実装(7-phase MVP stub の解消、Phase B 最大 blocker)
-- APM package 配布(`@ori-ori/ori` を apm registry に登録、scripts/ unresolved を解消)
-- `/ori-test-red` 用 test infra auto-scaffold(package.json / vitest install 自動化)
-- Brownfield migration helper(`/ori-migrate-domain` 等、ori-6us 解消含む)
-- `--setup-issues` 実装(`/ori-plan` から beads issue 自動 create)
+- F2 / `ori-29p` test infra auto-scaffold — 起点が brownfield(既存 project の package.json / test stack 尊重)。greenfield では `/ori-arch` の framework_init が test runner install を担うため不要
+- F5 / `ori-5wv` brownfield migration helper(`/ori-migrate-domain`) — v0.2 acceptance は greenfield で PASS、brownfield ケースを v0.2 blocker とする根拠なし。連動で `ori-6us`(移行ロス gaps)も同時 defer
+- `ori-100` `--setup-issues` CLI feature — CLI 廃止方針(v0.3)で不要。代替として AI が直接 `bd create` を行う方向に置換(`ori-zds`)
 
-### v0.3 候補(2026-05-22 改訂)
+### v0.3 — CLI 廃止 → skill + scripts ベース実行モデル(epic = `ori-1ny`)
 
-- `/ori-rules`(machine-checkable invariants 生成、v0.2 から降格)
-- 追加 pattern(2 個目を入れて pluggability 実証、v0.2 から降格)
-- Codex CLI の Layer 1 対応(v0.2 から降格)
-- Curated content の semver + migration helper(v0.2 から降格)
+`ori-execution-model-shift-2026-06-03` で確定した方針を全面実施する。配布を APM single package に一本化し、`@ori-ori/cli` を含む `@ori-ori/*` 4 packages を npm deprecate。共通 TS logic は `packages/` source + esbuild で `.apm/skills/<name>/scripts/` に per-skill bundle する。
+
+主要スコープ:
+
+- 実行モデル明文化(`.apm/contexts/skill-scripts-build.md`)— pure bash で書ける I/O 系は `scripts/*.sh`、JS が必要(yaml / zod / parser / coherence 依存等)は `packages/skills/<name>/index.ts` を esbuild → ESM single-file bundle
+- `packages/cli/src/commands/` の 7 サブコマンド(arch / sync / slice / page / lint / proposals / model)を skill scripts に移植
+- templates / docs / SKILL.md の CLI 言及を skill ベースに書き換え
+- `packages/cli` 撤去 + `@ori-ori/*` 4 packages を npm deprecate
+- pre-commit hook で `build:skills` stale check + contributing docs 整備
+
+### v0.4 以降(将来想定)
+
+- **ブラウンフィールド対応** — 既存プロジェクトの `docs/domain` を `.ori/domain` 規約に持ち上げる migration helper(`/ori-migrate-domain`、`ori-5wv` / `ori-6us` deferred)。あわせて test infra auto-scaffold(`ori-29p`)も brownfield 起点として再開
+- 追加 pattern(2 個目を入れて pluggability 実証)
+- 追加 template(Python / Go / Rust / Kotlin / Next.js / Django 等 — 詳細は README「init テンプレートを募集しています」参照)
+- 追加 arch adapter(import-linter / ArchUnit / depguard 等)
 - 追加 task manager adapter(Linear / GitHub Issues / Jira)
+- `/ori-rules`(machine-checkable invariants 生成)
 - Static analysis による code-to-code edge 自動検出
-- Brownfield support(`/ori-extract` 等、v0.2 の migration helper の上位)
-- 分散 event bus
-- Concurrent /ori-flow(aggregate-level lock)
+- 分散 event bus / Concurrent /ori-flow(aggregate-level lock)
 
 ### 検討中
 
