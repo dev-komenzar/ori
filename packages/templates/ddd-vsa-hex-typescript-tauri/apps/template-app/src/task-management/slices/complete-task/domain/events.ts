@@ -12,4 +12,12 @@ export type TaskCompleted = DomainEvent<
   { readonly id: TaskId }
 >;
 
-export type TaskEvent = TaskCreated | TaskCompleted;
+// Owned by archive-task slice but declared in the shared event union so
+// downstream consumers (UI projections, integration tests) can exhaust the
+// lifecycle without reaching across slices.
+export type TaskArchived = DomainEvent<
+  "TaskArchived",
+  { readonly id: TaskId }
+>;
+
+export type TaskEvent = TaskCreated | TaskCompleted | TaskArchived;

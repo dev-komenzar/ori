@@ -46,7 +46,7 @@ describe("slice:complete-task domain", () => {
 
       const result = createTask(id.value, title.value, FIXED_NOW);
 
-      expect(result.state.completed).toBe(false);
+      expect(result.state.status).toBe("open");
       expect(result.events).toHaveLength(1);
       expect(result.events[0]?.name).toBe("TaskCreated");
       expect(result.events[0]?.payload).toEqual({
@@ -65,7 +65,7 @@ describe("slice:complete-task domain", () => {
 
       expect(isOk(completed)).toBe(true);
       if (!isOk(completed)) return;
-      expect(completed.value.state.completed).toBe(true);
+      expect(completed.value.state.status).toBe("completed");
       expect(completed.value.events[0]?.name).toBe("TaskCompleted");
     });
 
