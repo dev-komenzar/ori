@@ -71,3 +71,32 @@ fi
 
 echo "Running: ${CMD[*]}  (in $DEST)"
 ( cd "$DEST" && "${CMD[@]}" )
+
+# Initialize bd (beads) workspace so /ori-flow and other skills that treat
+# beads as their SSoT can run immediately. This is best-effort: missing `bd`
+# is a warning (some users don't use beads), existing `.beads/` is honored
+# (idempotent), and any bd-side failure does not propagate to exit code.
+init_bd_workspace() {
+  if ! command -v bd >/dev/null 2>&1; then
+    echo "NOTE: 'bd' not found on PATH — skipping beads workspace init." >&2
+    echo "      Install beads (https://github.com/steveyegge/beads) to enable /ori-flow." >&2
+    return 0
+  fi
+  if [[ -d "$DEST/.beads" ]]; then
+    echo "NOTE: $DEST/.beads/ already exists — skipping bd init (idempotent)."
+    return 0
+  fi
+
+  # Normalize prefix: bd requires a trailing hyphen ('ori' → 'ori-').
+  local prefix="${ORI_BD_PREFIX:-ori}"
+  [[ "$prefix" != *- ]] && prefix="${prefix}-"
+
+  echo "Running: bd init -p $prefix --non-interactive  (in $DEST)"
+  if ! ( cd "$DEST" && bd init -p "$prefix" --non-interactive --quiet ); then
+    echo "WARN: 'bd init' failed; continuing without beads workspace." >&2
+    echo "      Re-run manually: bd init -p $prefix" >&2
+    return 0
+  fi
+}
+
+init_bd_workspace
