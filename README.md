@@ -203,6 +203,16 @@ $ /ori-flow switch-edit-target
 
 詳細な設計議論は [docs/design.md](docs/design.md) を参照。
 
+## ロードマップ
+
+- **v0.2 (作業中)** — /ori-flow 実行ギャップ解消。`/ori-test-red` 用 test infra auto-scaffold (`ori-29p`) と `/ori-plan --setup-issues` (`ori-100`) が残項目
+- **将来 (v0.3 以降想定)**
+  - **ブラウンフィールド対応** — 既存プロジェクトの `docs/domain` を `.ori/domain` 規約に持ち上げる migration helper (`/ori-migrate-domain`)。greenfield 動線を v0.2 で固め切ってから着手 (`ori-5wv` / `ori-6us` deferred)
+  - 追加 template (Python / Go / Rust / Kotlin / Next.js / Django 等) — 詳細は本 README「init テンプレートを募集しています」参照
+  - 追加 arch adapter (import-linter / ArchUnit / depguard 等)
+
+issue tracker は [beads](https://github.com/steveyegge/beads)（prefix `ori-`）で管理しています。
+
 ## ライセンス
 
 MIT — [LICENSE](LICENSE) を参照。
