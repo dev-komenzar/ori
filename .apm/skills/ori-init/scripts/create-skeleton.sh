@@ -1,51 +1,70 @@
 #!/usr/bin/env bash
-# ori-init: create .ori/ skeleton directory structure
-# Usage: ./create-skeleton.sh [--force]
-#   --force  Overwrite existing .ori/ if present
+# ori-init: create .ori/ skeleton in the current project.
+#
+# Transitional implementation (ori-05r): this script delegates to the `ori init`
+# CLI binary. The longer-term plan (ori-execution-model-shift-2026-06-03) is to
+# split init core into a published npm package so the skill can drive it
+# directly without a CLI hop — tracked as a separate refactor issue.
+#
+# Usage: create-skeleton.sh [--force] [--dest <dir>]
+#
+# Exit codes:
+#   0  success
+#   1  ori CLI not found, or `ori init` failed
+#   2  usage error (unknown flag)
 set -euo pipefail
 
-# Auto-detect project root
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
-if [ -z "$PROJECT_ROOT" ]; then
-  d="$SCRIPT_DIR"
-  while [ "$d" != "/" ]; do
-    if [ -d "$d/.ori" ]; then PROJECT_ROOT="$d"; break; fi
-    d="$(dirname "$d")"
-  done
-fi
-if [ -z "$PROJECT_ROOT" ]; then echo "ERROR: cannot find project root (.ori/ not found)" >&2; exit 1; fi
-cd "$PROJECT_ROOT"
-
 FORCE=false
-if [[ "${1:-}" == "--force" ]]; then
-  FORCE=true
-fi
+DEST=""
 
-if [[ -d .ori ]] && [[ "$FORCE" != "true" ]]; then
-  echo "ERROR: .ori/ already exists. Use --force to overwrite." >&2
+usage() {
+  cat >&2 <<'EOF'
+Usage: create-skeleton.sh [options]
+
+Options:
+  --force         Overwrite existing .ori/ files when present
+  --dest <dir>    Destination directory (default: current working directory)
+  -h, --help      Show this help and exit
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --force)     FORCE=true; shift ;;
+    --dest)      DEST="${2:-}"; shift 2 ;;
+    -h|--help)   usage; exit 0 ;;
+    *) echo "ERROR: unknown argument: $1" >&2; usage; exit 2 ;;
+  esac
+done
+
+DEST="${DEST:-$PWD}"
+if [[ ! -d "$DEST" ]]; then
+  echo "ERROR: --dest does not exist: $DEST" >&2
+  exit 1
+fi
+DEST="$(cd "$DEST" && pwd)"
+
+# pick runner: prefer `ori` on PATH; fall back to `pnpm dlx` / `npx`.
+declare -a CMD=()
+if command -v ori >/dev/null 2>&1; then
+  CMD=(ori init)
+elif command -v pnpm >/dev/null 2>&1; then
+  CMD=(pnpm dlx -p @ori-ori/cli ori init)
+elif command -v npx >/dev/null 2>&1; then
+  CMD=(npx --yes -p @ori-ori/cli ori init)
+else
+  {
+    echo "ERROR: cannot locate an ori CLI runner."
+    echo ""
+    echo "Install one of:"
+    echo "  - npm install -g @ori-ori/cli   (then 'ori' is on PATH)"
+    echo "  - pnpm (provides 'pnpm dlx @ori-ori/cli')"
+    echo "  - npx  (provides 'npx -p @ori-ori/cli ori init')"
+  } >&2
   exit 1
 fi
 
-[[ "$FORCE" == "true" ]] && rm -rf .ori
+[[ "$FORCE" == true ]] && CMD+=(--force)
 
-mkdir -p .ori/domain/workflows
-mkdir -p .ori/domain/ui-fields
-mkdir -p .ori/domain/code
-mkdir -p .ori/slices
-mkdir -p .ori/pages
-mkdir -p .ori/proposals
-mkdir -p .ori/state
-
-cat > .ori/config.yaml <<'YAMLEOF'
-# ori project configuration
-current_agent: claude
-language: typescript
-YAMLEOF
-
-cat > .ori/state/session.md <<'MDEOF'
-# Session State
-MDEOF
-
-echo "Created .ori/ skeleton"
-ls -R .ori/
+echo "Running: ${CMD[*]}  (in $DEST)"
+( cd "$DEST" && "${CMD[@]}" )
