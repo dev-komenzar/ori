@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
 # ori-init: create .ori/ skeleton in the current project.
 #
-# Transitional implementation (ori-05r): this script delegates to the `ori init`
-# CLI binary. The longer-term plan (ori-execution-model-shift-2026-06-03) is to
-# split init core into a published npm package so the skill can drive it
-# directly without a CLI hop — tracked as a separate refactor issue.
+# Invokes @ori-ori/init-core directly (no ori CLI hop), per
+# ori-execution-model-shift-2026-06-03 (skill drives core package directly).
 #
 # Usage: create-skeleton.sh [--force] [--dest <dir>]
 #
 # Exit codes:
 #   0  success
-#   1  ori CLI not found, or `ori init` failed
+#   1  no init-core runner available, or init-core failed
 #   2  usage error (unknown flag)
 set -euo pipefail
 
@@ -44,38 +42,38 @@ if [[ ! -d "$DEST" ]]; then
 fi
 DEST="$(cd "$DEST" && pwd)"
 
-# pick runner: prefer `ori` on PATH; fall back to `pnpm dlx` / `npx`.
-# pnpm dlx parses the first non-flag arg as the package and forwards the rest
-# to the package's bin (here `ori`), so `pnpm dlx @ori-ori/cli init` ⇒ `ori init`.
-# npx accepts `-p <pkg> <bin>` to run a bin whose name differs from the package.
+# Pick runner: prefer ori-init-skeleton on PATH (when @ori-ori/init-core is
+# globally installed), otherwise resolve via pnpm dlx / npx. Both forwarders
+# point at the same npm bin: `ori-init-skeleton`.
 declare -a CMD=()
-if command -v ori >/dev/null 2>&1; then
-  CMD=(ori init)
+if command -v ori-init-skeleton >/dev/null 2>&1; then
+  CMD=(ori-init-skeleton)
 elif command -v pnpm >/dev/null 2>&1; then
-  CMD=(pnpm dlx @ori-ori/cli init)
+  CMD=(pnpm dlx -p @ori-ori/init-core ori-init-skeleton)
 elif command -v npx >/dev/null 2>&1; then
-  CMD=(npx --yes -p @ori-ori/cli ori init)
+  CMD=(npx --yes -p @ori-ori/init-core ori-init-skeleton)
 else
   {
-    echo "ERROR: cannot locate an ori CLI runner."
+    echo "ERROR: cannot locate an @ori-ori/init-core runner."
     echo ""
     echo "Install one of:"
-    echo "  - npm install -g @ori-ori/cli   (then 'ori' is on PATH)"
-    echo "  - pnpm (provides 'pnpm dlx @ori-ori/cli init')"
-    echo "  - npx  (provides 'npx -p @ori-ori/cli ori init')"
+    echo "  - npm install -g @ori-ori/init-core   (then 'ori-init-skeleton' is on PATH)"
+    echo "  - pnpm (provides 'pnpm dlx -p @ori-ori/init-core ori-init-skeleton')"
+    echo "  - npx  (provides 'npx -p @ori-ori/init-core ori-init-skeleton')"
   } >&2
   exit 1
 fi
 
+CMD+=(--dest "$DEST")
 [[ "$FORCE" == true ]] && CMD+=(--force)
 
-echo "Running: ${CMD[*]}  (in $DEST)"
-( cd "$DEST" && "${CMD[@]}" )
+echo "Running: ${CMD[*]}"
+"${CMD[@]}"
 
 # Initialize bd (beads) workspace so /ori-flow and other skills that treat
-# beads as their SSoT can run immediately. This is best-effort: missing `bd`
-# is a warning (some users don't use beads), existing `.beads/` is honored
-# (idempotent), and any bd-side failure does not propagate to exit code.
+# beads as their SSoT can run immediately. Best-effort: missing `bd` is a
+# warning, existing `.beads/` is honored (idempotent), and bd-side failure
+# does not propagate to exit code.
 init_bd_workspace() {
   if ! command -v bd >/dev/null 2>&1; then
     echo "NOTE: 'bd' not found on PATH — skipping beads workspace init." >&2
@@ -87,7 +85,6 @@ init_bd_workspace() {
     return 0
   fi
 
-  # Normalize prefix: bd requires a trailing hyphen ('ori' → 'ori-').
   local prefix="${ORI_BD_PREFIX:-ori}"
   [[ "$prefix" != *- ]] && prefix="${prefix}-"
 

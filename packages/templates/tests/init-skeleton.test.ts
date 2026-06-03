@@ -48,13 +48,23 @@ function pathWithoutBd(): string {
     .join(":");
 }
 
-// Stub `ori` binary used in tests so we only exercise the bd-init branch
-// added in ori-ks7. The real ori init flow is covered by
-// packages/cli/src/commands/init.test.ts. Uses /bin/sh so it runs even
-// when the test deliberately strips PATH (the "bd missing" case).
-const ORI_STUB = `#!/bin/sh
-mkdir -p .ori
-cat > .ori/config.yaml <<'YAML'
+// Stub `ori-init-skeleton` binary used in tests so we only exercise the
+// bd-init branch. The real init-core flow is covered by
+// packages/init-core/src/skeleton.test.ts. The stub honors `--dest` so it
+// initializes the requested directory (the script always passes --dest).
+// Uses /bin/sh so it runs even when the test deliberately strips PATH
+// (the "bd missing" case).
+const ORI_INIT_SKELETON_STUB = `#!/bin/sh
+dest=.
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dest) dest="$2"; shift 2 ;;
+    --force) shift ;;
+    *) shift ;;
+  esac
+done
+mkdir -p "$dest/.ori"
+cat > "$dest/.ori/config.yaml" <<'YAML'
 workspace:
   apps:
     - name: stub-app
@@ -101,7 +111,7 @@ async function readBdPrefix(beadsDir: string): Promise<string> {
 describe("ori-init create-skeleton.sh bd integration (ori-ks7)", () => {
   it("runs `bd init` after `ori init` so /ori-flow has a SSoT immediately", async () => {
     const dest = await mkdtemp(join(tmpdir(), "ori-init-bd-"));
-    const stubBin = await makeStubBinDir({ ori: ORI_STUB });
+    const stubBin = await makeStubBinDir({ "ori-init-skeleton": ORI_INIT_SKELETON_STUB });
     try {
       await runInit(dest, stubBin);
       const prefix = await readBdPrefix(join(dest, ".beads"));
@@ -116,7 +126,7 @@ describe("ori-init create-skeleton.sh bd integration (ori-ks7)", () => {
 
   it("is idempotent — re-running over an existing .beads/ skips bd init", async () => {
     const dest = await mkdtemp(join(tmpdir(), "ori-init-bd-"));
-    const stubBin = await makeStubBinDir({ ori: ORI_STUB });
+    const stubBin = await makeStubBinDir({ "ori-init-skeleton": ORI_INIT_SKELETON_STUB });
     try {
       await runInit(dest, stubBin);
       const beadsStat = await stat(join(dest, ".beads"));
@@ -139,7 +149,7 @@ describe("ori-init create-skeleton.sh bd integration (ori-ks7)", () => {
 
   it("respects ORI_BD_PREFIX env var (with or without trailing hyphen)", async () => {
     const dest = await mkdtemp(join(tmpdir(), "ori-init-bd-"));
-    const stubBin = await makeStubBinDir({ ori: ORI_STUB });
+    const stubBin = await makeStubBinDir({ "ori-init-skeleton": ORI_INIT_SKELETON_STUB });
     try {
       await runInit(dest, stubBin, { ORI_BD_PREFIX: "demo" });
       const prefix = await readBdPrefix(join(dest, ".beads"));
@@ -155,7 +165,7 @@ describe("ori-init create-skeleton.sh bd integration (ori-ks7)", () => {
   it("warns and continues with exit 0 when `bd` is not on PATH", async () => {
     const dest = await mkdtemp(join(tmpdir(), "ori-init-bd-"));
     // Stub PATH contains only `ori` — bd lookup will fail.
-    const stubBin = await makeStubBinDir({ ori: ORI_STUB });
+    const stubBin = await makeStubBinDir({ "ori-init-skeleton": ORI_INIT_SKELETON_STUB });
     try {
       const result = await execFileAsync(BASH_PATH, [INIT_SCRIPT, "--dest", dest], {
         env: {
