@@ -33,7 +33,6 @@
   },
   "dependencies": {
     "@ori-ori/coherence": "workspace:*",
-    "@ori-ori/init-core": "workspace:*",
     "@ori-ori/slice-runner": "workspace:*",
     "@ori-ori/parser": "workspace:*",
     "citty": "^0.1.6",

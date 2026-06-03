@@ -1,10 +1,10 @@
-import { mkdtemp, rm, readFile, access } from "node:fs/promises";
+import { mkdtemp, rm, readFile, writeFile, mkdir, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { parse as yamlParse } from "yaml";
 import { initCommand } from "./init.js";
-import { DOMAIN_SCAFFOLD_PATHS } from "@ori-ori/init-core";
+import { DOMAIN_SCAFFOLD_PATHS, seedDomainScaffolds } from "../utils/domain-scaffold.js";
 
 async function fileExists(path: string): Promise<boolean> {
   try {
@@ -38,11 +38,11 @@ async function runInit(
   }
 }
 
-describe("init command (CLI integration)", () => {
+describe("init command", () => {
   let tmp: string;
 
   beforeEach(async () => {
-    tmp = await mkdtemp(join(tmpdir(), "ori-init-cli-"));
+    tmp = await mkdtemp(join(tmpdir(), "ori-init-"));
   });
 
   afterEach(async () => {
@@ -55,22 +55,121 @@ describe("init command (CLI integration)", () => {
     expect(typeof initCommand.run).toBe("function");
   });
 
-  it("delegates to init-core: writes config.yaml and all domain scaffolds", async () => {
+  it("creates the .ori/ skeleton silently (no template scaffold)", async () => {
     await runInit(tmp);
     expect(await fileExists(join(tmp, ".ori/config.yaml"))).toBe(true);
+    expect(await fileExists(join(tmp, ".ori/.gitignore"))).toBe(true);
     for (const rel of DOMAIN_SCAFFOLD_PATHS) {
       expect(await fileExists(join(tmp, rel))).toBe(true);
     }
-    const config = yamlParse(await readFile(join(tmp, ".ori/config.yaml"), "utf8")) as {
-      ori: { current_agent: string };
-    };
-    expect(config.ori.current_agent).toBe("claude");
+    // Template scaffold is delegated to /ori-arch — init must NOT touch project root.
+    expect(await fileExists(join(tmp, "package.json"))).toBe(false);
+    expect(await fileExists(join(tmp, "src-tauri"))).toBe(false);
+    expect(await fileExists(join(tmp, "CLAUDE.md"))).toBe(false);
+    expect(await fileExists(join(tmp, "AGENTS.md"))).toBe(false);
   });
 
-  it("does NOT touch the project root (no template scaffold from init)", async () => {
+  it("seeds aggregates.md with a status:pending frontmatter anchor", async () => {
     await runInit(tmp);
-    expect(await fileExists(join(tmp, "package.json"))).toBe(false);
-    expect(await fileExists(join(tmp, "CLAUDE.md"))).toBe(false);
+    const body = await readFile(join(tmp, ".ori/domain/aggregates.md"), "utf8");
+    expect(body).toContain("status: pending");
+    expect(body).toContain("# Aggregates");
+  });
+
+  it("does not overwrite existing files without --force", async () => {
+    await mkdir(join(tmp, ".ori/domain"), { recursive: true });
+    await writeFile(join(tmp, ".ori/domain/aggregates.md"), "USER CONTENT\n", "utf8");
+    await runInit(tmp);
+    const body = await readFile(join(tmp, ".ori/domain/aggregates.md"), "utf8");
+    expect(body).toBe("USER CONTENT\n");
+  });
+
+  it("overwrites existing files when --force is given", async () => {
+    await mkdir(join(tmp, ".ori/domain"), { recursive: true });
+    await writeFile(join(tmp, ".ori/domain/aggregates.md"), "USER CONTENT\n", "utf8");
+    await runInit(tmp, { force: true });
+    const body = await readFile(join(tmp, ".ori/domain/aggregates.md"), "utf8");
+    expect(body).toContain("status: pending");
+  });
+
+  it("scaffolds all 12 DDD phase outputs (1-11a + types/code/workflows/ui-fields indexes)", async () => {
+    expect(DOMAIN_SCAFFOLD_PATHS).toEqual([
+      ".ori/domain/discovery.md",
+      ".ori/domain/event-storming.md",
+      ".ori/domain/bounded-contexts.md",
+      ".ori/domain/context-map.md",
+      ".ori/domain/aggregates.md",
+      ".ori/domain/domain-events.md",
+      ".ori/domain/validation.md",
+      ".ori/domain/glossary.md",
+      ".ori/domain/workflows/index.md",
+      ".ori/domain/types.md",
+      ".ori/domain/code/index.md",
+      ".ori/domain/ui-fields/index.md",
+    ]);
+  });
+
+  it("seedDomainScaffolds reports written on first run and skipped on second run", async () => {
+    const first = await seedDomainScaffolds({ cwd: tmp, force: false });
+    expect(first.written).toEqual(DOMAIN_SCAFFOLD_PATHS);
+    expect(first.skipped).toEqual([]);
+
+    const second = await seedDomainScaffolds({ cwd: tmp, force: false });
+    expect(second.written).toEqual([]);
+    expect(second.skipped).toEqual(DOMAIN_SCAFFOLD_PATHS);
+  });
+
+  it("writes workspace.apps with a default app derived from the cwd folder name", async () => {
+    await runInit(tmp);
+    const config = yamlParse(await readFile(join(tmp, ".ori/config.yaml"), "utf8")) as {
+      ori: {
+        workspace: {
+          apps_root: string;
+          apps: Array<{ name: string; path: string }>;
+        };
+      };
+    };
+    expect(config.ori.workspace.apps_root).toBe("apps");
+    expect(config.ori.workspace.apps).toHaveLength(1);
+    const sanitized = basename(tmp)
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+    expect(config.ori.workspace.apps[0]).toEqual({
+      name: sanitized,
+      path: `apps/${sanitized}`,
+    });
+  });
+
+  it("does NOT create apps/ directory at init time (delegated to /ori-arch)", async () => {
+    await runInit(tmp);
     expect(await fileExists(join(tmp, "apps"))).toBe(false);
+  });
+
+  it("places .gitkeep in empty directories for VCS tracking", async () => {
+    await runInit(tmp);
+    expect(await fileExists(join(tmp, ".ori/slices/.gitkeep"))).toBe(true);
+    expect(await fileExists(join(tmp, ".ori/pages/.gitkeep"))).toBe(true);
+    expect(await fileExists(join(tmp, ".ori/proposals/.gitkeep"))).toBe(true);
+  });
+
+  it("seeds validation.md and workflows/index.md with the expected phase pointer", async () => {
+    await runInit(tmp);
+    const validation = await readFile(join(tmp, ".ori/domain/validation.md"), "utf8");
+    expect(validation).toContain("# Validation");
+    expect(validation).toContain("/ori-ddd-7-validation");
+
+    const workflowsIndex = await readFile(join(tmp, ".ori/domain/workflows/index.md"), "utf8");
+    expect(workflowsIndex).toContain("# Workflows Index");
+    expect(workflowsIndex).toContain("/ori-ddd-9-workflows");
+
+    const uiFieldsIndex = await readFile(join(tmp, ".ori/domain/ui-fields/index.md"), "utf8");
+    expect(uiFieldsIndex).toContain("# UI Fields Index");
+    expect(uiFieldsIndex).toContain("/ori-ddd-11a-ui-fields");
+
+    const codeIndex = await readFile(join(tmp, ".ori/domain/code/index.md"), "utf8");
+    expect(codeIndex).toContain("# Code Index");
+    expect(codeIndex).toContain("/ori-ddd-10-types");
   });
 });

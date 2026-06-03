@@ -1,6 +1,42 @@
 import { defineCommand } from "citty";
 import { consola } from "consola";
-import { createSkeleton } from "@ori-ori/init-core";
+import { mkdir, writeFile, access } from "node:fs/promises";
+import { basename, join } from "node:path";
+import { stringify as yamlStringify } from "yaml";
+import { DEFAULT_AGENTS, DEFAULT_PHASE_CONFIG } from "@ori-ori/slice-runner";
+import { seedDomainScaffolds } from "../utils/domain-scaffold.js";
+
+const DIRS = [
+  ".ori/domain/workflows",
+  ".ori/domain/ui-fields",
+  ".ori/domain/code",
+  ".ori/slices",
+  ".ori/pages",
+  ".ori/proposals",
+  ".ori/state",
+];
+
+function deriveAppName(cwd: string): string {
+  const folder = basename(cwd);
+  // Sanitize: lowercase, replace non-alphanumeric (except hyphen) with hyphen,
+  // collapse consecutive hyphens, trim leading/trailing hyphens.
+  // Fallback to "app" if the result is empty.
+  const sanitized = folder
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return sanitized || "app";
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export const initCommand = defineCommand({
   meta: {
@@ -18,24 +54,61 @@ export const initCommand = defineCommand({
     const cwd = process.cwd();
     consola.start(`Initializing ori workspace at ${cwd}`);
 
-    const result = await createSkeleton({ cwd, force: args.force });
+    for (const dir of DIRS) {
+      await mkdir(join(cwd, dir), { recursive: true });
+    }
 
-    if (result.configWritten) {
-      consola.success(
-        `Wrote .ori/config.yaml with defaults (app: ${result.appName}, current_agent: claude)`,
-      );
-    } else if (result.configAlreadyExisted) {
+    const gitkeepDirs = [".ori/slices", ".ori/pages", ".ori/proposals"];
+    for (const dir of gitkeepDirs) {
+      const gitkeepPath = join(cwd, dir, ".gitkeep");
+      if (!(await exists(gitkeepPath))) {
+        await writeFile(gitkeepPath, "", "utf8");
+      }
+    }
+
+    const configPath = join(cwd, ".ori/config.yaml");
+    const configExists = await exists(configPath);
+    if (configExists && !args.force) {
       consola.warn(".ori/config.yaml already exists. Use --force to overwrite.");
-    }
-
-    if (result.scaffold.written.length > 0) {
+    } else {
+      const appName = deriveAppName(cwd);
+      const config = {
+        ori: {
+          version: 1,
+          workspace: {
+            apps_root: "apps",
+            apps: [
+              {
+                name: appName,
+                path: `apps/${appName}`,
+              },
+            ],
+          },
+          workflow: { phases: DEFAULT_PHASE_CONFIG },
+          agents: DEFAULT_AGENTS,
+          current_agent: "claude",
+        },
+      };
+      await writeFile(configPath, yamlStringify(config), "utf8");
       consola.success(
-        `Seeded ${result.scaffold.written.length} domain scaffold file(s) under .ori/domain/`,
+        `Wrote .ori/config.yaml with defaults (app: ${appName}, current_agent: claude)`,
       );
     }
-    if (result.scaffold.skipped.length > 0) {
+
+    const gitignorePath = join(cwd, ".ori/.gitignore");
+    if (!(await exists(gitignorePath))) {
+      await writeFile(gitignorePath, "state/\n", "utf8");
+    }
+
+    const scaffold = await seedDomainScaffolds({ cwd, force: args.force });
+    if (scaffold.written.length > 0) {
+      consola.success(
+        `Seeded ${scaffold.written.length} domain scaffold file(s) under .ori/domain/`,
+      );
+    }
+    if (scaffold.skipped.length > 0) {
       consola.info(
-        `Skipped ${result.scaffold.skipped.length} existing scaffold file(s) (use --force to overwrite).`,
+        `Skipped ${scaffold.skipped.length} existing scaffold file(s) (use --force to overwrite).`,
       );
     }
 

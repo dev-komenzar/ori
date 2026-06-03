@@ -50,9 +50,6 @@ importers:
       '@ori-ori/coherence':
         specifier: workspace:*
         version: link:../coherence
-      '@ori-ori/init-core':
-        specifier: workspace:*
-        version: link:../init-core
       '@ori-ori/parser':
         specifier: workspace:*
         version: link:../parser
@@ -83,15 +80,6 @@ importers:
       zod:
         specifier: ^3.23.0
         version: 3.25.76
-
-  packages/init-core:
-    dependencies:
-      '@ori-ori/slice-runner':
-        specifier: workspace:*
-        version: link:../slice-runner
-      yaml:
-        specifier: ^2.5.0
-        version: 2.9.0
 
   packages/parser:
     dependencies:
