@@ -24,7 +24,7 @@ DDD 文書・slice / page・コードを 1 つのグラフに**織り**込み、
 
 ori は「AI に任意のコードを書かせるための薄いハーネス」ではありません。**「DDD ドキュメント → slice / page + DDD のコード骨格」というアーキテクチャまで指定する、opinionated（oriented）なハーネス**です。
 
-- `ori init --template ddd-typescript` は、slice ごとに `domain / application / infrastructure / presentation / tests` を切り、`index.ts` を唯一の public API として slice 間の直接 import を禁ずる、slice ベース DDD の雛形を吐きます。
+- `ori init` で `.ori/` skeleton を立てたあと `/ori-arch` を呼ぶと、pattern (`ddd-vsa-hex`) と framework (`typescript` / `typescript-tauri`) を対話で決めて、slice ごとに `domain / application / infrastructure / presentation / tests` を切り、`index.ts` を唯一の public API として slice 間の直接 import を禁ずる、slice ベース DDD の雛形を吐きます。
 - `.ori/architecture.md` を SSoT として、`@ori-ori/arch-adapter-*` 系の adapter が ESLint や言語ネイティブ linter にコンパイルされ、規約逸脱を CI で止めます。
 - AI に与えるのは「任意のスタイルで書く自由」ではなく「決められたスロットを埋める自由」です。創造性は domain modeling と slice 内ロジックに集中させます。
 
@@ -76,7 +76,8 @@ apm install dev-komenzar/ori
 
 # 3. プロジェクトを scaffold
 $ cd my-project
-$ ori init --template ddd-typescript          # or ddd-typescript-tauri
+$ ori init                                     # .ori/ skeleton + config.yaml (silent)
+$ /ori-arch                                    # pattern=ddd-vsa-hex / framework=typescript[-tauri] を選択 → template scaffold
 $ /ori-distill                                 # AI が distill-ddd phase 1-11 を対話実行
 $ /ori-flow app-startup                        # 1 slice を 7 phase で実装
 $ ori sync                                     # 変更伝播計算
@@ -84,7 +85,7 @@ $ ori sync                                     # 変更伝播計算
 
 ## init テンプレートを募集しています
 
-現状の `ori init` は MVP として `ddd-typescript`（slice ベース + DDD）を中心にサポートしています。将来的には**コミュニティから init テンプレートを集めたい**と考えています：
+現状の `/ori-arch` は MVP として `ddd-vsa-hex-typescript` / `ddd-vsa-hex-typescript-tauri`（slice ベース + DDD + Vertical Slice + Hexagonal）を中心にサポートしています。将来的には**コミュニティから template を集めたい**と考えています：
 
 - **言語別**: Python / Go / Rust / Kotlin / Scala / Swift...
 - **フレームワーク別**: Next.js / Nuxt / Remix / Django / FastAPI / Spring / Axum / Tauri...
