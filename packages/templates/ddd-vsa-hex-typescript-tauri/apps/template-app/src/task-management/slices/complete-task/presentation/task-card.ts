@@ -10,7 +10,11 @@ export interface TaskCardProps {
 }
 
 export function toTaskCardProps(task: Task): TaskCardProps {
-  return { id: task.id, title: task.title, completed: task.completed };
+  return {
+    id: task.id,
+    title: task.title,
+    completed: task.status === "completed",
+  };
 }
 
 export function renderTaskCard(props: TaskCardProps): string {

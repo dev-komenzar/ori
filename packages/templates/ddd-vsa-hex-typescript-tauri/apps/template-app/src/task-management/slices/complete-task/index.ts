@@ -5,13 +5,14 @@
 // architecture adapter).
 
 // Domain
-export type { Task, CommandResult } from "./domain/task.js";
+export type { Task, CommandResult, TaskStatus } from "./domain/task.js";
 export { createTask, completeTask, TaskStateError } from "./domain/task.js";
 export type { TaskId } from "./domain/task-id.js";
 export { taskId, TaskIdError } from "./domain/task-id.js";
 export type { TaskTitle } from "./domain/task-title.js";
 export { taskTitle, TaskTitleError } from "./domain/task-title.js";
 export type {
+  TaskArchived,
   TaskCompleted,
   TaskCreated,
   TaskEvent,
