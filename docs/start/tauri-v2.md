@@ -30,13 +30,20 @@ ori --version
 
 ```bash
 mkdir my-tauri-app && cd my-tauri-app
-ori init --template ddd-vsa-hex-typescript-tauri
+ori init                # .ori/ skeleton + config.yaml 生成 (silent)
+/ori-arch               # pattern=ddd-vsa-hex / framework=typescript-tauri を選択
 pnpm install
 ```
 
-生成物は **TS 側 (`apps/<app>/src/`)** と **Rust 側
-(`apps/<app>/src-tauri/`)** が並び、`.ori/` に両方を統治するマルチルートの
-architecture.md が置かれます。
+役割分担:
+
+- `ori init` （ステップ 1） — **silent**。`.ori/` skeleton と
+  `.ori/config.yaml` のみ生成。
+- `/ori-arch` （ステップ 2） — pattern (`ddd-vsa-hex`) / framework
+  (`typescript-tauri`) を選ぶと `ddd-vsa-hex-typescript-tauri` template が
+  cwd に展開され、TS 側 (`apps/<app>/src/`) と Rust 側
+  (`apps/<app>/src-tauri/`) が並び、`.ori/architecture.md` に両 root を
+  統治するマルチルート定義が置かれる。
 
 ## 3. 生成された構造
 

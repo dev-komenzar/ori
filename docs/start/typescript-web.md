@@ -24,18 +24,27 @@ ori --version
 
 ```bash
 mkdir my-ts-app && cd my-ts-app
-ori init --template ddd-vsa-hex-typescript
+ori init                # .ori/ skeleton + config.yaml 生成 (silent)
+/ori-arch               # pattern/framework 決定 → template scaffold
 pnpm install
 ```
 
-`ori init` が以下を生成します:
+役割分担:
 
-- `.ori/` — DDD ドキュメント置き場 + config + state
-- `package.json`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.js`
-- `.ori/architecture.md` — SSoT（後述）
-- `apps/<app>/src/` — ddd-vsa-hex scaffold（worked example: `task-management/complete-task`）
+- `ori init` （ステップ 1） — **silent**。`.ori/` skeleton と
+  `.ori/config.yaml`、domain scaffold seed のみ生成。プロジェクトルートには
+  `package.json` 等を書かない。
+- `/ori-arch` （ステップ 2） — pattern (`ddd-vsa-hex`) / framework
+  (`typescript`) を対話で決め、対応する template（ここでは
+  `ddd-vsa-hex-typescript`）を cwd に展開。`package.json`,
+  `tsconfig.json`, `vitest.config.ts`, `eslint.config.js`,
+  `.ori/architecture.md`, `apps/<app>/src/`（worked example:
+  `task-management/complete-task`）がここで揃う。
 
-> **Tip**: 既存プロジェクトに被せる場合は `ori init --template ddd-vsa-hex-typescript --force` 不要。既存ファイルは保護され、不足分だけ書き込まれます。
+`/ori-arch` の template copy は **既存ファイルを保護**します（上書きしたい
+場合のみ `--force` を skill 内で指示）。`apps/template-app/` は
+`.ori/config.yaml` の `workspace.apps[0].name` （cwd basename を sanitize した
+もの）に rename されます。
 
 ## 3. 生成された構造
 

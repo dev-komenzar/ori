@@ -7,11 +7,12 @@ import { pageCommand } from "./commands/page.js";
 import { modelCommand } from "./commands/model.js";
 import { proposalsCommand } from "./commands/proposals.js";
 import { archCommand } from "./commands/arch.js";
+import pkg from "../package.json" with { type: "json" };
 
 export const main = defineCommand({
   meta: {
     name: "ori",
-    version: "0.0.1",
+    version: pkg.version,
     description:
       "ori (織) — DDD-driven slice/page scaffolding with CoDD coherence + per-slice TDD",
   },
