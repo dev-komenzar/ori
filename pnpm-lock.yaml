@@ -129,6 +129,9 @@ importers:
       '@ori-ori/parser':
         specifier: workspace:*
         version: link:../parser
+      yaml:
+        specifier: ^2.5.0
+        version: 2.9.0
 
 packages:
 
