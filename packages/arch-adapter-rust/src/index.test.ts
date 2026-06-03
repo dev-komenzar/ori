@@ -126,6 +126,54 @@ describe("@ori-ori/arch-adapter-rust", () => {
     expect(result.notes?.join("\n")).toMatch(/skipped/);
   });
 
+  it("respects slice_subdir for the slice prefix (design.md §17)", async () => {
+    const spec = parseArchitectureSpec(`---
+version: 1
+workspace:
+  apps_root: apps
+  apps:
+    - name: template-app
+      path: apps/template-app
+root:
+  app: template-app
+  path: apps/template-app/src-tauri/src
+  language: rust
+  layer_set: ddd-vsa-hex-rs
+  adapter: rust
+  slice_root: task-management
+  slice_subdir: slices
+  public_entry: mod.rs
+layer_sets:
+  ddd-vsa-hex-rs:
+    layers:
+      - { id: shared, kind: shared }
+      - { id: domain, kind: slice }
+    rules:
+      cross_layer:
+        - { from: domain, allow: [shared] }
+        - { from: shared, allow: [] }
+      same_layer: prohibited
+      public_entry_required: true
+cross_slice:
+  prohibited_direct: true
+  via: [shared/contracts]
+---
+`);
+    const result = await adapter.export(spec, spec.roots[0]!);
+    const content = result.files[0]!.content;
+
+    // Slice matcher prefix includes the slices/ level.
+    expect(content).toContain(
+      'layer_id: "domain", kind: "slice", prefix: "apps/template-app/src-tauri/src/task-management/slices/", slice: true',
+    );
+    // Shared matcher stays at <bc>/shared/ — sibling of slices/, not under it.
+    expect(content).toContain(
+      'layer_id: "shared", kind: "shared", prefix: "apps/template-app/src-tauri/src/task-management/shared/"',
+    );
+    // SLICE_BASE constant tracks the BC base (without subdir) for diagnostic output.
+    expect(content).toContain('const SLICE_BASE: &str = "apps/template-app/src-tauri/src/task-management/"');
+  });
+
   it("emits the mod.rs-aware super:: resolver (regression for ori-w5j)", async () => {
     const spec = parseArchitectureSpec(SINGLE_CRATE_SPEC);
     const result = await adapter.export(spec, spec.roots[0]!);

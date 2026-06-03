@@ -1,8 +1,9 @@
 # Start: TypeScript (web / Node)
 
-`ddd-typescript` テンプレートで、Web フロントエンド単体、または Node 製
-サーバ単体のプロジェクトに ori の slice ベース DDD scaffold を立ち上げ
-ます。Tauri を併用したい場合は [tauri-v2.md](./tauri-v2.md) を参照。
+`ddd-vsa-hex-typescript` テンプレートで、Web フロントエンド単体、または
+Node 製サーバ単体のプロジェクトに ori の slice ベース DDD scaffold を
+立ち上げます。Tauri を併用したい場合は [tauri-v2.md](./tauri-v2.md) を
+参照。
 
 ## 1. 前提
 
@@ -23,7 +24,7 @@ ori --version
 
 ```bash
 mkdir my-ts-app && cd my-ts-app
-ori init --template ddd-typescript
+ori init --template ddd-vsa-hex-typescript
 pnpm install
 ```
 
@@ -32,39 +33,38 @@ pnpm install
 - `.ori/` — DDD ドキュメント置き場 + config + state
 - `package.json`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.js`
 - `.ori/architecture.md` — SSoT（後述）
-- `src/` — slice ベース scaffold（worked example: `tasks`）
+- `apps/<app>/src/` — ddd-vsa-hex scaffold（worked example: `task-management/complete-task`）
 
-> **Tip**: 既存プロジェクトに被せる場合は `ori init --template ddd-typescript --force` 不要。既存ファイルは保護され、不足分だけ書き込まれます。
+> **Tip**: 既存プロジェクトに被せる場合は `ori init --template ddd-vsa-hex-typescript --force` 不要。既存ファイルは保護され、不足分だけ書き込まれます。
 
 ## 3. 生成された構造
 
 ```
-src/
-├── lib/
-│   ├── shared/                        # 全 slice の下位レイヤ
-│   │   ├── types/                     # Result, branded types
-│   │   ├── events/                    # DomainEvent shape
-│   │   └── contracts/                 # cross-slice ports (空)
-│   └── tasks/                         # 1 slice = 1 folder
-│       ├── index.ts                   # ← 唯一の public API
-│       ├── domain/                    # 純粋（aggregates, VOs, events）
-│       ├── application/               # use-case 配線
-│       ├── infrastructure/            # I/O adapters
-│       ├── presentation/              # UI 境界
-│       └── tests/
-├── ui-entity/                         # FSD layer 1 — view models
-├── ui-feature/                        # FSD layer 2 — ドメインを呼ぶ唯一の UI 層
-├── ui-widget/                         # FSD layer 3 — 合成された UI block
-├── ui-page/                           # FSD layer 4 — 画面
+apps/<app>/src/
+├── task-management/                       # BC (slice_root)
+│   ├── shared/                            # BC-internal shared (kind: shared)
+│   │   ├── types/                         # Result, branded types
+│   │   ├── events/                        # DomainEvent shape
+│   │   └── contracts/                     # cross-slice ports (空)
+│   └── slices/                            # slice_subdir = slices
+│       └── complete-task/                 # 1 slice = 1 folder
+│           ├── index.ts                   # ← 唯一の public API
+│           ├── domain/                    # 純粋 (aggregates, VOs, events)
+│           ├── application/               # use-case 配線
+│           ├── infrastructure/            # I/O adapters
+│           ├── presentation/              # view model + render
+│           └── tests/
+├── ui-widget/                             # ddd-vsa-hex ui-layer (order 1)
+├── ui-page/                               # ddd-vsa-hex ui-layer (order 2)
 └── __tests__/
-    └── ui-flow.test.ts                # page → widget → feature → domain
+    └── ui-flow.test.ts                    # page -> widget -> slice
 ```
 
 主要ルール:
 
-- **slice 公開面は `index.ts` のみ。** 他 slice からは `lib/<slice>/index.js` 経由でしか触れません
-- **UI 層は片方向**: `ui-page → ui-widget → ui-feature → ui-entity → shared`
-- **`ui-feature` だけがドメインを import 可能**（他 UI 層は view-model を渡される側）
+- **slice 公開面は `index.ts` のみ。** 他 slice からは `slices/<slice>/index.js` 経由でしか触れません
+- **UI 層は片方向**: `ui-page -> ui-widget -> {shared, domain}`（design.md §6 の 2 層 ddd-vsa-hex）
+- **UI 層は slice の `index.ts` を介してドメインへ到達**（slice 内部直接 import は禁止）
 - **同層内の sibling import は禁止**（widget A → widget B など）
 
 ルールはコードではなく `.ori/architecture.md` のフロントマターに宣言され、
@@ -109,20 +109,20 @@ pnpm typecheck          # tsc --noEmit
 
 scaffold には:
 
-- `src/lib/tasks/tests/task.test.ts` — domain unit specs
-- `src/__tests__/ui-flow.test.ts` — UI 4 層を貫通する e2e demo
+- `apps/<app>/src/task-management/slices/complete-task/tests/task.test.ts` — domain unit specs
+- `apps/<app>/src/__tests__/ui-flow.test.ts` — UI 2 層 + slice を貫通する e2e demo
 
 が含まれます。自分の slice を足すたびに同じパターンで増やします。
 
 ## 7. よくある拡張
 
-- **新しい domain slice** — `src/lib/<new>/index.ts` + 配下の DDD レイヤを追加
+- **新しい domain slice** — `apps/<app>/src/<bc>/slices/<new-slice>/index.ts` + 配下の sub-layer を追加
 - **新しい UI 層**（例: `ui-shell`） — `.ori/architecture.md` の `layers` と `rules.cross_layer` に追加 → `pnpm arch:export`
-- **cross-slice の連携** — まず `src/lib/shared/contracts/<name>.ts` でポートを定義し、両 slice が contract に依存する形にする
+- **cross-slice の連携** — まず `apps/<app>/src/<bc>/shared/contracts/<name>.ts` でポートを定義し、両 slice が contract に依存する形にする
 
 ## 関連リンク
 
-- [`packages/templates/ddd-typescript/README.md`](../../packages/templates/ddd-typescript/README.md) — テンプレート本体の詳細
+- [`packages/templates/ddd-vsa-hex-typescript/README.md`](../../packages/templates/ddd-vsa-hex-typescript/README.md) — テンプレート本体の詳細
 - [`packages/arch-adapter-eslint/README.md`](../../packages/arch-adapter-eslint/README.md) — adapter の仕様
 - [`.apm/contexts/architecture-md-schema.md`](../../.apm/contexts/architecture-md-schema.md) — `.ori/architecture.md` のスキーマ
 - [`docs/design.md`](../design.md) — 設計判断の背景
