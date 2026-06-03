@@ -30,7 +30,7 @@ const newCmd = defineCommand({
       consola.error(`Page already exists: ${dir}`);
       process.exit(1);
     }
-    await mkdir(join(dir, "tests"), { recursive: true });
+    await mkdir(dir, { recursive: true });
 
     const manifest = {
       page_id: id,

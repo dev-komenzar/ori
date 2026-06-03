@@ -40,7 +40,7 @@ const newCmd = defineCommand({
       consola.error(`Slice already exists: ${dir}`);
       process.exit(1);
     }
-    await mkdir(join(dir, "tests"), { recursive: true });
+    await mkdir(dir, { recursive: true });
 
     const manifest = {
       slice_id: id,
