@@ -120,6 +120,17 @@ describe("ddd-vsa-hex-typescript-tauri template", () => {
     }
   });
 
+  it("package.json devDependencies pin a runnable lint+typecheck baseline", async () => {
+    const pkg = JSON.parse(
+      await readFile(join(TEMPLATE_ROOT, "package.json"), "utf8"),
+    );
+    const deps = pkg.devDependencies ?? {};
+    // ori-aw6 (tauri variant): same cli pin as the typescript template.
+    expect(deps["@ori-ori/cli"]).toBe("^0.1.0");
+    // ori-1ui (tauri variant): tsconfig requires @types/node.
+    expect(deps["@types/node"]).toMatch(/^\^?\d/);
+  });
+
   it("ships the canonical TS scaffolding files", async () => {
     const expected = [
       "README.md",
