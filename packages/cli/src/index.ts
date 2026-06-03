@@ -1,5 +1,4 @@
 import { defineCommand } from "citty";
-import { initCommand } from "./commands/init.js";
 import { lintCommand } from "./commands/lint.js";
 import { syncCommand } from "./commands/sync.js";
 import { sliceCommand } from "./commands/slice.js";
@@ -17,7 +16,6 @@ export const main = defineCommand({
       "ori (織) — DDD-driven slice/page scaffolding with CoDD coherence + per-slice TDD",
   },
   subCommands: {
-    init: initCommand,
     lint: lintCommand,
     sync: syncCommand,
     slice: sliceCommand,

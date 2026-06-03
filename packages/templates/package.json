@@ -25,6 +25,7 @@
   "devDependencies": {
     "@ori-ori/arch-adapter-eslint": "workspace:*",
     "@ori-ori/arch-adapter-rust": "workspace:*",
-    "@ori-ori/parser": "workspace:*"
+    "@ori-ori/parser": "workspace:*",
+    "yaml": "^2.5.0"
   }
 }
