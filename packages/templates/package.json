@@ -1,6 +1,6 @@
 {
   "name": "@ori-ori/templates",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DDD code-generation templates for ori",
   "license": "MIT",
   "repository": {

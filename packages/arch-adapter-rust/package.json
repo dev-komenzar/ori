@@ -1,6 +1,6 @@
 {
   "name": "@ori-ori/arch-adapter-rust",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "ori arch adapter that generates a self-contained Rust integration test enforcing .ori/architecture.md",
   "license": "MIT",
   "repository": {

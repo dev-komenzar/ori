@@ -126,7 +126,8 @@ describe("ddd-vsa-hex-typescript-tauri template", () => {
     );
     const deps = pkg.devDependencies ?? {};
     // ori-aw6 (tauri variant): same cli pin as the typescript template.
-    expect(deps["@ori-ori/cli"]).toBe("^0.1.0");
+    // Bumped to ^0.2.0 with the v0.2 release (ori-keo).
+    expect(deps["@ori-ori/cli"]).toBe("^0.2.0");
     // ori-1ui (tauri variant): tsconfig requires @types/node.
     expect(deps["@types/node"]).toMatch(/^\^?\d/);
   });
