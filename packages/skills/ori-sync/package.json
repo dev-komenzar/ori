@@ -1,0 +1,12 @@
+{
+  "name": "@ori-ori/skill-ori-sync",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "consola": "^3.2.3"
+  }
+}

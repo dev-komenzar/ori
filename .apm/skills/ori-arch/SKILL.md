@@ -61,11 +61,40 @@ SKILL.md は「対話 → スクリプト引数」変換のみ。
   4. ori repo の dev path (`<repo>/packages/templates/`)
 - **CLI 拡張は禁止**（`ori-execution-model-shift-2026-06-03`）：新機能はこのスキル + scripts/ で実装する
 
+## Architecture Export / Check スクリプト
+
+`scripts/` 配下の JS スクリプトで `.ori/architecture.md` を adapter 経由でコンパイル・検証できます：
+
+```bash
+# eslint.config.js を生成
+node .apm/skills/ori-arch/scripts/export.js --adapter=eslint
+
+# Rust 向け arch test を生成
+node .apm/skills/ori-arch/scripts/export.js --adapter=rust --root=rs
+
+# dry-run（ファイル出力なし）
+node .apm/skills/ori-arch/scripts/export.js --adapter=eslint --dry-run
+
+# adapter の native linter で違反チェック
+node .apm/skills/ori-arch/scripts/check.js --adapter=eslint
+
+# ui-fields から ## Page Map セクションを自動更新
+node .apm/skills/ori-arch/scripts/sync-page-map.js
+
+# dry-run
+node .apm/skills/ori-arch/scripts/sync-page-map.js --dry-run
+```
+
+オプション（export / check 共通）：
+- `--adapter=<name>` — adapter 指定（省略時は architecture.md の `adapter:` フィールドを使用）
+- `--root=<id>` — multi-root 対象（省略時は `default_root`）
+- `--spec=<path>` — spec ファイルパス（省略時: `.ori/architecture.md`）
+
 ## 次のアクション
 
 `/ori-arch` 完了後、ユーザに以下を提示：
 
 - **動作確認パス**：`pnpm install && pnpm test` で template の sample slice が動くこと確認
-- **最初の slice 作成パス**：`ori slice new <id>` → `/ori-flow <id>` で 7-phase 開発を回す
+- **最初の slice 作成パス**：`/ori-flow new-slice <id>` で新 slice を scaffold → 7-phase 開発を回す
 - **domain 起点で進めるパス**：`/ori-distill phase=discovery` で distill-ddd phase 1 から domain を立ち上げる
 - **既存 domain がある場合のパス**：`/ori-migrate` で `docs/domain/` 等を `.ori/domain/` に昇格

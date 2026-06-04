@@ -5,9 +5,20 @@ description: 溜まった proposal を人間と一緒にレビューし、accept
 
 `.ori/proposals/` 配下の pending proposal を順次レビューします。
 
+## スクリプト — 一覧表示
+
+```bash
+node .apm/skills/ori-review-proposals/scripts/list.js [--check]
+```
+
+- `--check` — pending proposal が 1 件以上あれば非ゼロ終了（CI モード）
+
 ## 手順
 
-1. **一覧表示**：`.ori/proposals/` を `ls` で表示し pending な提案を取得
+1. **一覧表示**：
+   ```bash
+   node .apm/skills/ori-review-proposals/scripts/list.js
+   ```
 2. **各 proposal について**：
    - 内容を読み上げ（target、by、reason、diff）
    - ユーザに **accept / reject / merge** を問う

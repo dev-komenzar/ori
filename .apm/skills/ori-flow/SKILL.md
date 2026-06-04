@@ -29,6 +29,20 @@ description: 1 slice / page を 7 phase で連続実行する薄い chain。各 
 - **ori-flow は orchestration を抱え込まない**：各 phase skill が `bd close` したかどうかだけを見て次へ進む。state を持たない・log を別の場所に書かない・review verdict を独自 parse しない。
 - **bd issue が状態の SSoT**：`bd show ori-<phase>-<id>` の status が closed なら成功、open のままなら失敗・停止。
 
+## スクリプト — Scaffold
+
+slice / page の新規 scaffold は CLI ではなく以下のスクリプトで行う：
+
+```bash
+# slice scaffold
+node .apm/skills/ori-flow/scripts/new-slice.js <id> [--type=command|query]
+
+# page scaffold
+node .apm/skills/ori-flow/scripts/new-page.js <id>
+```
+
+manifest テンプレートは `.apm/contexts/templates/slice-manifest.yaml.tpl` / `page-manifest.yaml.tpl` から読み込まれる（SSoT）。
+
 ## 引数
 
 - `id`：実装する slice / page の id（`.ori/slices/<id>/` または `.ori/pages/<id>/` に存在するもの）

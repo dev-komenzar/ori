@@ -108,6 +108,60 @@ importers:
 
   packages/skills/_hello: {}
 
+  packages/skills/ori-arch:
+    dependencies:
+      '@ori-ori/parser':
+        specifier: workspace:*
+        version: link:../../parser
+      consola:
+        specifier: ^3.2.3
+        version: 3.4.2
+
+  packages/skills/ori-doctor:
+    dependencies:
+      '@ori-ori/parser':
+        specifier: workspace:*
+        version: link:../../parser
+      consola:
+        specifier: ^3.2.3
+        version: 3.4.2
+
+  packages/skills/ori-flow:
+    dependencies:
+      '@ori-ori/slice-runner':
+        specifier: workspace:*
+        version: link:../../slice-runner
+      consola:
+        specifier: ^3.2.3
+        version: 3.4.2
+      yaml:
+        specifier: ^2.4.1
+        version: 2.9.0
+
+  packages/skills/ori-model:
+    dependencies:
+      '@ori-ori/slice-runner':
+        specifier: workspace:*
+        version: link:../../slice-runner
+      consola:
+        specifier: ^3.2.3
+        version: 3.4.2
+      yaml:
+        specifier: ^2.4.1
+        version: 2.9.0
+
+  packages/skills/ori-review-proposals:
+    dependencies:
+      consola:
+        specifier: ^3.2.3
+        version: 3.4.2
+
+  packages/skills/ori-sync:
+    dependencies:
+      consola:
+        specifier: ^3.2.3
+        version: 3.4.2
+
   packages/slice-runner:
     dependencies:
       '@ori-ori/coherence':
