@@ -1,9 +1,9 @@
 ---
 name: ori-arch
-description: pattern (DDD-VSA-Hex 等) と framework (Vite / Vite+Tauri 等) を決定し、対応する template を cwd へ scaffold する。`ori init` の next step。
+description: pattern (DDD-VSA-Hex 等) と framework (Vite / Vite+Tauri 等) を決定し、対応する template を cwd へ scaffold する。`/ori-init` の next step。
 ---
 
-`ori init` で `.ori/` skeleton が作られた後の **次のステップ**。pattern / framework を対話で決め、
+`/ori-init` で `.ori/` skeleton が作られた後の **次のステップ**。pattern / framework を対話で決め、
 `packages/templates/<derived-name>/` の中身を cwd に copy します。
 
 ## 設計原則 — 「decide → copy」二段構え
@@ -36,7 +36,7 @@ SKILL.md は「対話 → スクリプト引数」変換のみ。
    - 該当組合せが無ければユーザに警告し中断
 
 5. **app name を決定する**：
-   - `.ori/config.yaml` の `workspace.apps[0].name` を読む（`ori init` が cwd basename から sanitize して書く）
+   - `.ori/config.yaml` の `workspace.apps[0].name` を読む（`/ori-init` が cwd basename から sanitize して書く）
    - 取れなければ cwd basename を sanitize（`scripts/copy-template.sh` 内で自動 fallback）
 
 6. **template を copy**：
@@ -48,12 +48,12 @@ SKILL.md は「対話 → スクリプト引数」変換のみ。
 7. **次ステップ提示**：
    - `pnpm install`
    - `pnpm test`（template 同梱の sample test が PASS することを確認）
-   - 最初の slice を作るなら `ori slice new <id>` → `/ori-flow <id>`
+   - 最初の slice を作るなら `/ori-flow new-slice <id>` → 7-phase 開発開始
 
 ## 注意
 
 - **scaffold は idempotent ではない**：既存ファイルは default で skip (`--force` で上書き)。
-- **.ori/ skeleton は壊さない**：template に含まれる `.ori/architecture.md` のみ書く（ori init が作る `.ori/config.yaml` 等とは衝突しない）。
+- **.ori/ skeleton は壊さない**：template に含まれる `.ori/architecture.md` のみ書く（`/ori-init` が作る `.ori/config.yaml` 等とは衝突しない）。
 - **template の置き場所**：scripts は次の順で探索する：
   1. `--templates-dir <dir>` 引数
   2. `$ORI_TEMPLATES_DIR` 環境変数

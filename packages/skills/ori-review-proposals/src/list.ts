@@ -17,7 +17,7 @@ try {
     .map((e) => e.name)
     .sort();
 } catch {
-  consola.info("ori proposals: no .ori/proposals/ directory found");
+  consola.info("/ori-review-proposals: no .ori/proposals/ directory found");
   process.exit(0);
 }
 
