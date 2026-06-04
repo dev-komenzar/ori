@@ -1877,6 +1877,6 @@ function boolFlag(name) {
 var file = flag("file");
 var since = flag("since");
 var check = boolFlag("check");
-consola.info(`ori sync (MVP stub) \u2014 file=${file ?? "<all>"} since=${since ?? "HEAD"}`);
+consola.info(`/ori-sync (MVP stub) \u2014 file=${file ?? "<all>"} since=${since ?? "HEAD"}`);
 consola.warn("Detection + graph propagation not wired yet. Coming in next milestone.");
 if (check) process.exit(0);

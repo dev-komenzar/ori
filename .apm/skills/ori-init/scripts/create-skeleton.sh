@@ -3,8 +3,8 @@
 #
 # Skill-owned implementation per ori-execution-model-shift-2026-06-03
 # (CLI 廃止 → skill のスクリプト実行ベース). This script is the single
-# source of truth for `.ori/` initialization — no `ori init` CLI hop,
-# no npm library dependency.
+# source of truth for `.ori/` initialization — invoked directly by the
+# /ori-init skill; no npm library dependency.
 #
 # Usage: create-skeleton.sh [--force] [--dest <dir>]
 #

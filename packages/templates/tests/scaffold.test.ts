@@ -41,7 +41,7 @@ describe("ori-arch copy-template.sh placeholder behavior (ori-ou6)", () => {
       expect(body).toMatch(/export default\s*\[/);
       // The header must point users at the regeneration command so they
       // know the placeholder is intentional and replaceable.
-      expect(body).toMatch(/ori arch export/);
+      expect(body).toMatch(/\/ori-arch/);
     } finally {
       await rm(dest, { recursive: true, force: true });
     }

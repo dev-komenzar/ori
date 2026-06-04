@@ -1877,7 +1877,7 @@ try {
   const entries = await readdir(proposalsDir, { withFileTypes: true });
   files = entries.filter((e2) => e2.isFile() && e2.name.endsWith(".md")).map((e2) => e2.name).sort();
 } catch {
-  consola.info("ori proposals: no .ori/proposals/ directory found");
+  consola.info("/ori-review-proposals: no .ori/proposals/ directory found");
   process.exit(0);
 }
 if (files.length === 0) {

@@ -64,7 +64,7 @@ coherence:
 
 # ${id} — Page Specification
 
-> This file is a derived document. Edit the source manifest + domain docs and re-run \`ori page run ${id} --phase derive\`. Use \`ori sync --force\` if you need to edit here directly; ori will create a proposal for the upstream review.
+> This file is a derived document. Edit the source manifest + domain docs and re-run \`/ori-flow run-page ${id} phase=derive\`. Use \`/ori-sync\` if you need to edit here directly; ori will create a proposal for the upstream review.
 
 ## 概要 {#overview}
 
