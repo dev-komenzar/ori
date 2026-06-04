@@ -1,7 +1,7 @@
 # @ori-ori/templates
 
-Code-generation templates used by `ori init --template <name>` and by
-phase 4 (`impl-green`) of `ori feature run`.
+Code-generation templates used by the `/ori-arch` skill (via `apm install dev-komenzar/ori`) and by
+phase 4 (`impl-green`) of `/ori-flow`.
 
 ## Templates
 

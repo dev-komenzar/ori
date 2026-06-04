@@ -7,7 +7,7 @@
 // collaborate via `task_management/shared/`.
 //
 // Architecture rules are declared once in `.ori/architecture.md` and
-// compiled into `tests/arch.rs` by `ori arch export --adapter=rust --root=rs`.
+// compiled into `tests/arch.rs` by `node .apm/skills/ori-arch/scripts/export.js --adapter=rust --root=rs`.
 
 pub mod task_management;
 

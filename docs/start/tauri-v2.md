@@ -17,27 +17,26 @@ TS 単体プロジェクトの場合は [typescript-web.md](./typescript-web.md)
 | Rust      | stable >= 1.77   | `rustup` 経由                                                        |
 | Tauri CLI | 2.x              | `pnpm add -D @tauri-apps/cli` が `pnpm install` で入る               |
 | OS deps   | platform-specific | [Tauri prerequisites](https://tauri.app/start/prerequisites/) を参照 |
-| ori CLI   | >= 0.0.1         | `npm i -g @ori-ori/cli`                                              |
+| APM       | latest            | `apm install dev-komenzar/ori`                                       |
 
 ```bash
 node --version
 pnpm --version
 rustc --version
-ori --version
 ```
 
 ## 2. プロジェクト初期化
 
 ```bash
 mkdir my-tauri-app && cd my-tauri-app
-ori init                # .ori/ skeleton + config.yaml 生成 (silent)
+/ori-init               # .ori/ skeleton + config.yaml 生成 (silent)
 /ori-arch               # pattern=ddd-vsa-hex / framework=typescript-tauri を選択
 pnpm install
 ```
 
 役割分担:
 
-- `ori init` （ステップ 1） — **silent**。`.ori/` skeleton と
+- `/ori-init` （ステップ 1） — **silent**。`.ori/` skeleton と
   `.ori/config.yaml` のみ生成。
 - `/ori-arch` （ステップ 2） — pattern (`ddd-vsa-hex`) / framework
   (`typescript-tauri`) を選ぶと `ddd-vsa-hex-typescript-tauri` template が
@@ -129,7 +128,7 @@ tauri-specta が上書きするので、**手書き編集はしない**でくだ
 
 ```bash
 /ori-distill                          # phase 1-11 (ドメイン側)
-ori slice new <slice-id>              # ドメインから slice を切り出す
+node .apm/skills/ori-flow/scripts/new-slice.js <slice-id>   # ドメインから slice を切り出す
 /ori-flow <slice-id>                  # 7-phase TDD
 ```
 

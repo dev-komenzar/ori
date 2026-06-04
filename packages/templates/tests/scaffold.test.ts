@@ -37,7 +37,7 @@ describe("ori-arch copy-template.sh placeholder behavior (ori-ou6)", () => {
       const body = await readFile(placeholder, "utf8");
       // The placeholder must be a valid ES module that exposes an iterable
       // config array — eslint flat config consumers spread it. An empty
-      // array keeps `pnpm lint` from crashing before `ori arch export` runs.
+      // array keeps `pnpm lint` from crashing before `/ori-arch` (export) runs.
       expect(body).toMatch(/export default\s*\[/);
       // The header must point users at the regeneration command so they
       // know the placeholder is intentional and replaceable.
@@ -50,7 +50,7 @@ describe("ori-arch copy-template.sh placeholder behavior (ori-ou6)", () => {
   it("does not overwrite an existing eslint.config.ori.js", async () => {
     const dest = await mkdtemp(join(tmpdir(), "ori-scaffold-"));
     try {
-      // Seed the destination as if the user (or a previous `ori arch export`
+      // Seed the destination as if the user (or a previous /ori-arch export
       // run) already wrote a real arch config. The scaffold must respect it.
       await runCopy(["--template", "ddd-vsa-hex-typescript"], dest);
       const placeholder = join(dest, "eslint.config.ori.js");

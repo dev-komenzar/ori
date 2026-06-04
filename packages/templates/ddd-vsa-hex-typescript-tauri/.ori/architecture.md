@@ -94,9 +94,9 @@ This file is the **single source of truth** for both the TypeScript frontend
 
 ```bash
 # TypeScript root (default)
-pnpm exec ori arch export --adapter=eslint --root=ts
+node .apm/skills/ori-arch/scripts/export.js --adapter=eslint --root=ts
 # Rust root
-pnpm exec ori arch export --adapter=rust --root=rs
+node .apm/skills/ori-arch/scripts/export.js --adapter=rust --root=rs
 ```
 
 ## Roots
@@ -189,6 +189,6 @@ apps/template-app/src-tauri/src/
 Regenerate after editing this file:
 
 ```bash
-pnpm exec ori arch export --adapter=eslint --root=ts
-pnpm exec ori arch export --adapter=rust   --root=rs
+node .apm/skills/ori-arch/scripts/export.js --adapter=eslint --root=ts
+node .apm/skills/ori-arch/scripts/export.js --adapter=rust   --root=rs
 ```

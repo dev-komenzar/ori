@@ -50,7 +50,7 @@ page_map_marker: phase-11b
 # Architecture (ddd-vsa-hex-typescript template)
 
 This file is the **single source of truth** for the project's allowed
-dependency graph. The `ori arch export --adapter=eslint` command compiles
+dependency graph. The `/ori-arch` skill (`node .apm/skills/ori-arch/scripts/export.js --adapter=eslint`) compiles
 the frontmatter above into `eslint.config.ori.js`; your `eslint.config.js`
 just spreads it.
 
@@ -112,7 +112,7 @@ The two UI layers form a one-way pipeline
 Regenerate after editing this file:
 
 ```bash
-pnpm exec ori arch export --adapter=eslint
+node .apm/skills/ori-arch/scripts/export.js --adapter=eslint
 ```
 
 ## Page Map

@@ -4,7 +4,7 @@ target/
 # tauri-build cache
 gen/
 
-# Generated arch test (regenerate with `ori arch export --adapter=rust --root=rs`)
+# Generated arch test (regenerate with `node .apm/skills/ori-arch/scripts/export.js --adapter=rust --root=rs`)
 tests/arch.rs
 
 # Local IDE / OS noise

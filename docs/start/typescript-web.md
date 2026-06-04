@@ -11,27 +11,25 @@ Node 製サーバ単体のプロジェクトに ori の slice ベース DDD scaf
 | -------- | ----------- | ------------------------------------------ |
 | Node     | >= 20       | `nvm` 推奨                                 |
 | pnpm     | >= 9        | `corepack enable` で OK                    |
-| ori CLI  | >= 0.0.1    | `npm i -g @ori-ori/cli`                    |
-| APM      | latest      | AI 配布物（skill/agent/hook）の install に |
+| APM      | latest      | `apm install dev-komenzar/ori`             |
 
 ```bash
 node --version       # v20.x or higher
 pnpm --version       # 9.x or higher
-ori --version
 ```
 
 ## 2. プロジェクト初期化
 
 ```bash
 mkdir my-ts-app && cd my-ts-app
-ori init                # .ori/ skeleton + config.yaml 生成 (silent)
+/ori-init               # .ori/ skeleton + config.yaml 生成 (silent)
 /ori-arch               # pattern/framework 決定 → template scaffold
 pnpm install
 ```
 
 役割分担:
 
-- `ori init` （ステップ 1） — **silent**。`.ori/` skeleton と
+- `/ori-init` （ステップ 1） — **silent**。`.ori/` skeleton と
   `.ori/config.yaml`、domain scaffold seed のみ生成。プロジェクトルートには
   `package.json` 等を書かない。
 - `/ori-arch` （ステップ 2） — pattern (`ddd-vsa-hex`) / framework
@@ -86,7 +84,7 @@ apps/<app>/src/
 /ori-distill
 
 # 抽出された workflow から slice を切り出す
-ori slice new switch-edit-target
+node .apm/skills/ori-flow/scripts/new-slice.js switch-edit-target
 
 # 7-phase TDD を走らせる
 /ori-flow switch-edit-target
@@ -100,7 +98,7 @@ phase の中身は `packages/cli/src/commands/feature.ts` および
 `.ori/architecture.md` が編集されるたびに lint 設定を再生成します:
 
 ```bash
-pnpm arch:export        # = ori arch export --adapter=eslint
+pnpm arch:export        # = node .apm/skills/ori-arch/scripts/export.js --adapter=eslint
 pnpm lint               # eslint がルール違反を検出
 ```
 
