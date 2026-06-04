@@ -1,0 +1,14 @@
+{
+  "name": "@ori-ori/skill-ori-model",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ori-ori/slice-runner": "workspace:*",
+    "consola": "^3.2.3",
+    "yaml": "^2.4.1"
+  }
+}

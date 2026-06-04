@@ -41,10 +41,10 @@ agent=ori-reviewer override: capability=reasoning
 ユーザが「現状を見せて」と言ったら：
 
 ```bash
-bash scripts/show-config.sh
+node .apm/skills/ori-model/scripts/show.js
 ```
 
-を Bash で実行し結果を整形提示。
+を実行し、capability × phase の model 割当を整形提示。
 
 ### 変更モード
 

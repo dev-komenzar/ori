@@ -1,0 +1,13 @@
+{
+  "name": "@ori-ori/skill-ori-arch",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ori-ori/parser": "workspace:*",
+    "consola": "^3.2.3"
+  }
+}
