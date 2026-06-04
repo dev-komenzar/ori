@@ -6,8 +6,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "arch:export:ts": "ori arch export --adapter=eslint --root=ts",
-    "arch:export:rs": "ori arch export --adapter=rust --root=rs",
+    "arch:export:ts": "node ./.apm/skills/ori-arch/scripts/export.js --adapter=eslint --root=ts",
+    "arch:export:rs": "node ./.apm/skills/ori-arch/scripts/export.js --adapter=rust --root=rs",
     "arch:export": "pnpm arch:export:ts && pnpm arch:export:rs",
     "lint": "eslint .",
     "test": "vitest run",
@@ -18,7 +18,6 @@
     "bindings:check": "pnpm tauri build --debug --no-bundle && git diff --exit-code apps/template-app/src/task-management/shared/ipc/bindings.ts"
   },
   "devDependencies": {
-    "@ori-ori/cli": "^0.2.0",
     "@tauri-apps/cli": "^2.0.0",
     "@types/node": "^20.0.0",
     "eslint": "^9.0.0",

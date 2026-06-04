@@ -942,7 +942,7 @@ ori/                               # APM package source
 ### 開発 source は別 directory monorepo
 
 ```
-src/                             # TS monorepo(開発時 SSoT)
+packages/                        # TS monorepo(開発時 SSoT)
 ├── parser/
 ├── coherence/
 ├── arch-adapter-eslint/
@@ -950,8 +950,8 @@ src/                             # TS monorepo(開発時 SSoT)
 ├── arch-adapter-rust/
 ├── slice-runner/                # slice/page 生成本体
 └── skills/                      # skill ごとの bundle entry
-    ├── ori-arch/index.ts
-    ├── ori-sync/index.ts
+    ├── ori-arch/src/export.ts
+    ├── ori-sync/src/sync.ts
     └── ...
 ```
 
@@ -1190,6 +1190,14 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 - templates / docs / SKILL.md の CLI 言及を skill ベースに書き換え
 - `packages/cli` 撤去 + `@ori-ori/*` 4 packages を npm deprecate
 - pre-commit hook で `build:skills` stale check + contributing docs 整備
+
+採用済み(2026-06-04 時点):
+
+- ✓ Phase A(`ori-rem`): `packages/skills/` 足場 + esbuild `build:skills` + CI stale check
+- ✓ Phase B(`ori-2y2`, `ori-s3o`, `ori-ezc`, `ori-539`, `ori-4gp`): CLI 7 コマンドを skill scripts に移植
+- ✓ Phase E(`ori-ju9`): `.apm/skills/` 内 SKILL.md / scripts コメントの CLI 言及書き換え
+- ◐ Phase C(`ori-wuf`): `packages/templates/` の CLI 言及を skill scripts ベースに書き換え(進行中)
+- ◐ Phase D(`ori-csa`): ドキュメント(README / docs/start / design §15)の CLI 動線書き換え(進行中)
 
 ### v0.4 以降(将来想定)
 

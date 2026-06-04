@@ -45,7 +45,7 @@ arch-adapter-rust for Rust).
                         └── complete_task/  # mirrors the TS slice
 ```
 
-`ori init --template ddd-vsa-hex-typescript-tauri` copies only the **ori
+The `/ori-arch` skill (invoked after `apm install dev-komenzar/ori`) copies only the **ori
 overlay** (everything above marked `ori overlay`) and then shells out to
 `pnpm tauri init --ci ...` so Tauri owns its own version-volatile files
 (`Cargo.toml`, `tauri.conf.json`, `build.rs`, `capabilities/`, `src/main.rs`).
@@ -53,8 +53,7 @@ This means a `tauri-cli` bump never forces an ori template re-release.
 
 ## Getting started
 
-`ori init` runs `pnpm install` and `pnpm tauri init` for you. If you passed
-`--skip-tauri-init`, finish the bootstrap manually:
+`/ori-arch` runs `pnpm install` and `pnpm tauri init` for you. If needed, finish the bootstrap manually:
 
 ```bash
 pnpm install

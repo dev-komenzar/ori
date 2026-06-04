@@ -61,10 +61,8 @@ describe("ddd-vsa-hex-typescript template", () => {
       await readFile(join(TEMPLATE_ROOT, "package.json"), "utf8"),
     );
     const deps = pkg.devDependencies ?? {};
-    // ori-aw6: must pull in the post-0.1.0 cli so `ori slice new` does not
-    // leave empty tests/ dirs (the ori-8tx fix). Bumped to ^0.2.0 with the
-    // v0.2 release (ori-keo).
-    expect(deps["@ori-ori/cli"]).toBe("^0.2.0");
+    // ori-wuf (v0.3-C): @ori-ori/cli removed — skills run via .apm/skills/
+    expect(deps["@ori-ori/cli"]).toBeUndefined();
     // ori-1ui: tsconfig types: ['vitest/globals', 'node'] requires this so
     // pnpm typecheck does not bail with "Cannot find type definition file
     // for node".

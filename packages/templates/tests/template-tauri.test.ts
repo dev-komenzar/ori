@@ -125,9 +125,8 @@ describe("ddd-vsa-hex-typescript-tauri template", () => {
       await readFile(join(TEMPLATE_ROOT, "package.json"), "utf8"),
     );
     const deps = pkg.devDependencies ?? {};
-    // ori-aw6 (tauri variant): same cli pin as the typescript template.
-    // Bumped to ^0.2.0 with the v0.2 release (ori-keo).
-    expect(deps["@ori-ori/cli"]).toBe("^0.2.0");
+    // ori-wuf (v0.3-C): @ori-ori/cli removed — skills run via .apm/skills/
+    expect(deps["@ori-ori/cli"]).toBeUndefined();
     // ori-1ui (tauri variant): tsconfig requires @types/node.
     expect(deps["@types/node"]).toMatch(/^\^?\d/);
   });
@@ -182,9 +181,9 @@ describe("ddd-vsa-hex-typescript-tauri template", () => {
       await expect(readFile(join(TEMPLATE_ROOT, rel), "utf8")).resolves.toBeTypeOf("string");
     }
 
-    // Tauri-owned, version-volatile files are *intentionally* absent; 'ori init
-    // --template ddd-vsa-hex-typescript-tauri' shells out to 'pnpm tauri init
-    // --ci ...' to generate them, so they stay current with each Tauri release.
+    // Tauri-owned, version-volatile files are *intentionally* absent; the
+    // /ori-arch skill shells out to 'pnpm tauri init --ci ...' to generate
+    // them, so they stay current with each Tauri release.
     const delegated = [
       "apps/template-app/src-tauri/Cargo.toml",
       "apps/template-app/src-tauri/build.rs",

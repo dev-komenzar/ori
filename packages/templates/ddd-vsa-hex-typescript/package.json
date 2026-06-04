@@ -6,14 +6,13 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "arch:export": "ori arch export --adapter=eslint",
+    "arch:export": "node ./.apm/skills/ori-arch/scripts/export.js --adapter=eslint",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@ori-ori/cli": "^0.2.0",
     "@types/node": "^20.0.0",
     "eslint": "^9.0.0",
     "eslint-plugin-boundaries": "^5.0.0",

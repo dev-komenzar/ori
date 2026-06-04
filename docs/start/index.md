@@ -1,7 +1,7 @@
 # Start with Languages, Frameworks
 
 ori 自体は言語非依存です。プロジェクトの実装スタックに応じて **テンプレート**
-と **アーキテクチャ adapter** を組み合わせ、`ori init` （silent な
+と **アーキテクチャ adapter** を組み合わせ、`/ori-init` skill （silent な
 `.ori/` skeleton 生成）と `/ori-arch` skill （pattern/framework 決定 +
 template scaffold）の 2 ステップで slice ベース DDD scaffold を立ち上げます。
 
@@ -31,19 +31,18 @@ template scaffold）の 2 ステップで slice ベース DDD scaffold を立ち
 スタックを問わず、ori プロジェクトの立ち上げは以下のステップです。
 
 ```bash
-# 1. ori 本体（CLI + AI 配布物）をインストール
-npm i -g @ori-ori/cli
+# 1. インストール
 apm install dev-komenzar/ori
 
 # 2. プロジェクトディレクトリで初期化 + scaffold
 mkdir my-app && cd my-app
-ori init                    # .ori/ skeleton + config.yaml (silent)
+/ori-init                   # .ori/ skeleton + config.yaml (silent)
 /ori-arch                   # pattern/framework 決定 → template を cwd に展開
 pnpm install
 
 # 3. 最初の slice を AI と対話で派生
 /ori-distill                # phase 1-11 を対話実行 → .ori/domain/ が埋まる
-ori slice new <slice-id>    # workflow から slice を切り出す
+node .apm/skills/ori-flow/scripts/new-slice.js <slice-id>   # workflow から slice を切り出す
 /ori-flow <slice-id>        # 7-phase TDD を回す
 ```
 
