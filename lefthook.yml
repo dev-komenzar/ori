@@ -1,0 +1,5 @@
+pre-commit:
+  commands:
+    build-skills:
+      run: scripts/pre-commit-build-skills.sh
+      glob: "packages/skills/**/src/**"

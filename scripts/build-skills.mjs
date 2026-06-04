@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-import { build } from "esbuild"
+import { build, context } from "esbuild"
 import { readdirSync, mkdirSync } from "fs"
 import { join, dirname, basename } from "path"
 import { fileURLToPath } from "url"
+
+const watch = process.argv.includes("--watch")
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
 const SKILLS_SRC = join(ROOT, "packages/skills")
@@ -36,7 +38,7 @@ for (const skillName of skillDirs) {
     const outName = basename(entry, ".ts")
     const outFile = join(outDir, `${outName}.js`)
 
-    await build({
+    const opts = {
       entryPoints: [entry],
       outfile: outFile,
       bundle: true,
@@ -45,8 +47,32 @@ for (const skillName of skillDirs) {
       format: "esm",
       minify: false,
       banner: { js: "#!/usr/bin/env node" },
-    })
+    }
 
-    console.log(`✓ ${skillName}/src/${outName}.ts → .apm/skills/${skillName}/scripts/${outName}.js`)
+    if (watch) {
+      const ctx = await context({
+        ...opts,
+        plugins: [
+          {
+            name: "log",
+            setup(b) {
+              b.onEnd(() =>
+                console.log(
+                  `✓ ${skillName}/src/${outName}.ts → .apm/skills/${skillName}/scripts/${outName}.js`
+                )
+              )
+            },
+          },
+        ],
+      })
+      await ctx.watch()
+    } else {
+      await build(opts)
+      console.log(`✓ ${skillName}/src/${outName}.ts → .apm/skills/${skillName}/scripts/${outName}.js`)
+    }
   }
+}
+
+if (watch) {
+  console.log("👀 watching packages/skills/**/src/ ...")
 }
