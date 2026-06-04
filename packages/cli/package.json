@@ -1,7 +1,7 @@
 {
   "name": "@ori-ori/cli",
-  "version": "0.2.0",
-  "description": "ori CLI — DDD-driven slice/page scaffolding with CoDD coherence",
+  "version": "0.3.0",
+  "description": "DEPRECATED — Use APM: apm install dev-komenzar/ori",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -15,29 +15,10 @@
   "bin": {
     "ori": "./dist/bin.js"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
   "files": ["dist"],
   "scripts": {
-    "build": "tsup src/bin.ts src/index.ts --format esm --dts --clean",
+    "build": "tsup src/bin.ts --format esm --clean",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "dev": "tsup src/bin.ts --format esm --watch"
-  },
-  "dependencies": {
-    "@ori-ori/coherence": "workspace:*",
-    "@ori-ori/slice-runner": "workspace:*",
-    "@ori-ori/parser": "workspace:*",
-    "citty": "^0.1.6",
-    "consola": "^3.2.0",
-    "yaml": "^2.5.0",
-    "zod": "^3.23.0"
+    "typecheck": "tsc --noEmit"
   }
 }
