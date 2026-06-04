@@ -8133,7 +8133,7 @@ var PHASES = [
   "impl-green",
   "refactor",
   "review",
-  "sync"
+  "finalize"
 ];
 function resolveModel(phase, config2, agent = config2.current_agent) {
   const phaseConfig = config2.phases[phase];
@@ -8160,7 +8160,7 @@ var DEFAULT_PHASE_CONFIG = {
   "impl-green": { capability: "deep" },
   refactor: { capability: "fast" },
   review: { capability: "reasoning", fresh_context: true },
-  sync: { capability: "fast" }
+  finalize: { capability: "fast" }
 };
 var DEFAULT_AGENTS = {
   claude: {

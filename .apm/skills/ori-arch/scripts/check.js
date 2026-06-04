@@ -8394,11 +8394,13 @@ var SliceInternalSchema = external_exports.object({
 }).passthrough();
 var RootSchema = external_exports.object({
   id: external_exports.string().optional(),
+  app: external_exports.string().optional(),
   path: external_exports.string(),
   language: external_exports.string(),
   layer_set: external_exports.string(),
   adapter: external_exports.string(),
   slice_root: external_exports.string(),
+  slice_subdir: external_exports.string().optional(),
   public_entry: external_exports.string()
 }).passthrough();
 var CrossRootSchema = external_exports.object({
