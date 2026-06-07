@@ -252,9 +252,21 @@ MVP は **`ddd-vsa-hex` 1 個** のみ curated。複数 pattern は v0.2+。
 
 ```
 .apm/contexts/patterns/ddd-vsa-hex/
-├── pattern.md       # 概念定義(Summary, When, Tradeoffs, Layer, Dependency, Naming, Cross-cutting placement)
-└── ai-notes.md      # AI 行動指示(AI considerations, Test strategy, Migration)
+├── pattern.md                       # stack-agnostic 概念定義(Summary, When, Tradeoffs, Layer, Dependency, Naming, Cross-cutting placement)
+├── ai-notes.md                      # AI 行動指示(AI considerations, Test strategy, Migration)
+└── stacks/                          # pattern × stack の実現形(MVP は pre-bake、将来 axes dynamic 化時に生成へ移行)
+    ├── typescript/
+    │   ├── architecture.md.tpl      # → target の .ori/architecture.md ソース
+    │   └── example-slice/           # AI が新 slice 生成時に on-demand 参照する worked code(study material)
+    └── typescript-tauri/
+        ├── architecture.md.tpl
+        └── example-slice/           # TS + Rust mirror
 ```
+
+- **stack-agnostic な pattern.md / ai-notes.md** と **stack-specific な stacks/<stack>/** を物理パスで階層分け
+- **example-slice/ は study material**(target にコピーしない): AI が `/ori-flow new-slice` 等で参照、`package.json` 等 bootstrap ファイルは含めない(upstream の framework init が担当)
+- **target に書き出すのは `.ori/architecture.md` のみ**: 空 skeleton や worked slice の物理コピーは行わない(ori 責務は「upstream 出力に設定を加える」)
+- **architecture.md.tpl の placeholder**: app 名等は `/ori-arch` 実行時に config から解決して埋め込む
 
 ### Pattern.md の必須 sections
 
@@ -927,8 +939,15 @@ ori/                               # APM package source
 │   │   ├── marker-format.md
 │   │   └── patterns/
 │   │       └── ddd-vsa-hex/
-│   │           ├── pattern.md
-│   │           └── ai-notes.md
+│   │           ├── pattern.md                # stack-agnostic
+│   │           ├── ai-notes.md
+│   │           └── stacks/
+│   │               ├── typescript/
+│   │               │   ├── architecture.md.tpl
+│   │               │   └── example-slice/    # AI 参照用 study material
+│   │               └── typescript-tauri/
+│   │                   ├── architecture.md.tpl
+│   │                   └── example-slice/
 │   └── agents/                  # cross-harness subagents(Layer 1)
 └── docs/                        # ori repo 内部 doc(deploy 対象外)
     ├── design.md                # ★ 本ファイル
@@ -989,7 +1008,7 @@ packages/                        # TS monorepo(開発時 SSoT)
 | 種別 | 場所 | 用途 |
 |---|---|---|
 | Schema 仕様 | `.apm/contexts/<name>-schema.md` | cross-skill 共有 SSoT |
-| Pattern | `.apm/contexts/patterns/<name>/` | cross-skill(arch, types, flow が参照) |
+| Pattern | `.apm/contexts/patterns/<name>/{pattern.md, ai-notes.md, stacks/<stack>/...}` | cross-skill(arch, types, flow, impl-green が参照)。stack-agnostic / stack-specific を階層分け |
 | Tech catalog | `.apm/skills/ori-arch/references/tech/<id>.md` | ori-arch 専属 |
 | Vocabulary | `.apm/contexts/axes-vocabulary.md`, `phase-hook-names.md` | controlled vocabulary |
 | Hook scripts | `.apm/hooks/scripts/` | APM auto-deploy |
@@ -1011,8 +1030,15 @@ packages/                        # TS monorepo(開発時 SSoT)
 ├── marker-format.md                   # @ori-generated 等 marker 形式
 └── patterns/
     └── ddd-vsa-hex/
-        ├── pattern.md
-        └── ai-notes.md
+        ├── pattern.md                       # stack-agnostic
+        ├── ai-notes.md
+        └── stacks/
+            ├── typescript/
+            │   ├── architecture.md.tpl
+            │   └── example-slice/           # AI on-demand study material
+            └── typescript-tauri/
+                ├── architecture.md.tpl
+                └── example-slice/
 ```
 
 ---
@@ -1050,6 +1076,16 @@ Project root には ori / harness / contributor 向けメタ artifact(`.ori/`, `
 ```
 
 `/ori-init` は **silent** で .ori/ skeleton のみ作成。`apps/` directory も生成 **しない**(/ori-arch の framework init が apps/<app>/ を populate)。`.ori/config.yaml` には repo folder 名から導出した default app entry を書き込む。
+
+### `/ori-arch` の責務分担(2026-06-07 確定)
+
+`/ori-arch` は次の 3 ステップで動く。**worked example の物理コピーは行わない**:
+
+1. **decide**: pattern (DDD-VSA-Hex 等) と stack (typescript / typescript-tauri 等) をユーザと対話で確定
+2. **upstream framework init**: `pnpm create vite@latest`, `pnpm create tauri-app`, `cargo new` 等を実行(各 tech catalog の bash 手順)。bootstrap 系ファイル(`package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, `.gitignore`, `README.md` 等)はここで生まれる
+3. **ori artifact 追加**: `.apm/contexts/patterns/<pattern>/stacks/<stack>/architecture.md.tpl` を読み、app 名等の placeholder を解決して target の `.ori/architecture.md` を書き出す。これ以外 ori はファイルを足さない
+
+`example-slice/` (`.apm/contexts/patterns/<pattern>/stacks/<stack>/example-slice/`) は AI 専用の study material で、target にコピーされない。AI は `/ori-flow new-slice <id>` 等で初回 slice を生成する際に on-demand で参照し、ユーザーの実ドメインに沿った slice を直接生成する。これにより「他人の `task-management` example を消して自分のものを書く」工数が消え、ユーザー固有の domain を最初から扱える。
 
 ### /ori-arch 後の構造(single-app + Tauri 例)
 
@@ -1190,6 +1226,7 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 - templates / docs / SKILL.md の CLI 言及を skill ベースに書き換え
 - `packages/cli` 撤去 + `@ori-ori/*` 4 packages を npm deprecate
 - pre-commit hook で `build:skills` stale check + contributing docs 整備
+- **テンプレート方式の根本見直し**(`ori-5er`、2026-06-07 追加): `packages/templates/` 全廃 → `.apm/contexts/patterns/<name>/stacks/<stack>/` 構造へ。target には `.ori/architecture.md` のみ書き、bootstrap は upstream の framework init に委譲、worked example は AI 専用 study material として skill 側保持
 
 採用済み(2026-06-04 時点):
 
@@ -1198,6 +1235,14 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 - ✓ Phase E(`ori-ju9`): `.apm/skills/` 内 SKILL.md / scripts コメントの CLI 言及書き換え
 - ◐ Phase C(`ori-wuf`): `packages/templates/` の CLI 言及を skill scripts ベースに書き換え(進行中)
 - ◐ Phase D(`ori-csa`): ドキュメント(README / docs/start / design §15)の CLI 動線書き換え(進行中)
+
+未着手(2026-06-07 計画):
+
+- ○ Phase H(epic `ori-5er`): テンプレート方式廃止 → `.apm/contexts/patterns/<name>/stacks/<stack>/` 移行。**動機**: APM 配布経由で `packages/templates/` が lookup path から外れ `copy-template.sh` が失敗する障害が判明(2026-06-07 greenfield 検証)。同時に「target に worked example を物理コピーする方式」自体が ori 責務(設計原則 1「DDD ドキュメント = SSoT、コードは派生」)と整合しないことが明確化した。詳細決定は §6/§17 参照。サブタスク:
+  - `ori-p2f` (H1): `.apm/contexts/patterns/ddd-vsa-hex/` 新構造作成(pattern.md / ai-notes.md / stacks/typescript/{architecture.md.tpl, example-slice/} / stacks/typescript-tauri/...)
+  - `ori-62h` (H2): `/ori-arch` SKILL.md 改修 + scripts/ 再設計(copy-template.sh 廃止、architecture.md generator 新設)
+  - `ori-27a` (H3): `packages/templates/` 撤去 + scaffold tests 移管
+  - `ori-s44` (H4): 受け入れテスト — greenfield で `apm install` → `/ori-arch` 動作確認
 
 ### v0.4 以降(将来想定)
 
