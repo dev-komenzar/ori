@@ -97,13 +97,6 @@ importers:
       consola:
         specifier: ^3.2.3
         version: 3.4.2
-    devDependencies:
-      '@ori-ori/arch-adapter-eslint':
-        specifier: workspace:*
-        version: link:../../arch-adapter-eslint
-      vitest:
-        specifier: ^2.1.0
-        version: 2.1.9(@types/node@22.19.19)
 
   packages/skills/ori-doctor:
     dependencies:
