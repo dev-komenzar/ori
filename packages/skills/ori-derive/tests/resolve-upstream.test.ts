@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = join(__dirname, "..", "..", "..");
+const REPO_ROOT = join(__dirname, "..", "..", "..", "..");
 const SCRIPT = join(
   REPO_ROOT,
   ".apm",

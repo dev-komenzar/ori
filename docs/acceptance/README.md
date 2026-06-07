@@ -16,15 +16,16 @@ skill が visible になる) を回避するため。
 | **prep** | scaffold + manifest 整備 + bd issue 起票 + greenfield 環境準備 | `ori slice new <id>` で manifest skeleton 完成、bd ready で対象 epic + slice issue が見える、`pnpm test` で worked example PASS |
 | **run** | `/ori-flow <id>` で 7 phase (derive → plan → test-red → impl-green → refactor → review → finalize) 自動実行 | 全 phase closed、acceptance criteria 全 PASS、friction を bd 起票 |
 
-prep の進め方:
+prep の進め方 (design.md §17 三段構え):
 
 1. test 用 dir を作成 (`/tmp/ori-acceptance-greenfield-<n>`)
-2. `bash <ori-repo>/.apm/skills/ori-init/scripts/create-skeleton.sh --dest <test-dir>` で scaffold (ori-ks7 fix 後は bd init も自動)
-3. `<ori-repo>/packages/templates/ddd-vsa-hex-typescript` → test dir に copy (`bash .apm/skills/ori-arch/scripts/copy-template.sh --template ddd-vsa-hex-typescript --dest <test-dir>`)
-4. test dir で `pnpm install && pnpm test` を走らせて worked example の sanity check
-5. `ori slice new <slice-id>` → manifest.yaml の `derives_from:` を埋める
-6. 関連 domain 文書を `.ori/domain/` に置く
-7. prep session を **終了**して、新規 session で run
+2. `bash <ori-repo>/.apm/skills/ori-init/scripts/create-skeleton.sh --dest <test-dir>` で `.ori/` scaffold (ori-ks7 fix 後は bd init も自動)
+3. **upstream framework init**: `cd <test-dir> && mkdir -p apps/<app> && cd apps/<app> && pnpm create vite@latest . --template vanilla-ts` (Tauri 併用なら `pnpm add -D @tauri-apps/cli && pnpm tauri init` も)。`package.json` / `tsconfig.json` / `vitest.config.ts` 等 bootstrap 系はここで揃う
+4. `<test-dir>` で `node <ori-repo>/.apm/skills/ori-arch/scripts/render-architecture.js --pattern ddd-vsa-hex --stack typescript --bc <bc-name>` → `.ori/architecture.md` が書き出される
+5. test dir で `pnpm install && pnpm test` を走らせて upstream init 出力 (sample test 含む) の sanity check
+6. `node <ori-repo>/.apm/skills/ori-flow/scripts/new-slice.js <slice-id>` → manifest.yaml の `derives_from:` を埋める (AI は `.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript/example-slice/` を参照して slice を生成)
+7. 関連 domain 文書を `.ori/domain/` に置く
+8. prep session を **終了**して、新規 session で run
 
 ## 2. bd workspace の扱い (重要 / ori-cvv 該当箇所)
 

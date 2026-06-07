@@ -104,6 +104,15 @@ importers:
       '@ori-ori/arch-adapter-eslint':
         specifier: workspace:*
         version: link:../../arch-adapter-eslint
+      '@ori-ori/arch-adapter-rust':
+        specifier: workspace:*
+        version: link:../../arch-adapter-rust
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@22.19.19)
+
+  packages/skills/ori-derive:
+    devDependencies:
       vitest:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@22.19.19)
@@ -176,21 +185,6 @@ importers:
       zod:
         specifier: ^3.23.0
         version: 3.25.76
-
-  packages/templates:
-    devDependencies:
-      '@ori-ori/arch-adapter-eslint':
-        specifier: workspace:*
-        version: link:../arch-adapter-eslint
-      '@ori-ori/arch-adapter-rust':
-        specifier: workspace:*
-        version: link:../arch-adapter-rust
-      '@ori-ori/parser':
-        specifier: workspace:*
-        version: link:../parser
-      yaml:
-        specifier: ^2.5.0
-        version: 2.9.0
 
 packages:
 

@@ -33,7 +33,7 @@ VSA + ddd-vsa-hex 構造 (`apps/<app>/src/<bc>/slices/<slice-id>/`, `apps/<app>/
 ## 3. 対象範囲
 
 - UI framework (React / Solid / Svelte 等) を採用した **ori-adopting プロジェクト** に適用
-- ori 本体のテンプレート (`@ori-ori/templates`) は UI framework を内包しない方針 — 本規約は **テンプレ生成物の中で UI を足したときの規約** であり、テンプレ本体に Playwright / Testing Library 等を default dep として追加しない
+- ori 本体の pattern stack (`.apm/contexts/patterns/<p>/stacks/<s>/`) と example-slice は UI framework を内包しない方針 — 本規約は **upstream framework init + `/ori-flow` で生成された slice の中で UI を足したときの規約** であり、ori 側に Playwright / Testing Library 等を default dep として持たせない (UI framework は upstream init で選択される)
 
 ## 4. prod ビルドでの testid strip
 
