@@ -6,7 +6,8 @@ import { parseArchitectureSpec, parseFrontmatter } from "@ori-ori/parser";
 import eslintAdapter from "@ori-ori/arch-adapter-eslint";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = join(__dirname, "..", "..", "..");
+// packages/skills/ori-arch/tests/ -> repo root
+const REPO_ROOT = join(__dirname, "..", "..", "..", "..");
 const PATTERN_ROOT = join(
   REPO_ROOT,
   ".apm",
