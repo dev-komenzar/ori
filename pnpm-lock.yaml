@@ -97,6 +97,9 @@ importers:
       consola:
         specifier: ^3.2.3
         version: 3.4.2
+      yaml:
+        specifier: ^2.5.0
+        version: 2.9.0
     devDependencies:
       '@ori-ori/arch-adapter-eslint':
         specifier: workspace:*

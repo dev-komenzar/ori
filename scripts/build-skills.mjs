@@ -46,7 +46,14 @@ for (const skillName of skillDirs) {
       target: "node20",
       format: "esm",
       minify: false,
-      banner: { js: "#!/usr/bin/env node" },
+      banner: {
+        js: [
+          "#!/usr/bin/env node",
+          // Allow bundled CJS deps (e.g. `yaml`) to use dynamic require for node built-ins.
+          "import { createRequire as __ori_createRequire } from 'node:module';",
+          "const require = __ori_createRequire(import.meta.url);",
+        ].join("\n"),
+      },
     }
 
     if (watch) {

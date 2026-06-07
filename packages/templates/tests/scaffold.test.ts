@@ -27,7 +27,10 @@ async function runCopy(args: string[], dest: string) {
   );
 }
 
-describe("ori-arch copy-template.sh placeholder behavior (ori-ou6)", () => {
+// ori-62h (v0.3-H2): copy-template.sh は廃止され render-architecture (TS) に置換された。
+// packages/templates/ 自体も v0.3-H3 (ori-27a) で撤去される予定。それまでファイル丸ごと
+// skip して保持する (H3 で削除)。
+describe.skip("ori-arch copy-template.sh placeholder behavior (ori-ou6) — DEPRECATED: see ori-62h / ori-27a", () => {
   it("emits an eslint.config.ori.js placeholder when scaffolding fresh", async () => {
     const dest = await mkdtemp(join(tmpdir(), "ori-scaffold-"));
     try {
