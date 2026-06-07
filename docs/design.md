@@ -1233,16 +1233,17 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 - ✓ Phase A(`ori-rem`): `packages/skills/` 足場 + esbuild `build:skills` + CI stale check
 - ✓ Phase B(`ori-2y2`, `ori-s3o`, `ori-ezc`, `ori-539`, `ori-4gp`): CLI 7 コマンドを skill scripts に移植
 - ✓ Phase E(`ori-ju9`): `.apm/skills/` 内 SKILL.md / scripts コメントの CLI 言及書き換え
-- ◐ Phase C(`ori-wuf`): `packages/templates/` の CLI 言及を skill scripts ベースに書き換え(進行中)
+- ◐ Phase C(`ori-wuf`): `packages/templates/` の CLI 言及を skill scripts ベースに書き換え → Phase H で対象自体が消滅したため自然解消
 - ◐ Phase D(`ori-csa`): ドキュメント(README / docs/start / design §15)の CLI 動線書き換え(進行中)
+- ✓ Phase H1(`ori-p2f`): `.apm/contexts/patterns/ddd-vsa-hex/` 新構造作成(pattern.md / ai-notes.md / stacks/typescript/{architecture.md.tpl, example-slice/} / stacks/typescript-tauri/...)
+- ✓ Phase H2(`ori-62h`): `/ori-arch` SKILL.md 改修 + scripts/ 再設計(`copy-template.sh` 廃止、`render-architecture.js` 新設)
+- ✓ Phase H3(`ori-27a`): `packages/templates/` 物理撤去 + `resolve-upstream.test.ts` を `packages/skills/ori-derive/` に移管、生きた SSoT は `.apm/contexts/patterns/` に一本化
 
 未着手(2026-06-07 計画):
 
-- ○ Phase H(epic `ori-5er`): テンプレート方式廃止 → `.apm/contexts/patterns/<name>/stacks/<stack>/` 移行。**動機**: APM 配布経由で `packages/templates/` が lookup path から外れ `copy-template.sh` が失敗する障害が判明(2026-06-07 greenfield 検証)。同時に「target に worked example を物理コピーする方式」自体が ori 責務(設計原則 1「DDD ドキュメント = SSoT、コードは派生」)と整合しないことが明確化した。詳細決定は §6/§17 参照。サブタスク:
-  - `ori-p2f` (H1): `.apm/contexts/patterns/ddd-vsa-hex/` 新構造作成(pattern.md / ai-notes.md / stacks/typescript/{architecture.md.tpl, example-slice/} / stacks/typescript-tauri/...)
-  - `ori-62h` (H2): `/ori-arch` SKILL.md 改修 + scripts/ 再設計(copy-template.sh 廃止、architecture.md generator 新設)
-  - `ori-27a` (H3): `packages/templates/` 撤去 + scaffold tests 移管
-  - `ori-s44` (H4): 受け入れテスト — greenfield で `apm install` → `/ori-arch` 動作確認
+- ○ Phase H4(`ori-s44`): 受け入れテスト — greenfield で `apm install` → `/ori-init` → upstream init → `/ori-arch` → `render-architecture` の通しテスト
+
+(Phase H 全体の動機 — 2026-06-07 確定): APM 配布経由で `packages/templates/` が lookup path から外れ `copy-template.sh` が失敗する障害が判明し(greenfield 検証)、同時に「target に worked example を物理コピーする方式」自体が ori 責務(設計原則 1「DDD ドキュメント = SSoT、コードは派生」)と整合しないことが明確化したため、テンプレート方式を全廃。詳細決定は §6 / §17 参照。
 
 ### v0.4 以降(将来想定)
 
