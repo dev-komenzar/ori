@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@ori-ori/parser": "workspace:*",
-    "consola": "^3.2.3"
+    "consola": "^3.2.3",
+    "yaml": "^2.5.0"
   },
   "devDependencies": {
     "@ori-ori/arch-adapter-eslint": "workspace:*",

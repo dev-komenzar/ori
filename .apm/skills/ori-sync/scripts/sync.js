@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { createRequire as __ori_createRequire } from 'node:module';
+const require = __ori_createRequire(import.meta.url);
 var __defProp = Object.defineProperty;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __esm = (fn, res) => function __init() {
