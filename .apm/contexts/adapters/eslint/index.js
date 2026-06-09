@@ -7733,10 +7733,25 @@ function stripPrefix(value, prefix) {
   if (!prefix) return value;
   return value.startsWith(prefix) ? value.slice(prefix.length) : value;
 }
-function buildElements(matchers, prefix) {
+function sliceInternalFor(spec, root, layerId) {
+  const set = spec.layer_sets[root.layer_set];
+  if (!set) return void 0;
+  const layer = set.layers.find((l) => l.id === layerId);
+  if (!layer || layer.kind !== "slice" || !layer.slice_internal) return void 0;
+  return spec.slice_internal[layer.slice_internal];
+}
+function buildElements(spec, root, matchers, prefix) {
   return matchers.map((m) => {
     const pattern = stripPrefix(m.prefix, prefix);
     if (m.slice) {
+      const si = sliceInternalFor(spec, root, m.layerId);
+      if (si) {
+        return {
+          type: m.layerId,
+          pattern: `${pattern}*/*/**`,
+          capture: ["sliceName", "subLayer"]
+        };
+      }
       return {
         type: m.layerId,
         pattern: `${pattern}*/**`,
@@ -7751,8 +7766,38 @@ function buildDependencyRules(spec, root, rules) {
   const sliceLayerIds = new Set(
     set.layers.filter((l) => l.kind === "slice").map((l) => l.id)
   );
-  return rules.map((rule) => {
+  const expanded = [];
+  for (const rule of rules) {
     const isSlice = sliceLayerIds.has(rule.from);
+    const sliceInternal = isSlice ? sliceInternalFor(spec, root, rule.from) : void 0;
+    if (isSlice && sliceInternal) {
+      for (const subLayer of sliceInternal.sub_layers) {
+        const allow2 = [];
+        for (const target of rule.allow) {
+          if (target === rule.from) continue;
+          allow2.push({ to: { type: target } });
+        }
+        const siRule = sliceInternal.rules.find((r) => r.from === subLayer);
+        if (siRule) {
+          for (const targetSub of siRule.allow) {
+            allow2.push({
+              to: {
+                type: rule.from,
+                captured: {
+                  sliceName: "{{from.sliceName}}",
+                  subLayer: targetSub
+                }
+              }
+            });
+          }
+        }
+        expanded.push({
+          from: { type: rule.from, captured: { subLayer } },
+          allow: allow2
+        });
+      }
+      continue;
+    }
     const allow = rule.allow.map((target) => {
       if (target === rule.from && isSlice) {
         return {
@@ -7772,8 +7817,9 @@ function buildDependencyRules(spec, root, rules) {
         }
       });
     }
-    return { from: { type: rule.from }, allow };
-  });
+    expanded.push({ from: { type: rule.from }, allow });
+  }
+  return expanded;
 }
 function layerFileGlob(spec, root, matchers, layerId, prefix) {
   const set = spec.layer_sets[root.layer_set];
@@ -7835,7 +7881,7 @@ var adapter = {
     const prefix = appPrefix(root);
     const matchers = buildMatchers(spec, root);
     const irRules = buildRules(spec, root);
-    const elements = buildElements(matchers, prefix);
+    const elements = buildElements(spec, root, matchers, prefix);
     const dependencyRules = buildDependencyRules(spec, root, irRules);
     const forbiddenBlocks = buildForbiddenBlocks(spec, root, matchers, prefix);
     const relRootPath = stripPrefix(root.path, prefix);
@@ -7862,6 +7908,23 @@ var adapter = {
     if (forbiddenBlocks.length > 0) {
       notes.push(
         `Emitted ${forbiddenBlocks.length} no-restricted-imports override(s) from forbidden_imports entries.`
+      );
+    }
+    const sliceLayersWithInternal = set.layers.filter((l) => l.kind === "slice" && l.slice_internal).map((l) => l.id);
+    const sliceInternalActive = sliceLayersWithInternal.filter(
+      (id) => sliceInternalFor(spec, root, id) !== void 0
+    );
+    const sliceInternalMissing = sliceLayersWithInternal.filter(
+      (id) => sliceInternalFor(spec, root, id) === void 0
+    );
+    if (sliceInternalActive.length > 0) {
+      notes.push(
+        `Slice-internal sub-layer enforcement is active for [${sliceInternalActive.join(", ")}]; the boundaries 'subLayer' capture pins presentation\u2192application\u2192domain (etc.) inside each slice.`
+      );
+    }
+    if (sliceInternalMissing.length > 0) {
+      notes.push(
+        `Layer(s) [${sliceInternalMissing.join(", ")}] declare 'slice_internal:' but no matching top-level 'slice_internal' block was found; slice-internal sub-layer rules are NOT enforced for those layers.`
       );
     }
     if (prefix) {
