@@ -14,4 +14,13 @@ export {
   type OriArchAdapter,
   type AdapterExportResult,
   type AdapterCheckResult,
+  type AdapterOpts,
 } from "./architecture.js";
+export {
+  buildMatchers,
+  buildRules,
+  buildBridges,
+  type Matcher,
+  type Rule,
+  type Bridge,
+} from "./architecture-ir.js";

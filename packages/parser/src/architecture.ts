@@ -163,9 +163,14 @@ export interface AdapterCheckResult {
   }[];
 }
 
+export interface AdapterOpts {
+  /** Templates dir override (default: <adapter-bundle>/templates/). Used by tests to inject fixtures. */
+  templatesDir?: string;
+}
+
 export interface OriArchAdapter {
   name: string;
   language: string | string[];
-  export(spec: ArchitectureSpec, root: RootConfig): Promise<AdapterExportResult>;
-  check?(spec: ArchitectureSpec, root: RootConfig): Promise<AdapterCheckResult>;
+  export(spec: ArchitectureSpec, root: RootConfig, opts?: AdapterOpts): Promise<AdapterExportResult>;
+  check?(spec: ArchitectureSpec, root: RootConfig, opts?: AdapterOpts): Promise<AdapterCheckResult>;
 }

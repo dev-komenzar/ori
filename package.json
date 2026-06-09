@@ -15,9 +15,12 @@
   },
   "packageManager": "pnpm@10.33.2",
   "scripts": {
-    "build": "pnpm -r run build",
+    "build": "pnpm -r run build && pnpm run build:skills && pnpm run build:adapters",
     "build:skills": "node scripts/build-skills.mjs",
+    "build:adapters": "node scripts/build-adapters.mjs",
     "dev:skills": "node scripts/build-skills.mjs --watch",
+    "dev:adapters": "node scripts/build-adapters.mjs --watch",
+    "pretest": "pnpm run build:adapters",
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",
     "typecheck": "pnpm -r run typecheck",
