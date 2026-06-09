@@ -141,7 +141,9 @@ node <script-base>/sync-page-map.js --dry-run
 
 `/ori-arch` 完了後、ユーザに以下を提示：
 
-- **動作確認パス**：`pnpm install && pnpm test` で upstream init 出力 (sample test 含む) が走ること確認
+- **動作確認パス**：upstream init 出力が正しく走るかを smoke チェック
+  - `typescript` (vite vanilla-ts)：`pnpm install && pnpm build`（vanilla-ts には `test` script が無いため `build` で代用）
+  - `typescript-tauri`：`pnpm install && pnpm build`（Rust 側は `pnpm tauri build` で確認可、初回は時間がかかる）
 - **最初の slice 作成パス**：`/ori-flow new-slice <id>` で新 slice を scaffold → 7-phase 開発を回す
 - **domain 起点で進めるパス**：`/ori-distill phase=discovery` で distill-ddd phase 1 から domain を立ち上げる
 - **既存 domain がある場合のパス**：`/ori-migrate` で `docs/domain/` 等を `.ori/domain/` に昇格
