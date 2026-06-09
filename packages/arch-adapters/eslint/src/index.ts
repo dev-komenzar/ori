@@ -18,11 +18,16 @@ interface ElementEntry {
   capture?: string[];
 }
 
-type AllowTarget = string | [string, Record<string, string>];
+interface DependencyAllowEntry {
+  to: {
+    type: string;
+    captured?: Record<string, string>;
+  };
+}
 
-interface RuleEntry {
-  from: string[];
-  allow: AllowTarget[];
+interface DependencyRuleEntry {
+  from: { type: string };
+  allow: DependencyAllowEntry[];
 }
 
 interface RestrictedPath {
@@ -46,40 +51,60 @@ function defaultTemplatesDir(): string {
   return join(dirname(fileURLToPath(import.meta.url)), "templates");
 }
 
-function buildElements(matchers: Matcher[]): ElementEntry[] {
+function appPrefix(root: RootConfig): string {
+  return root.app ? `apps/${root.app}/` : "";
+}
+
+function stripPrefix(value: string, prefix: string): string {
+  if (!prefix) return value;
+  return value.startsWith(prefix) ? value.slice(prefix.length) : value;
+}
+
+function buildElements(matchers: Matcher[], prefix: string): ElementEntry[] {
   return matchers.map((m) => {
+    const pattern = stripPrefix(m.prefix, prefix);
     if (m.slice) {
       return {
         type: m.layerId,
-        pattern: `${m.prefix}*/**`,
+        pattern: `${pattern}*/**`,
         capture: ["sliceName"],
       };
     }
-    return { type: m.layerId, pattern: `${m.prefix}**` };
+    return { type: m.layerId, pattern: `${pattern}**` };
   });
 }
 
-function buildElementTypeRules(
+function buildDependencyRules(
   spec: ArchitectureSpec,
   root: RootConfig,
   rules: Rule[],
-): RuleEntry[] {
+): DependencyRuleEntry[] {
   const set = spec.layer_sets[root.layer_set]!;
   const sliceLayerIds = new Set(
     set.layers.filter((l) => l.kind === "slice").map((l) => l.id),
   );
   return rules.map((rule) => {
     const isSlice = sliceLayerIds.has(rule.from);
-    const allow: AllowTarget[] = rule.allow.map((target) => {
+    const allow: DependencyAllowEntry[] = rule.allow.map((target) => {
       if (target === rule.from && isSlice) {
-        return [target, { sliceName: "${from.sliceName}" }];
+        return {
+          to: {
+            type: target,
+            captured: { sliceName: "{{from.sliceName}}" },
+          },
+        };
       }
-      return target;
+      return { to: { type: target } };
     });
     if (isSlice && !rule.allow.includes(rule.from)) {
-      allow.push([rule.from, { sliceName: "${from.sliceName}" }]);
+      allow.push({
+        to: {
+          type: rule.from,
+          captured: { sliceName: "{{from.sliceName}}" },
+        },
+      });
     }
-    return { from: [rule.from], allow };
+    return { from: { type: rule.from }, allow };
   });
 }
 
@@ -88,27 +113,30 @@ function layerFileGlob(
   root: RootConfig,
   matchers: Matcher[],
   layerId: string,
+  prefix: string,
 ): string | null {
   const set = spec.layer_sets[root.layer_set];
   if (!set) return null;
   const matcher = matchers.find((m) => m.layerId === layerId);
   if (!matcher) return null;
+  const stripped = stripPrefix(matcher.prefix, prefix);
   if (matcher.slice) {
-    return `${matcher.prefix}*/**/*.${PATTERN_EXT}`;
+    return `${stripped}*/**/*.${PATTERN_EXT}`;
   }
-  return `${matcher.prefix}**/*.${PATTERN_EXT}`;
+  return `${stripped}**/*.${PATTERN_EXT}`;
 }
 
 function buildForbiddenBlocks(
   spec: ArchitectureSpec,
   root: RootConfig,
   matchers: Matcher[],
+  prefix: string,
 ): ForbiddenBlock[] {
   const set = spec.layer_sets[root.layer_set];
   if (!set) return [];
   const blocks: ForbiddenBlock[] = [];
   for (const fi of set.rules.forbidden_imports ?? []) {
-    const glob = layerFileGlob(spec, root, matchers, fi.from);
+    const glob = layerFileGlob(spec, root, matchers, fi.from, prefix);
     if (!glob) continue;
     const paths: RestrictedPath[] = fi.modules.map((module) => ({
       name: module,
@@ -126,9 +154,6 @@ function buildForbiddenBlocks(
 }
 
 function renderJsonExpr(value: unknown): string {
-  // The placeholder is meant to be a JS expression. JSON.stringify is valid
-  // JS for arrays/objects/primitives we use; we keep ${from.sliceName} as a
-  // literal token by emitting it inside a JSON string (it round-trips).
   return JSON.stringify(value, null, 2);
 }
 
@@ -158,12 +183,14 @@ const adapter: OriArchAdapter = {
       throw new Error(`layer_set "${root.layer_set}" not found in layer_sets`);
     }
 
+    const prefix = appPrefix(root);
     const matchers = buildMatchers(spec, root);
     const irRules = buildRules(spec, root);
-    const elements = buildElements(matchers);
-    const eslintRules = buildElementTypeRules(spec, root, irRules);
-    const forbiddenBlocks = buildForbiddenBlocks(spec, root, matchers);
-    const filePattern = `${root.path}/**/*.${PATTERN_EXT}`;
+    const elements = buildElements(matchers, prefix);
+    const dependencyRules = buildDependencyRules(spec, root, irRules);
+    const forbiddenBlocks = buildForbiddenBlocks(spec, root, matchers, prefix);
+    const relRootPath = stripPrefix(root.path, prefix);
+    const filePattern = `${relRootPath}/**/*.${PATTERN_EXT}`;
 
     const templatesDir = opts.templatesDir ?? defaultTemplatesDir();
     const template = await readFile(join(templatesDir, "flat-config.js.tpl"), "utf8");
@@ -171,7 +198,7 @@ const adapter: OriArchAdapter = {
     const content = applyPlaceholders(template, {
       FILE_PATTERN: filePattern,
       ELEMENTS: renderJsonExpr(elements),
-      RULES: renderJsonExpr(eslintRules),
+      RULES: renderJsonExpr(dependencyRules),
       EXTRA_BLOCKS: renderJsonExpr(forbiddenBlocks),
     });
 
@@ -191,10 +218,15 @@ const adapter: OriArchAdapter = {
         `Emitted ${forbiddenBlocks.length} no-restricted-imports override(s) from forbidden_imports entries.`,
       );
     }
+    if (prefix) {
+      notes.push(
+        `Emitted at ${prefix}eslint.config.ori.js with app-relative file globs; run \`pnpm exec eslint .\` from ${prefix.replace(/\/$/, "")} or \`pnpm exec eslint ${prefix}\` from the repo root.`,
+      );
+    }
     notes.push("Install peers: pnpm add -D eslint eslint-plugin-boundaries");
 
     return {
-      files: [{ path: "eslint.config.ori.js", content }],
+      files: [{ path: `${prefix}eslint.config.ori.js`, content }],
       notes,
     };
   },

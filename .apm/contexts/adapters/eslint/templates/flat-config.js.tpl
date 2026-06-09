@@ -16,7 +16,7 @@ export default [
       "boundaries/elements": __ORI_ELEMENTS__,
     },
     rules: {
-      "boundaries/element-types": [
+      "boundaries/dependencies": [
         "error",
         {
           default: "disallow",
