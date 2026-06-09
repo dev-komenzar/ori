@@ -9,7 +9,7 @@
 `.ori/architecture.md` is the **language-neutral SSoT** for ddd-vsa-hex architecture
 enforcement. It declares layers, allowed cross-layer dependencies, and public entry
 points. Adapters compile it to native linter configs (eslint, dependency-cruiser,
-import-linter, arch-adapter-rust, generic regex fallback).
+import-linter, rust integration test, generic regex fallback).
 
 The file is **YAML frontmatter + Markdown body**. Frontmatter is the machine-parseable
 contract; body is rationale, examples, and human-maintained notes (preserved across

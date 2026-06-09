@@ -125,7 +125,7 @@ TS 側固有:
 Rust 側固有:
 
 - slice 内の sibling は idiomatic な `super::*` で参照、cross-slice 連携の
-  ために `crate::task_management::shared::*` を使う（arch-adapter-rust は
+  ために `crate::task_management::shared::*` を使う（rust adapter は
   Rust 2018+ の module-file convention に沿って `crate::*` / `super::*` /
   `self::*` を正しく解決します）
 - tauri command は **`<bc>/slices/<slice>/commands.rs` にのみ**置く
@@ -180,7 +180,7 @@ Rust 識別子規約により `<slice_id>` の hyphen は underscore に置き�
 node .apm/skills/ori-arch/scripts/export.js --adapter=eslint    # eslint.config.ori.js を再生成
 pnpm lint                                                       # eslint がルール違反を検出
 
-# Rust root → arch-adapter-rust
+# Rust root → rust adapter
 node .apm/skills/ori-arch/scripts/export.js --adapter=rust --root=rs   # apps/<app>/src-tauri/tests/arch.rs を再生成
 cd apps/<app>/src-tauri && cargo test --test arch
 ```

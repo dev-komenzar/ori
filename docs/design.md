@@ -782,7 +782,7 @@ slice_internal:
 | rust | Rust | `tests/arch.rs` または `cargo-modules` config |
 | generic | any | `.ori/arch-rules.json` + tiny CLI checker(regex) |
 
-Adapter は APM bundle 内に統合(`.apm/skills/ori-arch/scripts/adapters/`)。@ori-ori npm package は廃止。
+Adapter は APM bundle 内に統合(`.apm/contexts/adapters/<name>/index.js`、template + JSON injection 分離構造)。`@ori-ori/arch-adapter-*` npm package は v0.3-J で publish 停止(`packages/arch-adapter-*/` 物理撤去)。ori-arch skill が dynamic import で skill 隣接の bundle を解決する。
 
 ---
 
@@ -964,9 +964,10 @@ ori/                               # APM package source
 packages/                        # TS monorepo(開発時 SSoT)
 ├── parser/
 ├── coherence/
-├── arch-adapter-eslint/
-├── arch-adapter-generic/
-├── arch-adapter-rust/
+├── arch-adapters/               # adapter source(template + JSON injection 分離)
+│   ├── eslint/                  # → .apm/contexts/adapters/eslint/index.js に bundle
+│   ├── generic/                 # → .apm/contexts/adapters/generic/index.js に bundle
+│   └── rust/                    # → .apm/contexts/adapters/rust/index.js に bundle
 ├── slice-runner/                # slice/page 生成本体
 └── skills/                      # skill ごとの bundle entry
     ├── ori-arch/src/export.ts
@@ -974,15 +975,23 @@ packages/                        # TS monorepo(開発時 SSoT)
     └── ...
 ```
 
-ビルド時に esbuild が各 skill bundle を `.apm/skills/<name>/scripts/` に書き出す。CI で `pnpm build && git diff --exit-code .apm/` で stale check。
+ビルド時に esbuild が各 skill bundle を `.apm/skills/<name>/scripts/` に書き出し、各 adapter bundle を `.apm/contexts/adapters/<name>/index.js` に書き出す。CI で `pnpm build && git diff --exit-code .apm/` で stale check。
+
+> v0.3-J で `packages/arch-adapter-{eslint,rust,generic}/` (旧 publishable npm package) は物理撤去。配布は APM 単独 (`apm install dev-komenzar/ori`) に一本化、`@ori-ori/arch-adapter-*` の npm publish は停止。
 
 ### npm package 戦略
 
-- **`@ori-ori/cli` を含む全 packages を soft-deprecate**
-  ```bash
-  npm deprecate @ori-ori/<name>@'*' \
-    "Reserved for future use. Currently distributed via APM: apm install ori"
-  ```
+- **`@ori-ori/cli` および `@ori-ori/arch-adapter-*` 系を deprecate**
+  - placeholder package (publish 名前温存目的、機能なし) — `@ori-ori/templates` 等
+    ```bash
+    npm deprecate @ori-ori/<name>@'*' \
+      "Reserved for future use. Currently distributed via APM: apm install dev-komenzar/ori"
+    ```
+  - 実体ありで bundled に移行済 package — `@ori-ori/arch-adapter-{eslint,rust,generic}` (v0.3-J で APM bundle に embed、新規 publish 停止)
+    ```bash
+    npm deprecate @ori-ori/arch-adapter-eslint@'<=0.2.0' \
+      "Now bundled into .apm/contexts/adapters/eslint via APM. Use 'apm install dev-komenzar/ori' instead. See https://github.com/dev-komenzar/ori"
+    ```
 - 配布は APM 単独
 - CI 用途: APM-installed skill scripts を直接 node で実行
   ```bash
@@ -1244,6 +1253,16 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 - ○ Phase H4(`ori-s44`): 受け入れテスト — greenfield で `apm install` → `/ori-init` → upstream init → `/ori-arch` → `render-architecture` の通しテスト
 
 (Phase H 全体の動機 — 2026-06-07 確定): APM 配布経由で `packages/templates/` が lookup path から外れ `copy-template.sh` が失敗する障害が判明し(greenfield 検証)、同時に「target に worked example を物理コピーする方式」自体が ori 責務(設計原則 1「DDD ドキュメント = SSoT、コードは派生」)と整合しないことが明確化したため、テンプレート方式を全廃。詳細決定は §6 / §17 参照。
+
+#### Phase J — adapter を skill bundle に取り込み + npm package 廃止(epic = `ori-c4w`)
+
+動機: 旧 `packages/arch-adapter-*` は TS file 内に大 template literal で Rust/JS syntax を書く「string-concat code generation」の業界 anti-pattern (Prisma / OpenAPI Generator / sqlc / GraphQL codegen が template-based 分離で解決している領域)。加えて consumer が `pnpm add -D @ori-ori/arch-adapter-eslint` を要求される構造は skill-only 実行モデル(`ori-execution-model-shift-2026-06-03`)と不整合 (`ori-s44` acceptance §F-1)。
+
+スコープ:
+
+- ✓ Phase J1(`ori-apv`、PR #34): adapter を template + JSON injection 分離構造に再設計、`.apm/contexts/adapters/<name>/{templates,index.js}` に bundle、ori-arch skill は dynamic import で skill 隣接から解決(`ori-0ok` 内包)
+- ✓ Phase J2(`ori-osm`): 旧 `packages/arch-adapter-{eslint,rust,generic}/` を物理撤去 + `@ori-ori/arch-adapter-*@<=0.2.0` を npm deprecate 強化(`ori-u5d` 内包、`scripts/npm-deprecate-adapters.sh` 参照)
+- ○ Phase J3(未起票、J2 merge 後): greenfield acceptance retry — `/tmp/ori-acceptance-j/` で `apm install` → 追加 `pnpm add` 無しで adapter 動作確認
 
 ### v0.4 以降(将来想定)
 
