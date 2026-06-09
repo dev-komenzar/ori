@@ -1,0 +1,18 @@
+{
+  "name": "@ori-ori/arch-adapter-generic-bundled",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Source for the generic arch adapter — built to .apm/contexts/adapters/generic/ via scripts/build-adapters.mjs",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@ori-ori/parser": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  }
+}

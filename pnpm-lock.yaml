@@ -51,6 +51,36 @@ importers:
         specifier: workspace:*
         version: link:../parser
 
+  packages/arch-adapters/eslint:
+    dependencies:
+      '@ori-ori/parser':
+        specifier: workspace:*
+        version: link:../../parser
+    devDependencies:
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@22.19.19)
+
+  packages/arch-adapters/generic:
+    dependencies:
+      '@ori-ori/parser':
+        specifier: workspace:*
+        version: link:../../parser
+    devDependencies:
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@22.19.19)
+
+  packages/arch-adapters/rust:
+    dependencies:
+      '@ori-ori/parser':
+        specifier: workspace:*
+        version: link:../../parser
+    devDependencies:
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@22.19.19)
+
   packages/cli: {}
 
   packages/coherence:
@@ -101,12 +131,6 @@ importers:
         specifier: ^2.5.0
         version: 2.9.0
     devDependencies:
-      '@ori-ori/arch-adapter-eslint':
-        specifier: workspace:*
-        version: link:../../arch-adapter-eslint
-      '@ori-ori/arch-adapter-rust':
-        specifier: workspace:*
-        version: link:../../arch-adapter-rust
       vitest:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@22.19.19)

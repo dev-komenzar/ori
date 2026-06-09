@@ -1,13 +1,19 @@
-import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile, stat } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
-import { pathToFileURL } from "node:url";
-import { parseArchitectureSpec, type ArchitectureSpec, type OriArchAdapter, type RootConfig } from "@ori-ori/parser";
+import {
+  parseArchitectureSpec,
+  type ArchitectureSpec,
+  type RootConfig,
+} from "@ori-ori/parser";
 import { consola } from "consola";
+import { loadAdapter, resolveAdaptersDir } from "./internal/adapter-loader.js";
 
 const DEFAULT_SPEC_PATH = ".ori/architecture.md";
 
-async function loadSpec(cwd: string, specArg: string | undefined): Promise<{ spec: ArchitectureSpec; path: string }> {
+async function loadSpec(
+  cwd: string,
+  specArg: string | undefined,
+): Promise<{ spec: ArchitectureSpec; path: string }> {
   const specPath = join(cwd, specArg ?? DEFAULT_SPEC_PATH);
   try {
     await stat(specPath);
@@ -25,7 +31,10 @@ async function loadSpec(cwd: string, specArg: string | undefined): Promise<{ spe
   }
 }
 
-function resolveRoot(spec: ArchitectureSpec, requestedId: string | undefined): RootConfig {
+function resolveRoot(
+  spec: ArchitectureSpec,
+  requestedId: string | undefined,
+): RootConfig {
   const targetId = requestedId ?? spec.default_root;
   const root = spec.roots.find((r) => r.id === targetId);
   if (!root) {
@@ -34,27 +43,6 @@ function resolveRoot(spec: ArchitectureSpec, requestedId: string | undefined): R
     process.exit(2);
   }
   return root;
-}
-
-async function loadAdapter(cwd: string, name: string): Promise<OriArchAdapter> {
-  const pkg = `@ori-ori/arch-adapter-${name}`;
-  const require = createRequire(join(cwd, "package.json"));
-  let mod: unknown;
-  try {
-    const resolved = require.resolve(pkg);
-    mod = await import(pathToFileURL(resolved).href);
-  } catch (err) {
-    consola.error(`Adapter package "${pkg}" is not installed in ${cwd}.`);
-    consola.info(`Install it with: pnpm add -D ${pkg}`);
-    consola.info(err instanceof Error ? err.message : String(err));
-    process.exit(2);
-  }
-  const adapter = ((mod as { default?: unknown }).default ?? mod) as OriArchAdapter;
-  if (!adapter || typeof adapter.export !== "function") {
-    consola.error(`Adapter "${pkg}" does not export a valid OriArchAdapter (missing export()).`);
-    process.exit(2);
-  }
-  return adapter;
 }
 
 const args = process.argv.slice(2);
@@ -75,7 +63,8 @@ const root = resolveRoot(spec, flag("root"));
 const adapterName = flag("adapter") ?? root.adapter;
 const dryRun = boolFlag("dry-run");
 
-const adapter = await loadAdapter(cwd, adapterName);
+const adaptersDir = await resolveAdaptersDir({ adaptersDir: flag("adapters-dir") });
+const adapter = await loadAdapter(adapterName, adaptersDir);
 const result = await adapter.export(spec, root);
 
 if (result.files.length === 0) {

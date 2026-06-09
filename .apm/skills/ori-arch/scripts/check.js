@@ -4279,10 +4279,8 @@ ${e.cyan(d)}
 });
 
 // packages/skills/ori-arch/src/check.ts
-import { createRequire } from "node:module";
-import { readFile, stat } from "node:fs/promises";
-import { join, relative } from "node:path";
-import { pathToFileURL } from "node:url";
+import { readFile, stat as stat2 } from "node:fs/promises";
+import { join as join2, relative } from "node:path";
 
 // packages/parser/dist/index.js
 var import_gray_matter = __toESM(require_gray_matter(), 1);
@@ -9549,12 +9547,77 @@ function _getDefaultLogLevel() {
 }
 var consola = createConsola2();
 
+// packages/skills/ori-arch/src/internal/adapter-loader.ts
+import { readdir, stat } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+async function exists(p) {
+  try {
+    await stat(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function listDirs(p) {
+  try {
+    const entries = await readdir(p, { withFileTypes: true });
+    return entries.filter((d2) => d2.isDirectory()).map((d2) => d2.name).sort();
+  } catch {
+    return [];
+  }
+}
+async function resolveAdaptersDir(opts) {
+  const candidates = [];
+  if (opts.adaptersDir) candidates.push(opts.adaptersDir);
+  if (process.env.ORI_ADAPTERS_DIR) candidates.push(process.env.ORI_ADAPTERS_DIR);
+  const here = dirname(fileURLToPath(import.meta.url));
+  candidates.push(resolve(here, "..", "..", "..", "contexts", "adapters"));
+  candidates.push(
+    resolve(here, "..", "..", "..", "..", "..", ".apm", "contexts", "adapters")
+  );
+  for (const cand of candidates) {
+    if (await exists(cand)) return resolve(cand);
+  }
+  const lines = [
+    "Adapters directory not found. Searched:",
+    ...candidates.map((c3) => `  - ${c3}`),
+    "Set $ORI_ADAPTERS_DIR or pass --adapters-dir <path>."
+  ];
+  process.stderr.write(lines.join("\n") + "\n");
+  process.exit(2);
+}
+async function loadAdapter(name, adaptersDir2) {
+  const adapterDir = join(adaptersDir2, name);
+  const entry = join(adapterDir, "index.js");
+  if (!await exists(entry)) {
+    const available = await listDirs(adaptersDir2);
+    consola.error(`Adapter "${name}" not found at ${entry}`);
+    consola.info(
+      `Available adapters: ${available.length ? available.join(", ") : "(none found)"}`
+    );
+    consola.info(
+      "If you installed via APM, ensure your bundle is up to date (apm install dev-komenzar/ori)."
+    );
+    process.exit(2);
+  }
+  const mod = await import(pathToFileURL(entry).href);
+  const adapter2 = mod.default ?? mod;
+  if (!adapter2 || typeof adapter2.export !== "function") {
+    consola.error(
+      `Adapter at ${entry} does not export a valid OriArchAdapter (missing export()).`
+    );
+    process.exit(2);
+  }
+  return adapter2;
+}
+
 // packages/skills/ori-arch/src/check.ts
 var DEFAULT_SPEC_PATH = ".ori/architecture.md";
 async function loadSpec(cwd2, specArg) {
-  const specPath = join(cwd2, specArg ?? DEFAULT_SPEC_PATH);
+  const specPath = join2(cwd2, specArg ?? DEFAULT_SPEC_PATH);
   try {
-    await stat(specPath);
+    await stat2(specPath);
   } catch {
     consola.error(`Spec not found: ${relative(cwd2, specPath)}`);
     process.exit(2);
@@ -9578,26 +9641,6 @@ function resolveRoot(spec2, requestedId) {
   }
   return root2;
 }
-async function loadAdapter(cwd2, name) {
-  const pkg = `@ori-ori/arch-adapter-${name}`;
-  const require2 = createRequire(join(cwd2, "package.json"));
-  let mod;
-  try {
-    const resolved = require2.resolve(pkg);
-    mod = await import(pathToFileURL(resolved).href);
-  } catch (err) {
-    consola.error(`Adapter package "${pkg}" is not installed in ${cwd2}.`);
-    consola.info(`Install it with: pnpm add -D ${pkg}`);
-    consola.info(err instanceof Error ? err.message : String(err));
-    process.exit(2);
-  }
-  const adapter2 = mod.default ?? mod;
-  if (!adapter2 || typeof adapter2.export !== "function") {
-    consola.error(`Adapter "${pkg}" does not export a valid OriArchAdapter (missing export()).`);
-    process.exit(2);
-  }
-  return adapter2;
-}
 var args = process.argv.slice(2);
 function flag(name) {
   const idx = args.findIndex((a3) => a3 === `--${name}` || a3.startsWith(`--${name}=`));
@@ -9610,10 +9653,11 @@ var cwd = process.cwd();
 var { spec } = await loadSpec(cwd, flag("spec"));
 var root = resolveRoot(spec, flag("root"));
 var adapterName = flag("adapter") ?? root.adapter;
-var adapter = await loadAdapter(cwd, adapterName);
+var adaptersDir = await resolveAdaptersDir({ adaptersDir: flag("adapters-dir") });
+var adapter = await loadAdapter(adapterName, adaptersDir);
 if (!adapter.check) {
   consola.error(
-    `Adapter "${adapterName}" does not implement check(). Run \`node export.js --adapter=${adapterName}\` and use the native linter directly.`
+    `Adapter "${adapterName}" does not implement check(). Use the export() output and run the native linter (eslint / cargo test) instead.`
   );
   process.exit(2);
 }
