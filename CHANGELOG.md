@@ -4,6 +4,19 @@ ori (織) — DDD-driven slice/page scaffolding with CoDD coherence.
 
 ローカル変更ログ。npm scope は `@ori-ori/*`、monorepo 配下の全 publishable パッケージは同期 version で release する。
 
+## Unreleased
+
+### v0.3-J: npm package 廃止 → APM 単独配布
+
+`@ori-ori/arch-adapter-*` を含む adapter は APM bundle (`.apm/contexts/adapters/<name>/`) に統合され、npm 上の publish は停止します。配布は `apm install dev-komenzar/ori` のみ。
+
+- **J1** ([`ori-apv`](https://github.com/dev-komenzar/ori/pull/34)) — adapter を「template + JSON injection」分離構造に再設計、`.apm/contexts/adapters/{eslint,rust,generic}/` に bundle、ori-arch skill は dynamic import で skill 隣接から解決
+- **J2** ([`ori-osm`](https://github.com/dev-komenzar/ori/issues)) — 旧 `packages/arch-adapter-{eslint,rust,generic}/` を物理撤去。pnpm workspace から消失し、`pnpm -r publish` の対象外に。既存 publish 済 `@ori-ori/arch-adapter-{eslint,rust,generic}@0.2.0` は npm deprecate 強化 ([`ori-u5d`](https://github.com/dev-komenzar/ori/issues) 内包、`scripts/npm-deprecate-adapters.sh` 参照)
+
+破壊的変更:
+
+- `pnpm add -D @ori-ori/arch-adapter-eslint` 等は v0.3 以降サポート対象外。APM 経由 (`apm install dev-komenzar/ori`) で `.apm/contexts/adapters/` を入手し、ori-arch skill (`node .apm/skills/ori-arch/scripts/export.js --adapter=eslint`) から利用すること
+
 ## v0.2.0 — 2026-06-03
 
 Phase C (epic [`ori-5mi`](https://github.com/dev-komenzar/ori/issues)) で「`/ori-flow` execution gap を閉じる」を目標に進めた release。greenfield acceptance ([`ori-3ik`](https://github.com/dev-komenzar/ori/pull/14)) と promptnotes-vcsdd ドッグフード ([`ori-ywp`](https://github.com/dev-komenzar/ori/issues)) で /ori-flow が手動代替ゼロで完走することを確認済み。
