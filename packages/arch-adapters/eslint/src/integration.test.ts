@@ -123,14 +123,22 @@ async function render(spec: string): Promise<string> {
   return result.files[0]!.content;
 }
 
+async function renderResult(spec: string) {
+  const parsed = parseArchitectureSpec(spec);
+  return adapter.export(parsed, parsed.roots[0]!, {
+    templatesDir: TEMPLATES_DIR,
+  });
+}
+
 describe("eslint adapter — template + injection integration", () => {
-  it("renders boundaries config with elements, rules, and capture interpolation", async () => {
+  it("renders boundaries v6 dependencies rule with elements and capture interpolation", async () => {
     const content = await render(TS_SPEC);
-    // header is skill-based, not CLI-based
     expect(content).toContain("Regenerate via the /ori-arch skill");
     expect(content).not.toContain("ori arch export");
-    // import boundaries plugin
     expect(content).toContain('import boundaries from "eslint-plugin-boundaries"');
+    // v6 rule name
+    expect(content).toContain('"boundaries/dependencies"');
+    expect(content).not.toContain('"boundaries/element-types"');
     // file pattern
     expect(content).toContain("src/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}");
     // shared element pattern
@@ -143,9 +151,25 @@ describe("eslint adapter — template + injection integration", () => {
     expect(content).toContain('"pattern": "src/ui-page/**"');
   });
 
-  it("encodes cross-slice isolation via the capture interpolation", async () => {
+  it("emits object-based selectors (v6) for from/allow with handlebars capture template", async () => {
     const content = await render(TS_SPEC);
-    expect(content).toMatch(/"domain"[\s\S]*"sliceName"[\s\S]*"\$\{from\.sliceName\}"/);
+    // v6 from selector is object form
+    expect(content).toContain('"from": {');
+    expect(content).toContain('"type": "domain"');
+    // v6 allow entries are wrapped in `to: { type, captured? }`
+    expect(content).toMatch(/"allow":\s*\[/);
+    expect(content).toMatch(/"to":\s*\{/);
+    // capture interpolation uses handlebars syntax (no `${...}` legacy)
+    expect(content).toContain("{{from.sliceName}}");
+    expect(content).not.toContain("${from.sliceName}");
+  });
+
+  it("encodes cross-slice isolation via the captured-values selector", async () => {
+    const content = await render(TS_SPEC);
+    // The domain rule must include an allow entry that re-targets domain with capture
+    expect(content).toMatch(
+      /"from":\s*\{\s*"type":\s*"domain"\s*\}[\s\S]*?"to":\s*\{\s*"type":\s*"domain"[\s\S]*?"sliceName":\s*"\{\{from\.sliceName\}\}"/,
+    );
   });
 
   it("orders shared before slice element so overlapping globs resolve correctly", async () => {
@@ -157,15 +181,29 @@ describe("eslint adapter — template + injection integration", () => {
     expect(sharedIdx).toBeLessThan(sliceIdx);
   });
 
-  it("respects slice_subdir for the slice element pattern (design.md §17)", async () => {
-    const content = await render(SUBDIR_SPEC);
-    // BC-internal shared sits beside slices/ (no subdir)
-    expect(content).toContain('"pattern": "apps/template-app/src/task-management/shared/**"');
-    // slice element matches one level below slices/
-    expect(content).toContain('"pattern": "apps/template-app/src/task-management/slices/*/**"');
-    // ui-layer patterns stay at root path
-    expect(content).toContain('"pattern": "apps/template-app/src/ui-widget/**"');
-    expect(content).toContain('"pattern": "apps/template-app/src/ui-page/**"');
+  it("emits app-relative file and element patterns when root.app is set", async () => {
+    const result = await renderResult(SUBDIR_SPEC);
+    expect(result.files).toHaveLength(1);
+    // output is placed in the app dir, not at repo root
+    expect(result.files[0]?.path).toBe("apps/template-app/eslint.config.ori.js");
+    const content = result.files[0]!.content;
+    // file pattern is app-relative (no apps/<app>/ prefix)
+    expect(content).toContain('"src/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}"');
+    expect(content).not.toContain("apps/template-app/src/**/*.{ts");
+    // element patterns are app-relative
+    expect(content).toContain('"pattern": "src/task-management/shared/**"');
+    expect(content).toContain('"pattern": "src/task-management/slices/*/**"');
+    expect(content).toContain('"pattern": "src/ui-widget/**"');
+    expect(content).toContain('"pattern": "src/ui-page/**"');
+    // and never carry the absolute prefix
+    expect(content).not.toContain("apps/template-app/src/task-management");
+    expect(content).not.toContain("apps/template-app/src/ui-");
+  });
+
+  it("emits a hint note about the app-dir-relative output location", async () => {
+    const result = await renderResult(SUBDIR_SPEC);
+    const notes = result.notes?.join("\n") ?? "";
+    expect(notes).toMatch(/apps\/template-app\/eslint\.config\.ori\.js/);
   });
 
   it("emits no-restricted-imports override scoped to forbidden layer files", async () => {
@@ -173,7 +211,6 @@ describe("eslint adapter — template + injection integration", () => {
     expect(content).toContain('"no-restricted-imports"');
     expect(content).toContain("@tauri-apps/api/core");
     expect(content).toContain("tauri-specta-generated");
-    // override file glob is the ui-feature layer files
     expect(content).toMatch(/"src\/ui-feature\/\*\*\/\*\.\{ts,tsx,js,jsx,mts,cts,mjs,cjs\}"/);
   });
 

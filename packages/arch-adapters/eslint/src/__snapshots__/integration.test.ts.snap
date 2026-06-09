@@ -47,71 +47,133 @@ export default [
 ],
     },
     rules: {
-      "boundaries/element-types": [
+      "boundaries/dependencies": [
         "error",
         {
           default: "disallow",
           rules: [
   {
-    "from": [
-      "ui-page"
-    ],
+    "from": {
+      "type": "ui-page"
+    },
     "allow": [
-      "ui-widget",
-      "ui-feature",
-      "ui-entity",
-      "shared",
-      "domain"
-    ]
-  },
-  {
-    "from": [
-      "ui-widget"
-    ],
-    "allow": [
-      "ui-feature",
-      "ui-entity",
-      "shared",
-      "domain"
-    ]
-  },
-  {
-    "from": [
-      "ui-feature"
-    ],
-    "allow": [
-      "ui-entity",
-      "shared",
-      "domain"
-    ]
-  },
-  {
-    "from": [
-      "ui-entity"
-    ],
-    "allow": [
-      "shared",
-      "domain"
-    ]
-  },
-  {
-    "from": [
-      "domain"
-    ],
-    "allow": [
-      "shared",
-      [
-        "domain",
-        {
-          "sliceName": "\${from.sliceName}"
+      {
+        "to": {
+          "type": "ui-widget"
         }
-      ]
+      },
+      {
+        "to": {
+          "type": "ui-feature"
+        }
+      },
+      {
+        "to": {
+          "type": "ui-entity"
+        }
+      },
+      {
+        "to": {
+          "type": "shared"
+        }
+      },
+      {
+        "to": {
+          "type": "domain"
+        }
+      }
     ]
   },
   {
-    "from": [
-      "shared"
-    ],
+    "from": {
+      "type": "ui-widget"
+    },
+    "allow": [
+      {
+        "to": {
+          "type": "ui-feature"
+        }
+      },
+      {
+        "to": {
+          "type": "ui-entity"
+        }
+      },
+      {
+        "to": {
+          "type": "shared"
+        }
+      },
+      {
+        "to": {
+          "type": "domain"
+        }
+      }
+    ]
+  },
+  {
+    "from": {
+      "type": "ui-feature"
+    },
+    "allow": [
+      {
+        "to": {
+          "type": "ui-entity"
+        }
+      },
+      {
+        "to": {
+          "type": "shared"
+        }
+      },
+      {
+        "to": {
+          "type": "domain"
+        }
+      }
+    ]
+  },
+  {
+    "from": {
+      "type": "ui-entity"
+    },
+    "allow": [
+      {
+        "to": {
+          "type": "shared"
+        }
+      },
+      {
+        "to": {
+          "type": "domain"
+        }
+      }
+    ]
+  },
+  {
+    "from": {
+      "type": "domain"
+    },
+    "allow": [
+      {
+        "to": {
+          "type": "shared"
+        }
+      },
+      {
+        "to": {
+          "type": "domain",
+          "captured": {
+            "sliceName": "{{from.sliceName}}"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "from": {
+      "type": "shared"
+    },
     "allow": []
   }
 ],
