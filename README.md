@@ -88,7 +88,7 @@ $ /ori-sync                                    # 変更伝播計算
 - **フレームワーク別**: Next.js / Nuxt / Remix / Django / FastAPI / Spring / Axum / Tauri...
 - **アーキテクチャ別**: slice + DDD / Clean Architecture / Hexagonal / Onion / VSA...
 
-各テンプレートは「slice ごとのディレクトリ骨格 + 単一 public API（`index.ts` 相当）+ `.ori/architecture.md` を生成する arch-adapter 設定」の 3 点を満たせば ori と整合します。adapter は現在 ESLint / 汎用 regex / Rust が APM bundle 経由 (`.apm/contexts/adapters/{eslint,generic,rust}/`) で利用可能で、Python (import-linter) / JVM (ArchUnit) / Go (depguard) などは計画中です。
+各テンプレートは「slice ごとのディレクトリ骨格 + 単一 public API（`index.ts` 相当）+ `.ori/architecture.md` を生成する arch-adapter 設定」の 3 点を満たせば ori と整合します。adapter は現在 ESLint / 汎用 regex / Rust が APM bundle 経由 (`.apm/skills/ori-arch/adapters/{eslint,generic,rust}/`) で利用可能で、Python (import-linter) / JVM (ArchUnit) / Go (depguard) などは計画中です。
 
 興味がある方は [issues](https://github.com/dev-komenzar/ori/issues) または discussions で声をかけてください。
 

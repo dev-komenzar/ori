@@ -782,7 +782,7 @@ slice_internal:
 | rust | Rust | `tests/arch.rs` または `cargo-modules` config |
 | generic | any | `.ori/arch-rules.json` + tiny CLI checker(regex) |
 
-Adapter は APM bundle 内に統合(`.apm/contexts/adapters/<name>/index.js`、template + JSON injection 分離構造)。`@ori-ori/arch-adapter-*` npm package は v0.3-J で publish 停止(`packages/arch-adapter-*/` 物理撤去)。ori-arch skill が dynamic import で skill 隣接の bundle を解決する。
+Adapter は APM bundle 内に統合(`.apm/skills/ori-arch/adapters/<name>/index.js`、template + JSON injection 分離構造)。`@ori-ori/arch-adapter-*` npm package は v0.3-J で publish 停止(`packages/arch-adapter-*/` 物理撤去)。Phase K1 (`ori-6kd.2`) で `.apm/contexts/adapters/` → `.apm/skills/ori-arch/adapters/` に移動し、runtime artifact を消費 skill bundle と co-locate。ori-arch skill が dynamic import で skill 隣接の bundle を解決する。
 
 ---
 
@@ -965,9 +965,9 @@ packages/                        # TS monorepo(開発時 SSoT)
 ├── parser/
 ├── coherence/
 ├── arch-adapters/               # adapter source(template + JSON injection 分離)
-│   ├── eslint/                  # → .apm/contexts/adapters/eslint/index.js に bundle
-│   ├── generic/                 # → .apm/contexts/adapters/generic/index.js に bundle
-│   └── rust/                    # → .apm/contexts/adapters/rust/index.js に bundle
+│   ├── eslint/                  # → .apm/skills/ori-arch/adapters/eslint/index.js に bundle
+│   ├── generic/                 # → .apm/skills/ori-arch/adapters/generic/index.js に bundle
+│   └── rust/                    # → .apm/skills/ori-arch/adapters/rust/index.js に bundle
 ├── slice-runner/                # slice/page 生成本体
 └── skills/                      # skill ごとの bundle entry
     ├── ori-arch/src/export.ts
@@ -975,7 +975,7 @@ packages/                        # TS monorepo(開発時 SSoT)
     └── ...
 ```
 
-ビルド時に esbuild が各 skill bundle を `.apm/skills/<name>/scripts/` に書き出し、各 adapter bundle を `.apm/contexts/adapters/<name>/index.js` に書き出す。CI で `pnpm build && git diff --exit-code .apm/` で stale check。
+ビルド時に esbuild が各 skill bundle を `.apm/skills/<name>/scripts/` に書き出し、各 adapter bundle を `.apm/skills/ori-arch/adapters/<name>/index.js` に書き出す (Phase K1: `templates/*.tpl` も `packages/arch-adapters/<name>/templates/` から同 dir にコピーされる)。CI で `pnpm build && git diff --exit-code .apm/` で stale check。
 
 > v0.3-J で `packages/arch-adapter-{eslint,rust,generic}/` (旧 publishable npm package) は物理撤去。配布は APM 単独 (`apm install dev-komenzar/ori`) に一本化、`@ori-ori/arch-adapter-*` の npm publish は停止。
 
@@ -990,7 +990,7 @@ packages/                        # TS monorepo(開発時 SSoT)
   - 実体ありで bundled に移行済 package — `@ori-ori/arch-adapter-{eslint,rust,generic}` (v0.3-J で APM bundle に embed、新規 publish 停止)
     ```bash
     npm deprecate @ori-ori/arch-adapter-eslint@'<=0.2.0' \
-      "Now bundled into .apm/contexts/adapters/eslint via APM. Use 'apm install dev-komenzar/ori' instead. See https://github.com/dev-komenzar/ori"
+      "Now bundled into .apm/skills/ori-arch/adapters/eslint via APM. Use 'apm install dev-komenzar/ori' instead. See https://github.com/dev-komenzar/ori"
     ```
 - 配布は APM 単独
 - CI 用途: APM-installed skill scripts を直接 node で実行
@@ -1260,7 +1260,8 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 
 スコープ:
 
-- ✓ Phase J1(`ori-apv`、PR #34): adapter を template + JSON injection 分離構造に再設計、`.apm/contexts/adapters/<name>/{templates,index.js}` に bundle、ori-arch skill は dynamic import で skill 隣接から解決(`ori-0ok` 内包)
+- ✓ Phase J1(`ori-apv`、PR #34): adapter を template + JSON injection 分離構造に再設計、`.apm/contexts/adapters/<name>/{templates,index.js}` に bundle、ori-arch skill は dynamic import で skill 隣接から解決(`ori-0ok` 内包) — Phase K1 で `.apm/skills/ori-arch/adapters/` に移動
+- ✓ Phase K1(`ori-6kd.2`): adapter bundle を `.apm/skills/ori-arch/adapters/<name>/` に co-locate、templates SSoT を `packages/arch-adapters/<name>/templates/` に格上げ、resolver を `--adapters-dir` + bundle-adjacent の 2 候補に簡略化
 - ✓ Phase J2(`ori-osm`): 旧 `packages/arch-adapter-{eslint,rust,generic}/` を物理撤去 + `@ori-ori/arch-adapter-*@<=0.2.0` を npm deprecate 強化(`ori-u5d` 内包、`scripts/npm-deprecate-adapters.sh` 参照)
 - ○ Phase J3(未起票、J2 merge 後): greenfield acceptance retry — `/tmp/ori-acceptance-j/` で `apm install` → 追加 `pnpm add` 無しで adapter 動作確認
 

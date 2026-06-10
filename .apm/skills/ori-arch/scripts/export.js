@@ -9567,39 +9567,18 @@ async function listDirs(p) {
     return [];
   }
 }
-async function findApmModulesAdapters(cwd2) {
-  const apmModules = join(cwd2, "apm_modules");
-  if (!await exists(apmModules)) return [];
-  const found = [];
-  const owners = await listDirs(apmModules);
-  for (const owner of owners) {
-    const repos = await listDirs(join(apmModules, owner));
-    for (const repo of repos) {
-      const cand = join(apmModules, owner, repo, ".apm", "contexts", "adapters");
-      if (await exists(cand)) found.push(cand);
-    }
-  }
-  return found;
-}
 async function resolveAdaptersDir(opts) {
   const candidates = [];
   if (opts.adaptersDir) candidates.push(opts.adaptersDir);
-  if (process.env.ORI_ADAPTERS_DIR) candidates.push(process.env.ORI_ADAPTERS_DIR);
   const here = dirname(fileURLToPath(import.meta.url));
-  candidates.push(resolve(here, "..", "..", "..", "contexts", "adapters"));
-  for (const found of await findApmModulesAdapters(process.cwd())) {
-    candidates.push(found);
-  }
-  candidates.push(
-    resolve(here, "..", "..", "..", "..", "..", ".apm", "contexts", "adapters")
-  );
+  candidates.push(resolve(here, "..", "adapters"));
   for (const cand of candidates) {
     if (await exists(cand)) return resolve(cand);
   }
   const lines = [
     "Adapters directory not found. Searched:",
     ...candidates.map((c3) => `  - ${c3}`),
-    "Set $ORI_ADAPTERS_DIR or pass --adapters-dir <path>."
+    "Pass --adapters-dir <path> to override."
   ];
   process.stderr.write(lines.join("\n") + "\n");
   process.exit(2);
