@@ -10,6 +10,7 @@ import {
   type OriArchAdapter,
   type Rule,
   type RootConfig,
+  type SliceInternal,
 } from "@ori-ori/parser";
 
 interface ElementEntry {
@@ -26,7 +27,7 @@ interface DependencyAllowEntry {
 }
 
 interface DependencyRuleEntry {
-  from: { type: string };
+  from: { type: string; captured?: Record<string, string> };
   allow: DependencyAllowEntry[];
 }
 
@@ -60,10 +61,35 @@ function stripPrefix(value: string, prefix: string): string {
   return value.startsWith(prefix) ? value.slice(prefix.length) : value;
 }
 
-function buildElements(matchers: Matcher[], prefix: string): ElementEntry[] {
+function sliceInternalFor(
+  spec: ArchitectureSpec,
+  root: RootConfig,
+  layerId: string,
+): SliceInternal | undefined {
+  const set = spec.layer_sets[root.layer_set];
+  if (!set) return undefined;
+  const layer = set.layers.find((l) => l.id === layerId);
+  if (!layer || layer.kind !== "slice" || !layer.slice_internal) return undefined;
+  return spec.slice_internal[layer.slice_internal];
+}
+
+function buildElements(
+  spec: ArchitectureSpec,
+  root: RootConfig,
+  matchers: Matcher[],
+  prefix: string,
+): ElementEntry[] {
   return matchers.map((m) => {
     const pattern = stripPrefix(m.prefix, prefix);
     if (m.slice) {
+      const si = sliceInternalFor(spec, root, m.layerId);
+      if (si) {
+        return {
+          type: m.layerId,
+          pattern: `${pattern}*/*/**`,
+          capture: ["sliceName", "subLayer"],
+        };
+      }
       return {
         type: m.layerId,
         pattern: `${pattern}*/**`,
@@ -83,8 +109,42 @@ function buildDependencyRules(
   const sliceLayerIds = new Set(
     set.layers.filter((l) => l.kind === "slice").map((l) => l.id),
   );
-  return rules.map((rule) => {
+  const expanded: DependencyRuleEntry[] = [];
+  for (const rule of rules) {
     const isSlice = sliceLayerIds.has(rule.from);
+    const sliceInternal = isSlice
+      ? sliceInternalFor(spec, root, rule.from)
+      : undefined;
+
+    if (isSlice && sliceInternal) {
+      for (const subLayer of sliceInternal.sub_layers) {
+        const allow: DependencyAllowEntry[] = [];
+        for (const target of rule.allow) {
+          if (target === rule.from) continue;
+          allow.push({ to: { type: target } });
+        }
+        const siRule = sliceInternal.rules.find((r) => r.from === subLayer);
+        if (siRule) {
+          for (const targetSub of siRule.allow) {
+            allow.push({
+              to: {
+                type: rule.from,
+                captured: {
+                  sliceName: "{{from.sliceName}}",
+                  subLayer: targetSub,
+                },
+              },
+            });
+          }
+        }
+        expanded.push({
+          from: { type: rule.from, captured: { subLayer } },
+          allow,
+        });
+      }
+      continue;
+    }
+
     const allow: DependencyAllowEntry[] = rule.allow.map((target) => {
       if (target === rule.from && isSlice) {
         return {
@@ -104,8 +164,9 @@ function buildDependencyRules(
         },
       });
     }
-    return { from: { type: rule.from }, allow };
-  });
+    expanded.push({ from: { type: rule.from }, allow });
+  }
+  return expanded;
 }
 
 function layerFileGlob(
@@ -186,7 +247,7 @@ const adapter: OriArchAdapter = {
     const prefix = appPrefix(root);
     const matchers = buildMatchers(spec, root);
     const irRules = buildRules(spec, root);
-    const elements = buildElements(matchers, prefix);
+    const elements = buildElements(spec, root, matchers, prefix);
     const dependencyRules = buildDependencyRules(spec, root, irRules);
     const forbiddenBlocks = buildForbiddenBlocks(spec, root, matchers, prefix);
     const relRootPath = stripPrefix(root.path, prefix);
@@ -216,6 +277,25 @@ const adapter: OriArchAdapter = {
     if (forbiddenBlocks.length > 0) {
       notes.push(
         `Emitted ${forbiddenBlocks.length} no-restricted-imports override(s) from forbidden_imports entries.`,
+      );
+    }
+    const sliceLayersWithInternal = set.layers
+      .filter((l) => l.kind === "slice" && l.slice_internal)
+      .map((l) => l.id);
+    const sliceInternalActive = sliceLayersWithInternal.filter(
+      (id) => sliceInternalFor(spec, root, id) !== undefined,
+    );
+    const sliceInternalMissing = sliceLayersWithInternal.filter(
+      (id) => sliceInternalFor(spec, root, id) === undefined,
+    );
+    if (sliceInternalActive.length > 0) {
+      notes.push(
+        `Slice-internal sub-layer enforcement is active for [${sliceInternalActive.join(", ")}]; the boundaries 'subLayer' capture pins presentation→application→domain (etc.) inside each slice.`,
+      );
+    }
+    if (sliceInternalMissing.length > 0) {
+      notes.push(
+        `Layer(s) [${sliceInternalMissing.join(", ")}] declare 'slice_internal:' but no matching top-level 'slice_internal' block was found; slice-internal sub-layer rules are NOT enforced for those layers.`,
       );
     }
     if (prefix) {

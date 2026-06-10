@@ -115,6 +115,47 @@ cross_slice:
 ---
 `;
 
+const SLICE_INTERNAL_SPEC = `---
+version: 1
+root:
+  app: my-app
+  path: apps/my-app/src
+  language: typescript
+  layer_set: ddd-vsa-hex-ts
+  adapter: eslint
+  slice_root: task-management
+  slice_subdir: slices
+  public_entry: index.ts
+layer_sets:
+  ddd-vsa-hex-ts:
+    layers:
+      - { id: shared,    kind: shared }
+      - { id: domain,    kind: slice, slice_internal: slice-internal-ts }
+      - { id: ui-widget, kind: ui-layer, order: 1 }
+      - { id: ui-page,   kind: ui-layer, order: 2 }
+    rules:
+      cross_layer:
+        - { from: ui-page,   allow: [ui-widget, shared, domain] }
+        - { from: ui-widget, allow: [shared, domain] }
+        - { from: domain,    allow: [shared] }
+        - { from: shared,    allow: [] }
+      same_layer: prohibited
+      public_entry_required: true
+slice_internal:
+  slice-internal-ts:
+    sub_layers: [domain, application, infrastructure, presentation, tests]
+    rules:
+      - { from: presentation,   allow: [application, domain] }
+      - { from: application,    allow: [domain] }
+      - { from: infrastructure, allow: [domain] }
+      - { from: domain,         allow: [] }
+      - { from: tests,          allow: [domain, application, infrastructure, presentation] }
+cross_slice:
+  prohibited_direct: true
+  via: [shared/contracts, shared/events]
+---
+`;
+
 async function render(spec: string): Promise<string> {
   const parsed = parseArchitectureSpec(spec);
   const result = await adapter.export(parsed, parsed.roots[0]!, {
@@ -239,5 +280,108 @@ cross_slice: { prohibited_direct: true, via: [] }
   it("matches the full snapshot for the canonical TS spec (regression net)", async () => {
     const content = await render(TS_SPEC);
     expect(content).toMatchSnapshot();
+  });
+});
+
+describe("eslint adapter — slice-internal sub-layer enforcement", () => {
+  it("expands slice element pattern to capture subLayer when slice_internal is defined", async () => {
+    const content = await render(SLICE_INTERNAL_SPEC);
+    // pattern descends one extra level for the sub_layer capture
+    expect(content).toContain('"pattern": "src/task-management/slices/*/*/**"');
+    // both captures present, in order
+    expect(content).toMatch(
+      /"capture":\s*\[\s*"sliceName",\s*"subLayer"\s*\]/,
+    );
+    // and the bare slice pattern is NOT emitted (the wide-open fallback)
+    expect(content).not.toContain('"pattern": "src/task-management/slices/*/**"');
+  });
+
+  it("emits one boundaries rule per sub_layer with from.captured.subLayer selector", async () => {
+    const content = await render(SLICE_INTERNAL_SPEC);
+    for (const sub of [
+      "domain",
+      "application",
+      "infrastructure",
+      "presentation",
+      "tests",
+    ]) {
+      expect(content).toMatch(
+        new RegExp(
+          `"from":\\s*\\{\\s*"type":\\s*"domain",\\s*"captured":\\s*\\{\\s*"subLayer":\\s*"${sub}"`,
+        ),
+      );
+    }
+  });
+
+  it("encodes presentation → application/domain (same slice) via captured selector", async () => {
+    const content = await render(SLICE_INTERNAL_SPEC);
+    // The presentation rule must allow domain/application within the same slice
+    expect(content).toMatch(
+      /"from":\s*\{\s*"type":\s*"domain",\s*"captured":\s*\{\s*"subLayer":\s*"presentation"\s*\}\s*\}[\s\S]*?"to":\s*\{\s*"type":\s*"domain",\s*"captured":\s*\{\s*"sliceName":\s*"\{\{from\.sliceName\}\}",\s*"subLayer":\s*"application"/,
+    );
+    expect(content).toMatch(
+      /"from":\s*\{\s*"type":\s*"domain",\s*"captured":\s*\{\s*"subLayer":\s*"presentation"\s*\}\s*\}[\s\S]*?"subLayer":\s*"domain"/,
+    );
+  });
+
+  it("forbids domain sub_layer from importing siblings (allow: []) so only cross-layer 'shared' remains", async () => {
+    const content = await render(SLICE_INTERNAL_SPEC);
+    // pull out the domain.domain block: from.captured.subLayer === "domain"
+    const match = content.match(
+      /"from":\s*\{\s*"type":\s*"domain",\s*"captured":\s*\{\s*"subLayer":\s*"domain"\s*\}\s*\},\s*"allow":\s*(\[[\s\S]*?\])\s*\}/,
+    );
+    expect(match, "domain sub_layer rule must be present").not.toBeNull();
+    const allow = match![1]!;
+    // only `shared` (cross-layer) is allowed; no same-slice sibling allows
+    expect(allow).toContain('"type": "shared"');
+    expect(allow).not.toContain('"subLayer": "application"');
+    expect(allow).not.toContain('"subLayer": "presentation"');
+  });
+
+  it("does NOT add a wide 'same slice, any sub_layer' allow entry (the legacy fallback)", async () => {
+    const content = await render(SLICE_INTERNAL_SPEC);
+    // The legacy fallback emits `"captured": { "sliceName": "{{from.sliceName}}" }`
+    // (no subLayer). With slice_internal active, every same-slice allow MUST also
+    // pin subLayer, so the trailing `}}"\n<spaces>}` form must never appear.
+    expect(content).not.toMatch(
+      /"sliceName":\s*"\{\{from\.sliceName\}\}"\s*\n\s*\}/,
+    );
+  });
+
+  it("leaves slice element pattern flat when slice_internal block is absent (backwards compat)", async () => {
+    // TS_SPEC declares slice_internal: slice-internal-ts on the layer but
+    // does NOT define the top-level slice_internal block — adapter must fall
+    // back to the legacy single-capture form.
+    const content = await render(TS_SPEC);
+    expect(content).toContain('"pattern": "src/lib/*/**"');
+    expect(content).not.toContain('"pattern": "src/lib/*/*/**"');
+    expect(content).not.toContain('"subLayer"');
+  });
+
+  it("matches the full snapshot for the slice-internal DDD spec (regression net)", async () => {
+    const content = await render(SLICE_INTERNAL_SPEC);
+    expect(content).toMatchSnapshot();
+  });
+
+  it("emits an info note announcing slice-internal sub-layer enforcement is active", async () => {
+    const parsed = parseArchitectureSpec(SLICE_INTERNAL_SPEC);
+    const result = await adapter.export(parsed, parsed.roots[0]!, {
+      templatesDir: TEMPLATES_DIR,
+    });
+    const notes = result.notes?.join("\n") ?? "";
+    expect(notes).toMatch(/Slice-internal sub-layer enforcement is active/);
+    expect(notes).toMatch(/\[domain\]/);
+  });
+
+  it("warns when a layer declares slice_internal but the matching block is absent", async () => {
+    // TS_SPEC declares slice_internal: slice-internal-ts on the layer but
+    // the top-level slice_internal block is omitted.
+    const parsed = parseArchitectureSpec(TS_SPEC);
+    const result = await adapter.export(parsed, parsed.roots[0]!, {
+      templatesDir: TEMPLATES_DIR,
+    });
+    const notes = result.notes?.join("\n") ?? "";
+    expect(notes).toMatch(/slice_internal.*?NOT enforced/);
+    expect(notes).toMatch(/\[domain\]/);
   });
 });
