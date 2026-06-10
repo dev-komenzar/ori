@@ -9241,8 +9241,8 @@ async function exists(path) {
   }
 }
 async function loadTemplate(name) {
-  const skillRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", ".apm", "contexts", "templates");
-  const tplPath = join(skillRoot, name);
+  const templatesDir = join(dirname(fileURLToPath(import.meta.url)), "..", "templates");
+  const tplPath = join(templatesDir, name);
   try {
     return await readFile(tplPath, "utf8");
   } catch {
