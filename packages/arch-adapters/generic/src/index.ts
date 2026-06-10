@@ -92,7 +92,7 @@ const adapter: OriArchAdapter = {
         },
       ],
       notes: [
-        "Generic adapter ships its own checker — invoke /ori-arch check to scan the project (uses the .apm/contexts/adapters/generic bundle).",
+        "Generic adapter ships its own checker — invoke /ori-arch check to scan the project (uses the .apm/skills/ori-arch/adapters/generic bundle).",
         "Precision is per-file regex, not AST. Use a native adapter (eslint, rust) when available.",
       ],
     };

@@ -19,10 +19,17 @@ const PATTERN_ROOT = join(
   "ddd-vsa-hex",
 );
 
-// Load adapters from the bundled APM contexts location — same path the skill
-// resolves at runtime via resolveAdaptersDir(). `pretest` (root package.json)
-// runs build:adapters so these bundles are guaranteed fresh.
-const ADAPTERS_DIR = join(REPO_ROOT, ".apm", "contexts", "adapters");
+// Load adapters from the bundled location — same path the skill resolves at
+// runtime via resolveAdaptersDir() (bundle-adjacent to the skill scripts/).
+// `pretest` (root package.json) runs build:adapters so these bundles are
+// guaranteed fresh.
+const ADAPTERS_DIR = join(
+  REPO_ROOT,
+  ".apm",
+  "skills",
+  "ori-arch",
+  "adapters",
+);
 const eslintMod = (await import(
   join(ADAPTERS_DIR, "eslint", "index.js")
 )) as { default: OriArchAdapter };

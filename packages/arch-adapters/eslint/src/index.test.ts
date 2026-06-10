@@ -8,13 +8,6 @@ import adapter from "./index.js";
 const TEMPLATES_DIR = join(
   dirname(fileURLToPath(import.meta.url)),
   "..",
-  "..",
-  "..",
-  "..",
-  ".apm",
-  "contexts",
-  "adapters",
-  "eslint",
   "templates",
 );
 

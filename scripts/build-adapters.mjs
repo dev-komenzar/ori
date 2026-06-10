@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { build, context } from "esbuild"
-import { existsSync, readdirSync, mkdirSync } from "fs"
+import { existsSync, readdirSync, mkdirSync, cpSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 
@@ -8,11 +8,18 @@ const watch = process.argv.includes("--watch")
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
 const ADAPTERS_SRC = join(ROOT, "packages/arch-adapters")
-const ADAPTERS_OUT = join(ROOT, ".apm/contexts/adapters")
+const ADAPTERS_OUT = join(ROOT, ".apm/skills/ori-arch/adapters")
 
 const adapterDirs = readdirSync(ADAPTERS_SRC, { withFileTypes: true })
   .filter((d) => d.isDirectory())
   .map((d) => d.name)
+
+function copyTemplates(adapterName) {
+  const srcTemplatesDir = join(ADAPTERS_SRC, adapterName, "templates")
+  if (!existsSync(srcTemplatesDir)) return
+  const outTemplatesDir = join(ADAPTERS_OUT, adapterName, "templates")
+  cpSync(srcTemplatesDir, outTemplatesDir, { recursive: true })
+}
 
 for (const adapterName of adapterDirs) {
   const entry = join(ADAPTERS_SRC, adapterName, "src/index.ts")
@@ -49,11 +56,12 @@ for (const adapterName of adapterDirs) {
         {
           name: "log",
           setup(b) {
-            b.onEnd(() =>
+            b.onEnd(() => {
+              copyTemplates(adapterName)
               console.log(
-                `✓ arch-adapters/${adapterName}/src/index.ts → .apm/contexts/adapters/${adapterName}/index.js`
+                `✓ arch-adapters/${adapterName}/src/index.ts → .apm/skills/ori-arch/adapters/${adapterName}/index.js`
               )
-            )
+            })
           },
         },
       ],
@@ -61,8 +69,9 @@ for (const adapterName of adapterDirs) {
     await ctx.watch()
   } else {
     await build(opts)
+    copyTemplates(adapterName)
     console.log(
-      `✓ arch-adapters/${adapterName}/src/index.ts → .apm/contexts/adapters/${adapterName}/index.js`
+      `✓ arch-adapters/${adapterName}/src/index.ts → .apm/skills/ori-arch/adapters/${adapterName}/index.js`
     )
   }
 }
