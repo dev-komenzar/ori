@@ -14,7 +14,8 @@ const REPO_ROOT = join(__dirname, "..", "..", "..", "..");
 const PATTERN_ROOT = join(
   REPO_ROOT,
   ".apm",
-  "contexts",
+  "skills",
+  "ori-arch",
   "patterns",
   "ddd-vsa-hex",
 );

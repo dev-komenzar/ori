@@ -79,7 +79,7 @@ apps/{{APP_NAME}}/src/
     └── <e2e>.test.ts                   # end-to-end demo (page -> widget -> slice)
 ```
 
-See `.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript/example-slice/` for
+See `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/example-slice/` for
 a worked TS slice (`complete-task`) — AI agents read it on demand when
 generating new slices.
 

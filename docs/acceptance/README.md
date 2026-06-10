@@ -23,7 +23,7 @@ prep の進め方 (design.md §17 三段構え):
 3. **upstream framework init**: `cd <test-dir> && mkdir -p apps/<app> && cd apps/<app> && pnpm create vite@latest . --template vanilla-ts` (Tauri 併用なら `pnpm add -D @tauri-apps/cli && pnpm tauri init` も)。`package.json` / `tsconfig.json` / `vitest.config.ts` 等 bootstrap 系はここで揃う
 4. `<test-dir>` で `node <ori-repo>/.apm/skills/ori-arch/scripts/render-architecture.js --pattern ddd-vsa-hex --stack typescript --bc <bc-name>` → `.ori/architecture.md` が書き出される
 5. test dir で `pnpm install && pnpm test` を走らせて upstream init 出力 (sample test 含む) の sanity check
-6. `node <ori-repo>/.apm/skills/ori-flow/scripts/new-slice.js <slice-id>` → manifest.yaml の `derives_from:` を埋める (AI は `.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript/example-slice/` を参照して slice を生成)
+6. `node <ori-repo>/.apm/skills/ori-flow/scripts/new-slice.js <slice-id>` → manifest.yaml の `derives_from:` を埋める (AI は `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/example-slice/` を参照して slice を生成)
 7. 関連 domain 文書を `.ori/domain/` に置く
 8. prep session を **終了**して、新規 session で run
 

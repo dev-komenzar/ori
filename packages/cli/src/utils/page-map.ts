@@ -4,7 +4,7 @@
 // spec-fixed marker comments so manual prose elsewhere in architecture.md is
 // preserved.
 //
-// Convention (see docs/design.md §"Page Map" and .apm/contexts/architecture-md-schema.md):
+// Convention (see docs/design.md §"Page Map" and .apm/skills/ori-arch/architecture-md-schema.md):
 //
 //   coherence:
 //     depended_by:                       # which group(s) this screen contributes to

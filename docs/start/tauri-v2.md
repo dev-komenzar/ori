@@ -60,7 +60,7 @@ pnpm install
   `src/main.rs` 等) を upstream の最新形式で揃える。
 - `/ori-arch` （ステップ 3） — pattern (`ddd-vsa-hex`) / stack
   (`typescript-tauri`) を対話で決め、内部で
-  `.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript-tauri/architecture.md.tpl`
+  `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/architecture.md.tpl`
   を render → target の `.ori/architecture.md` に両 root (`ts` + `rs`) と
   cross-root 関係 (tauri-specta による bindings 生成) を 1 ファイルで宣言:
 
@@ -76,7 +76,7 @@ pnpm install
 ## 3. 推奨される構造
 
 `/ori-flow new-slice <id>` で slice を作るとき、AI は
-`.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/`
+`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/`
 を参照して以下のような構造を生成します:
 
 ```
@@ -223,9 +223,9 @@ pnpm tauri build               # 各 OS のインストーラを生成
 
 ## 関連リンク
 
-- [`.apm/contexts/patterns/ddd-vsa-hex/pattern.md`](../../.apm/contexts/patterns/ddd-vsa-hex/pattern.md) — pattern 本体
-- [`.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript-tauri/architecture.md.tpl`](../../.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript-tauri/architecture.md.tpl) — render 前の multi-root テンプレート
-- [`.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/`](../../.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/) — AI 専用 worked example (TS + Rust)
+- [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md) — pattern 本体
+- [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/architecture.md.tpl`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/architecture.md.tpl) — render 前の multi-root テンプレート
+- [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/) — AI 専用 worked example (TS + Rust)
 - [`packages/arch-adapter-rust/README.md`](../../packages/arch-adapter-rust/README.md) — Rust adapter
 - [Tauri 2 公式ドキュメント](https://tauri.app/)
 - [tauri-specta リポジトリ](https://github.com/specta-rs/tauri-specta)

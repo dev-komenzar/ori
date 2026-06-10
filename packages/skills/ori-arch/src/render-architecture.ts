@@ -34,8 +34,7 @@ Options:
   --bc-rs <name>         Rust-side bounded context (snake_case).
                          Default: derived from --bc by kebab→snake.
   --dest <dir>           Destination directory. Default: current working directory.
-  --patterns-dir <dir>   Patterns root. Overrides $ORI_PATTERNS_DIR and
-                         the skill-bundled default.
+  --patterns-dir <dir>   Patterns root. Overrides the skill-bundled default.
   --force                Overwrite existing .ori/architecture.md.
   -h, --help             Show this help and exit.
 
@@ -111,15 +110,18 @@ async function listDirs(path: string): Promise<string[]> {
   }
 }
 
+/**
+ * Resolve the patterns bundle directory.
+ *   1. explicit --patterns-dir CLI override
+ *   2. bundle-adjacent: scripts/render-architecture.js → ../patterns/
+ *      (works for ori repo dev, apm install layout, and Claude Code install
+ *      — anywhere the skill bundle lives, patterns/ is its sibling)
+ */
 async function resolvePatternsDir(args: ParsedArgs): Promise<string> {
   const candidates: string[] = [];
   if (args.patternsDir) candidates.push(args.patternsDir);
-  if (process.env.ORI_PATTERNS_DIR) candidates.push(process.env.ORI_PATTERNS_DIR);
-  // bundled path: .apm/skills/ori-arch/scripts/render-architecture.js → .apm/contexts/patterns/
   const here = dirname(fileURLToPath(import.meta.url));
-  candidates.push(resolve(here, "..", "..", "..", "contexts", "patterns"));
-  // ori repo dev fallback: packages/skills/ori-arch/src/render-architecture.ts (when run via vitest etc.)
-  candidates.push(resolve(here, "..", "..", "..", "..", "..", ".apm", "contexts", "patterns"));
+  candidates.push(resolve(here, "..", "patterns"));
 
   for (const cand of candidates) {
     if (await exists(cand)) return resolve(cand);
@@ -127,7 +129,7 @@ async function resolvePatternsDir(args: ParsedArgs): Promise<string> {
   const lines = [
     "Patterns directory not found. Searched:",
     ...candidates.map((c) => `  - ${c}`),
-    "Set $ORI_PATTERNS_DIR or pass --patterns-dir <path>.",
+    "Pass --patterns-dir <path> to override.",
   ];
   process.stderr.write(lines.join("\n") + "\n");
   process.exit(2);
