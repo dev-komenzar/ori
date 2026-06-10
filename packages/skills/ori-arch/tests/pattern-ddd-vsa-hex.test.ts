@@ -135,11 +135,16 @@ describe("pattern:ddd-vsa-hex — stacks/typescript/architecture.md.tpl", () => 
     const spec = parseArchitectureSpec(rendered);
     const result = await eslintAdapter.export(spec, spec.roots[0]!);
     expect(result.files).toHaveLength(1);
+    // ori-dm3: adapter emits at apps/<app>/eslint.config.ori.js with
+    // app-relative globs (src/...), not repo-root-relative apps/<app>/src/...
+    expect(result.files[0]!.path).toBe("apps/myapp/eslint.config.ori.js");
     const content = result.files[0]!.content;
-    expect(content).toContain("apps/myapp/src/task-management/shared/**");
-    expect(content).toContain("apps/myapp/src/task-management/slices/*/**");
-    expect(content).toContain('"pattern": "apps/myapp/src/ui-widget/**"');
-    expect(content).toContain('"pattern": "apps/myapp/src/ui-page/**"');
+    expect(content).toContain('"pattern": "src/task-management/shared/**"');
+    // ori-a46: slice_internal expands the slice pattern with subLayer capture
+    // (src/<bc>/slices/*/<subLayer>/**) so authors can be pinned per sub-layer.
+    expect(content).toContain('"pattern": "src/task-management/slices/*/*/**"');
+    expect(content).toContain('"pattern": "src/ui-widget/**"');
+    expect(content).toContain('"pattern": "src/ui-page/**"');
   });
 });
 
@@ -186,13 +191,17 @@ describe("pattern:ddd-vsa-hex — stacks/typescript-tauri/architecture.md.tpl", 
     const spec = parseArchitectureSpec(rendered);
     const tsRoot = spec.roots.find((r) => r.id === "ts")!;
     const result = await eslintAdapter.export(spec, tsRoot);
+    expect(result.files[0]!.path).toBe("apps/myapp/eslint.config.ori.js");
     const content = result.files[0]!.content;
     // ui-widget / ui-page must be blocked from importing @tauri-apps/api/core.
     expect(content).toContain("@tauri-apps/api/core");
     // The deny-message must steer authors toward the BC-rooted ipc/ bindings.
     expect(content).toContain("task-management/shared/ipc");
-    expect(content).toContain("apps/myapp/src/ui-widget/**");
-    expect(content).toContain("apps/myapp/src/ui-page/**");
+    // ori-dm3: forbidden_imports `files` globs are also app-relative.
+    expect(content).toContain("src/ui-widget/**");
+    expect(content).toContain("src/ui-page/**");
+    expect(content).not.toContain("apps/myapp/src/ui-widget/**");
+    expect(content).not.toContain("apps/myapp/src/ui-page/**");
   });
 
   it("rust adapter compiles the rs root to a self-contained tests/arch.rs", async () => {
