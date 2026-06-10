@@ -15,7 +15,7 @@ APM resolves the contents below into each AI harness's native format (`.claude/`
 | `instructions/` | Instructions | file-glob-scoped rule files applied automatically when AI touches matching paths |
 | `skills/` | Skills | user-invocable workflows (`/ori-init`, `/ori-flow`, `/ori-sync`, `/ori-derive`, …) — each carries its own `scripts/` for relative-path lookup |
 | `agents/` | Agents | `ori-reviewer` — fresh-context adversarial reviewer for review phase |
-| `contexts/` | Contexts | shared schema fragments referenced by skills (e.g., `architecture-md-schema.md`) |
+| `contexts/` | Contexts | shared schema fragments referenced by skills (e.g., `slice-manifest-schema.md`) — Phase K で consuming skill 同梱化が進行中 |
 
 ## Architecture
 

@@ -114,7 +114,7 @@ This is the only sanctioned cross-root contract; everything else stays inside
 its own root. (Rust identifier rules require underscores, hence the
 `{{BC_NAME_RS}}` spelling on the Rust side.)
 
-See `.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/`
+See `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/`
 for a worked slice (`complete-task` on the TS side, `complete_task` on the
 Rust side) — AI agents read it on demand when generating new slices.
 

@@ -476,8 +476,8 @@ migration required.
 
 ## Related context files
 
-- `.apm/contexts/patterns/ddd-vsa-hex/pattern.md` — pattern definition
-- `.apm/contexts/patterns/ddd-vsa-hex/ai-notes.md` — AI behavior guidance
+- `.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` — pattern definition
+- `.apm/skills/ori-arch/patterns/ddd-vsa-hex/ai-notes.md` — AI behavior guidance
 - `.apm/contexts/slice-manifest-schema.md` — `.ori/slices/<id>/manifest.yaml` format
 - `.apm/contexts/page-manifest-schema.md` — `.ori/pages/<id>/manifest.yaml` format
 - `.apm/contexts/marker-format.md` — `@ori-generated` etc. marker format

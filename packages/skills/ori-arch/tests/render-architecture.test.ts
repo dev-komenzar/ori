@@ -10,7 +10,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // packages/skills/ori-arch/tests/ -> repo root
 const REPO_ROOT = join(__dirname, "..", "..", "..", "..");
 const SCRIPT = join(REPO_ROOT, ".apm/skills/ori-arch/scripts/render-architecture.js");
-const PATTERNS_DIR = join(REPO_ROOT, ".apm/contexts/patterns");
 
 interface Run {
   code: number;
@@ -20,9 +19,11 @@ interface Run {
 
 function runScript(args: string[], cwd: string): Promise<Run> {
   return new Promise((res, rej) => {
+    // bundle-adjacent resolver: SCRIPT lives next to .apm/skills/ori-arch/patterns/,
+    // so no --patterns-dir or env var is needed (Phase K2, S3).
     const p = spawn("node", [SCRIPT, ...args], {
       cwd,
-      env: { ...process.env, ORI_PATTERNS_DIR: PATTERNS_DIR },
+      env: process.env,
     });
     let stdout = "";
     let stderr = "";

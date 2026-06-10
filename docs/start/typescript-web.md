@@ -49,7 +49,7 @@ pnpm install
   等で `apps/<app>/` 配下に bootstrap 系ファイルを揃える。ori は
   network / 対話 / 既存ファイル削除リスクを避けるため自動実行しない。
 - `/ori-arch` （ステップ 3） — pattern (`ddd-vsa-hex`) / stack
-  (`typescript`) を対話で決め、`.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript/architecture.md.tpl`
+  (`typescript`) を対話で決め、`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/architecture.md.tpl`
   を render して target の `.ori/architecture.md` 1 ファイルだけを書き出す。
   内部では下記コマンドが走る:
 
@@ -67,7 +67,7 @@ pnpm install
 ## 3. 推奨される構造
 
 `/ori-flow new-slice <id>` で slice を作るとき、AI は
-`.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript/example-slice/`
+`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/example-slice/`
 を参照して以下のような構造を生成します:
 
 ```
@@ -114,7 +114,7 @@ node .apm/skills/ori-flow/scripts/new-slice.js switch-edit-target
 /ori-flow switch-edit-target
 ```
 
-`/ori-flow new-slice` は `.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript/example-slice/`
+`/ori-flow new-slice` は `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/example-slice/`
 を on-demand で読み、ユーザの実ドメインに沿った slice を直接生成する
 （example-slice 自体は target にコピーされない）。
 
@@ -152,9 +152,9 @@ unit / integration テストを追加します。
 
 ## 関連リンク
 
-- [`.apm/contexts/patterns/ddd-vsa-hex/pattern.md`](../../.apm/contexts/patterns/ddd-vsa-hex/pattern.md) — pattern 本体 (Summary / Tradeoffs / Layer responsibilities 等)
-- [`.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript/architecture.md.tpl`](../../.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript/architecture.md.tpl) — render 前の architecture.md テンプレート
-- [`.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript/example-slice/`](../../.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript/example-slice/) — AI 専用 worked example
+- [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md) — pattern 本体 (Summary / Tradeoffs / Layer responsibilities 等)
+- [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/architecture.md.tpl`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/architecture.md.tpl) — render 前の architecture.md テンプレート
+- [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/example-slice/`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/example-slice/) — AI 専用 worked example
 - [`packages/arch-adapter-eslint/README.md`](../../packages/arch-adapter-eslint/README.md) — adapter の仕様
-- [`.apm/contexts/architecture-md-schema.md`](../../.apm/contexts/architecture-md-schema.md) — `.ori/architecture.md` のスキーマ
+- [`.apm/skills/ori-arch/architecture-md-schema.md`](../../.apm/skills/ori-arch/architecture-md-schema.md) — `.ori/architecture.md` のスキーマ
 - [`docs/design.md`](../design.md) — 設計判断の背景 (§6 / §17 / §19 Phase H)
