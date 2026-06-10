@@ -30,14 +30,31 @@ export interface ResolveAdaptersDirOptions {
   adaptersDir?: string | undefined;
 }
 
+async function findApmModulesAdapters(cwd: string): Promise<string[]> {
+  const apmModules = join(cwd, "apm_modules");
+  if (!(await exists(apmModules))) return [];
+  const found: string[] = [];
+  const owners = await listDirs(apmModules);
+  for (const owner of owners) {
+    const repos = await listDirs(join(apmModules, owner));
+    for (const repo of repos) {
+      const cand = join(apmModules, owner, repo, ".apm", "contexts", "adapters");
+      if (await exists(cand)) found.push(cand);
+    }
+  }
+  return found;
+}
+
 /**
- * Resolve the adapters bundle directory using the same probing strategy as
- * render-architecture.ts's resolvePatternsDir():
+ * Resolve the adapters bundle directory.
  *   1. explicit CLI flag
  *   2. $ORI_ADAPTERS_DIR env var
- *   3. bundle-adjacent (apm install layout: .apm/skills/ori-arch/scripts/<bundle>.js
+ *   3. bundle-adjacent (ori repo dev: .apm/skills/ori-arch/scripts/<bundle>.js
  *      → .apm/contexts/adapters/)
- *   4. ori repo dev fallback (packages/skills/ori-arch/src/<source>.ts → repo .apm/contexts/adapters/)
+ *   4. consumer cwd: apm_modules/<owner>/<repo>/.apm/contexts/adapters/
+ *      (apm install layout — adapters live in the package cache, NOT in
+ *      .github/skills/ alongside the skill bundle)
+ *   5. legacy parent-of-repo fallback
  */
 export async function resolveAdaptersDir(
   opts: ResolveAdaptersDirOptions,
@@ -47,6 +64,9 @@ export async function resolveAdaptersDir(
   if (process.env.ORI_ADAPTERS_DIR) candidates.push(process.env.ORI_ADAPTERS_DIR);
   const here = dirname(fileURLToPath(import.meta.url));
   candidates.push(resolve(here, "..", "..", "..", "contexts", "adapters"));
+  for (const found of await findApmModulesAdapters(process.cwd())) {
+    candidates.push(found);
+  }
   candidates.push(
     resolve(here, "..", "..", "..", "..", "..", ".apm", "contexts", "adapters"),
   );
