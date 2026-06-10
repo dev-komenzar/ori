@@ -16893,8 +16893,7 @@ Options:
   --bc-rs <name>         Rust-side bounded context (snake_case).
                          Default: derived from --bc by kebab\u2192snake.
   --dest <dir>           Destination directory. Default: current working directory.
-  --patterns-dir <dir>   Patterns root. Overrides $ORI_PATTERNS_DIR and
-                         the skill-bundled default.
+  --patterns-dir <dir>   Patterns root. Overrides the skill-bundled default.
   --force                Overwrite existing .ori/architecture.md.
   -h, --help             Show this help and exit.
 
@@ -16990,17 +16989,15 @@ async function listDirs(path) {
 async function resolvePatternsDir(args) {
   const candidates = [];
   if (args.patternsDir) candidates.push(args.patternsDir);
-  if (process.env.ORI_PATTERNS_DIR) candidates.push(process.env.ORI_PATTERNS_DIR);
   const here = dirname(fileURLToPath(import.meta.url));
-  candidates.push(resolve(here, "..", "..", "..", "contexts", "patterns"));
-  candidates.push(resolve(here, "..", "..", "..", "..", "..", ".apm", "contexts", "patterns"));
+  candidates.push(resolve(here, "..", "patterns"));
   for (const cand of candidates) {
     if (await exists(cand)) return resolve(cand);
   }
   const lines = [
     "Patterns directory not found. Searched:",
     ...candidates.map((c3) => `  - ${c3}`),
-    "Set $ORI_PATTERNS_DIR or pass --patterns-dir <path>."
+    "Pass --patterns-dir <path> to override."
   ];
   process.stderr.write(lines.join("\n") + "\n");
   process.exit(2);
