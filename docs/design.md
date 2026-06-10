@@ -976,6 +976,8 @@ packages/                        # TS monorepo(開発時 SSoT)
 ビルド時に esbuild が各 skill bundle を `.apm/skills/<name>/scripts/` に書き出し、各 adapter bundle を `.apm/skills/ori-arch/adapters/<name>/index.js` に書き出す (Phase K1: `templates/*.tpl` も `packages/arch-adapters/<name>/templates/` から同 dir にコピーされる)。CI で `pnpm build && git diff --exit-code .apm/` で stale check。
 
 > v0.3-J で `packages/arch-adapter-{eslint,rust,generic}/` (旧 publishable npm package) は物理撤去。配布は APM 単独 (`apm install dev-komenzar/ori`) に一本化、`@ori-ori/arch-adapter-*` の npm publish は停止。
+>
+> v0.3-L (`ori-7dx`、2026-06-11) で `packages/cli/` も物理撤去。`@ori-ori/cli` の bin は deprecate stub のため `dist/` だけ npm registry に残り、source / workspace package は repo から消滅した。配布は APM 単独。
 
 ### npm package 戦略
 
@@ -1241,7 +1243,7 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 - 実行モデル明文化(`docs/skill-scripts-build.md`、Phase K3 で旧 `.apm/contexts/` から移管)— pure bash で書ける I/O 系は `scripts/*.sh`、JS が必要(yaml / zod / parser / coherence 依存等)は `packages/skills/<name>/index.ts` を esbuild → ESM single-file bundle
 - `packages/cli/src/commands/` の 7 サブコマンド(arch / sync / slice / page / lint / proposals / model)を skill scripts に移植
 - templates / docs / SKILL.md の CLI 言及を skill ベースに書き換え
-- `packages/cli` 撤去 + `@ori-ori/*` 4 packages を npm deprecate
+- ✓ `packages/cli` 撤去(`ori-7dx`、2026-06-11) + `@ori-ori/*` 4 packages を npm deprecate
 - pre-commit hook で `build:skills` stale check + contributing docs 整備
 - **テンプレート方式の根本見直し**(`ori-5er`、2026-06-07 追加): `packages/templates/` 全廃 → `.apm/skills/ori-arch/patterns/<name>/stacks/<stack>/` 構造へ。target には `.ori/architecture.md` のみ書き、bootstrap は upstream の framework init に委譲、worked example は AI 専用 study material として skill 側保持
 
