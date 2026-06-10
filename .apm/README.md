@@ -13,9 +13,10 @@ APM resolves the contents below into each AI harness's native format (`.claude/`
 | Path | Type | Purpose |
 |------|------|---------|
 | `instructions/` | Instructions | file-glob-scoped rule files applied automatically when AI touches matching paths |
-| `skills/` | Skills | user-invocable workflows (`/ori-init`, `/ori-flow`, `/ori-sync`, `/ori-derive`, …) — each carries its own `scripts/` for relative-path lookup |
+| `skills/` | Skills | user-invocable workflows (`/ori-init`, `/ori-flow`, `/ori-sync`, `/ori-derive`, …) — each carries its own `scripts/` (esbuild bundle) と必要に応じ `templates/` `patterns/` `adapters/` を bundle 隣接で同梱 |
 | `agents/` | Agents | `ori-reviewer` — fresh-context adversarial reviewer for review phase |
-| `contexts/` | Contexts | shared schema fragments referenced by skills (e.g., `slice-manifest-schema.md`) — Phase K で consuming skill 同梱化が進行中 |
+
+> Phase K (2026-06-10) で旧 cross-skill 共有 SSoT は consuming skill 配下に co-locate され、`.apm/contexts/` は廃止。runtime artifact は常に consuming skill bundle と同 tree に常駐する。
 
 ## Architecture
 

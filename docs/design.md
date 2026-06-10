@@ -327,9 +327,7 @@ Cross-slice rules:
 
 ### Curated vocabulary
 
-```
-.apm/contexts/axes-vocabulary.md
-```
+axes 名 / tech catalog は `.apm/skills/ori-arch/references/tech/` 配下に集約 (controlled vocabulary)。
 
 **Core axes(頻出)**:
 - `host` — デプロイ・実行先
@@ -782,7 +780,7 @@ slice_internal:
 | rust | Rust | `tests/arch.rs` または `cargo-modules` config |
 | generic | any | `.ori/arch-rules.json` + tiny CLI checker(regex) |
 
-Adapter は APM bundle 内に統合(`.apm/skills/ori-arch/adapters/<name>/index.js`、template + JSON injection 分離構造)。`@ori-ori/arch-adapter-*` npm package は v0.3-J で publish 停止(`packages/arch-adapter-*/` 物理撤去)。Phase K1 (`ori-6kd.2`) で `.apm/contexts/adapters/` → `.apm/skills/ori-arch/adapters/` に移動し、runtime artifact を消費 skill bundle と co-locate。ori-arch skill が dynamic import で skill 隣接の bundle を解決する。
+Adapter は APM bundle 内に統合(`.apm/skills/ori-arch/adapters/<name>/index.js`、template + JSON injection 分離構造)。`@ori-ori/arch-adapter-*` npm package は v0.3-J で publish 停止(`packages/arch-adapter-*/` 物理撤去)。Phase K1 (`ori-6kd.2`) で adapter bundle を `.apm/skills/ori-arch/adapters/` に co-locate し、runtime artifact を消費 skill bundle と同 tree に常駐させる構造に整理した。ori-arch skill が dynamic import で skill 隣接の bundle を解決する。
 
 ---
 
@@ -924,32 +922,31 @@ ori/                               # APM package source
 │   │   ├── ori-init/SKILL.md
 │   │   ├── ori-ddd-1-discovery/SKILL.md
 │   │   ├── ...(32 個)
+│   │   ├── ori-flow/
+│   │   │   ├── SKILL.md
+│   │   │   ├── scripts/                  # esbuild bundle(per-skill)
+│   │   │   └── templates/                # Phase K3: skill 同梱化
+│   │   │       ├── slice-manifest.yaml.tpl
+│   │   │       └── page-manifest.yaml.tpl
 │   │   └── ori-arch/
 │   │       ├── SKILL.md
-│   │       ├── scripts/                      # esbuild bundle(per-skill)
-│   │       ├── adapters/                     # Phase K1: per-skill artifact co-locate
-│   │       ├── architecture-md-schema.md     # Phase K2: skill 同梱化
-│   │       ├── patterns/                     # Phase K2: skill 同梱化
+│   │       ├── scripts/                  # esbuild bundle(per-skill)
+│   │       ├── adapters/                 # Phase K1: per-skill artifact co-locate
+│   │       ├── architecture-md-schema.md # Phase K2: skill 同梱化
+│   │       ├── patterns/                 # Phase K2: skill 同梱化
 │   │       │   └── ddd-vsa-hex/
-│   │       │       ├── pattern.md            # stack-agnostic
+│   │       │       ├── pattern.md        # stack-agnostic
 │   │       │       ├── ai-notes.md
 │   │       │       └── stacks/
 │   │       │           ├── typescript/
 │   │       │           │   ├── architecture.md.tpl
-│   │       │           │   └── example-slice/    # AI 参照用 study material
+│   │       │           │   └── example-slice/   # AI 参照用 study material
 │   │       │           └── typescript-tauri/
 │   │       │               ├── architecture.md.tpl
 │   │       │               └── example-slice/
 │   │       └── references/
-│   │           └── tech/        # 12 tech catalog
-│   ├── contexts/                # cross-skill shared SSoT (Phase K で縮小、K3 で全廃予定)
-│   │   ├── slice-manifest-schema.md
-│   │   ├── page-manifest-schema.md
-│   │   ├── axes-vocabulary.md
-│   │   ├── phase-hook-names.md
-│   │   ├── phase-hook-schema.md
-│   │   └── marker-format.md
-│   └── agents/                  # cross-harness subagents(Layer 1)
+│   │           └── tech/                 # 12 tech catalog
+│   └── agents/                           # cross-harness subagents(Layer 1)
 └── docs/                        # ori repo 内部 doc(deploy 対象外)
     ├── design.md                # ★ 本ファイル
     └── contributing/
@@ -1017,22 +1014,31 @@ packages/                        # TS monorepo(開発時 SSoT)
 
 | 種別 | 場所 | 用途 |
 |---|---|---|
-| Schema 仕様 | `.apm/contexts/<name>-schema.md` | cross-skill 共有 SSoT |
+| Architecture schema | `.apm/skills/ori-arch/architecture-md-schema.md` | `.ori/architecture.md` の形式 (Phase K2 で `ori-arch` 配下に co-locate) |
 | Pattern | `.apm/skills/ori-arch/patterns/<name>/{pattern.md, ai-notes.md, stacks/<stack>/...}` | cross-skill(arch, types, flow, impl-green が参照)。stack-agnostic / stack-specific を階層分け |
 | Tech catalog | `.apm/skills/ori-arch/references/tech/<id>.md` | ori-arch 専属 |
-| Vocabulary | `.apm/contexts/axes-vocabulary.md`, `phase-hook-names.md` | controlled vocabulary |
+| Slice / Page manifest templates | `.apm/skills/ori-flow/templates/{slice,page}-manifest.yaml.tpl` | `/ori-flow new-slice` / `new-page` が bundle 隣接で参照 (Phase K3) |
 | Hook scripts | `.apm/hooks/scripts/` | APM auto-deploy |
 | Skill scripts | `.apm/skills/<name>/scripts/` | per-skill esbuild bundle |
-| Adapter | `.apm/skills/ori-arch/scripts/adapters/<name>.js` | adapter 統合 |
+| Adapter | `.apm/skills/ori-arch/adapters/<name>/` | adapter 統合 (Phase K1) |
 | Contributor docs | `docs/contributing/*.md` | ori 開発者向け |
 
-### Cross-skill 共有 schema list
+### Phase K co-location map
 
-Phase K (2026-06-10) で `architecture-md-schema.md` と `patterns/` は consuming skill (`ori-arch`) 隣に co-locate された (R2 / D1)。残る contexts/ entry は K3 で各 consumer skill 同梱化 → contexts/ dir 全廃予定。
+Phase K (2026-06-10) で旧 `.apm/contexts/` (cross-skill 共有 SSoT) を全廃し、runtime artifact を consuming skill bundle と co-locate した。
+
+| 旧 path | 新 path | 移動 PR |
+|---|---|---|
+| `.apm/contexts/adapters/<name>/` | `.apm/skills/ori-arch/adapters/<name>/` | K1 (`ori-6kd.2`) |
+| `.apm/contexts/architecture-md-schema.md` | `.apm/skills/ori-arch/architecture-md-schema.md` | K2 (`ori-6kd.4`) |
+| `.apm/contexts/patterns/` | `.apm/skills/ori-arch/patterns/` | K2 (`ori-6kd.4`) |
+| `.apm/contexts/templates/{slice,page}-manifest.yaml.tpl` | `.apm/skills/ori-flow/templates/...` | K3 (`ori-6kd.3`) |
+| `.apm/contexts/skill-scripts-build.md` | `docs/skill-scripts-build.md` | K3 (`ori-6kd.3`) |
 
 ```
 .apm/skills/ori-arch/
 ├── architecture-md-schema.md          # .ori/architecture.md の形式 (Phase K2)
+├── adapters/                          # (Phase K1) per-adapter bundle + templates
 └── patterns/                          # (Phase K2)
     └── ddd-vsa-hex/
         ├── pattern.md                       # stack-agnostic
@@ -1045,14 +1051,11 @@ Phase K (2026-06-10) で `architecture-md-schema.md` と `patterns/` は consumi
                 ├── architecture.md.tpl
                 └── example-slice/
 
-.apm/contexts/                         # Phase K3 で全廃予定
-├── slice-manifest-schema.md           # .ori/slices/<id>/manifest.yaml
-├── page-manifest-schema.md            # .ori/pages/<id>/manifest.yaml(slice schema + type:page)
-├── doc-frontmatter-schema.md          # 全 DDD doc 共通 frontmatter
-├── axes-vocabulary.md                 # stack axes controlled vocabulary
-├── phase-hook-names.md                # tech phase_hooks の phase 名前空間
-├── phase-hook-schema.md               # phase_hooks の verify schema
-└── marker-format.md                   # @ori-generated 等 marker 形式
+.apm/skills/ori-flow/
+├── scripts/                           # esbuild bundle
+└── templates/                         # (Phase K3) bundle 隣接の manifest テンプレ
+    ├── slice-manifest.yaml.tpl
+    └── page-manifest.yaml.tpl
 ```
 
 ---
@@ -1235,7 +1238,7 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 
 主要スコープ:
 
-- 実行モデル明文化(`.apm/contexts/skill-scripts-build.md`)— pure bash で書ける I/O 系は `scripts/*.sh`、JS が必要(yaml / zod / parser / coherence 依存等)は `packages/skills/<name>/index.ts` を esbuild → ESM single-file bundle
+- 実行モデル明文化(`docs/skill-scripts-build.md`、Phase K3 で旧 `.apm/contexts/` から移管)— pure bash で書ける I/O 系は `scripts/*.sh`、JS が必要(yaml / zod / parser / coherence 依存等)は `packages/skills/<name>/index.ts` を esbuild → ESM single-file bundle
 - `packages/cli/src/commands/` の 7 サブコマンド(arch / sync / slice / page / lint / proposals / model)を skill scripts に移植
 - templates / docs / SKILL.md の CLI 言及を skill ベースに書き換え
 - `packages/cli` 撤去 + `@ori-ori/*` 4 packages を npm deprecate
@@ -1265,10 +1268,22 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 
 スコープ:
 
-- ✓ Phase J1(`ori-apv`、PR #34): adapter を template + JSON injection 分離構造に再設計、`.apm/contexts/adapters/<name>/{templates,index.js}` に bundle、ori-arch skill は dynamic import で skill 隣接から解決(`ori-0ok` 内包) — Phase K1 で `.apm/skills/ori-arch/adapters/` に移動
-- ✓ Phase K1(`ori-6kd.2`): adapter bundle を `.apm/skills/ori-arch/adapters/<name>/` に co-locate、templates SSoT を `packages/arch-adapters/<name>/templates/` に格上げ、resolver を `--adapters-dir` + bundle-adjacent の 2 候補に簡略化
+- ✓ Phase J1(`ori-apv`、PR #34): adapter を template + JSON injection 分離構造に再設計、当時は `.apm/contexts/adapters/<name>/{templates,index.js}` に bundle、ori-arch skill は dynamic import で skill 隣接から解決(`ori-0ok` 内包) — Phase K1 で `.apm/skills/ori-arch/adapters/` に移動
 - ✓ Phase J2(`ori-osm`): 旧 `packages/arch-adapter-{eslint,rust,generic}/` を物理撤去 + `@ori-ori/arch-adapter-*@<=0.2.0` を npm deprecate 強化(`ori-u5d` 内包、`scripts/npm-deprecate-adapters.sh` 参照)
 - ○ Phase J3(未起票、J2 merge 後): greenfield acceptance retry — `/tmp/ori-acceptance-j/` で `apm install` → 追加 `pnpm add` 無しで adapter 動作確認
+
+#### Phase K — runtime artifact を consuming skill bundle に co-locate(epic = `ori-6kd`)
+
+動機: 旧 `.apm/contexts/` は「cross-skill 共有 SSoT」として運用してきたが、ほぼ全 entry が 1 つの consuming skill (`ori-arch` か `ori-flow`) しか参照しておらず、共有の事実が成立していない。runtime artifact が skill bundle と別 tree にあると (1) APM install 後の解決 path が複雑化し、(2) `apm_modules/<owner>/<repo>/.apm/contexts/...` walk が必要になり、(3) "どの skill が壊れたら artifact が stale になるか" の責務帰属が曖昧になる。Phase J1 の `.apm/contexts/adapters/` 構造で同じ問題が顕在化したため、全 runtime artifact を consuming skill bundle と co-locate に揃える。
+
+スコープ:
+
+- ✓ Phase K1(`ori-6kd.2`): adapter bundle を `.apm/skills/ori-arch/adapters/<name>/` に co-locate、templates SSoT を `packages/arch-adapters/<name>/templates/` に格上げ、`resolveAdaptersDir` を `--adapters-dir` + bundle-adjacent の 2 候補のみに簡略化 (apm_modules walk / `$ORI_ADAPTERS_DIR` env / legacy parent-of-repo fallback を削除)
+- ✓ Phase K2(`ori-6kd.4`): `architecture-md-schema.md` と `patterns/` を `.apm/skills/ori-arch/` 配下に co-locate、`resolvePatternsDir` を bundle-adjacent 1 候補に簡略化
+- ✓ Phase K3(`ori-6kd.3`): `.apm/contexts/templates/{slice,page}-manifest.yaml.tpl` を `.apm/skills/ori-flow/templates/` に co-locate、`loadTemplate` を bundle-adjacent (`dirname(import.meta.url)/../templates`) に変更、`skill-scripts-build.md` を `docs/skill-scripts-build.md` に移管、`.apm/contexts/` を物理撤去
+- ○ Phase K4(`ori-6kd.1`): Phase K greenfield acceptance retry — `apm install dev-komenzar/ori` 後の skill bundle で `/ori-flow new-slice` / `new-page` / `/ori-arch render-architecture` が動作することを 2-session pattern で確認
+
+得られた pattern: **「runtime artifact は常に consuming skill bundle 隣に置く」** — esbuild bundle output (`scripts/*.js`)、template/asset (`templates/`, `patterns/`)、adapter (`adapters/`) いずれも `import.meta.url` 基準で bundle-adjacent に解決する。`.apm/<top-level>/` (旧 `contexts/`) のような cross-skill 共有 dir は導入しない — 共有が必要なら最も依存度の高い skill に co-locate し、他 skill は path 参照のみで再利用する。
 
 ### v0.4 以降(将来想定)
 

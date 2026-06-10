@@ -478,7 +478,6 @@ migration required.
 
 - `.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` — pattern definition
 - `.apm/skills/ori-arch/patterns/ddd-vsa-hex/ai-notes.md` — AI behavior guidance
-- `.apm/contexts/slice-manifest-schema.md` — `.ori/slices/<id>/manifest.yaml` format
-- `.apm/contexts/page-manifest-schema.md` — `.ori/pages/<id>/manifest.yaml` format
-- `.apm/contexts/marker-format.md` — `@ori-generated` etc. marker format
+- `.apm/skills/ori-flow/templates/slice-manifest.yaml.tpl` — `.ori/slices/<id>/manifest.yaml` テンプレート
+- `.apm/skills/ori-flow/templates/page-manifest.yaml.tpl` — `.ori/pages/<id>/manifest.yaml` テンプレート
 - `docs/contributing/adding-adapter.md` — adapter implementation guide

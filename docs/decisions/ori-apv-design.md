@@ -1,5 +1,7 @@
 # ori-apv (Phase J1) — adapter を template + injection 構造で再設計
 
+> **2026-06-10 後注**: 本 doc 内の adapter bundle path (`.apm/contexts/adapters/<name>/`) は J1 時点の決定。Phase K1 (`ori-6kd.2`) で `.apm/skills/ori-arch/adapters/<name>/` に再 co-locate、Phase K3 (`ori-6kd.3`) で `.apm/contexts/` dir 自体を物理撤去。現行の path は [CHANGELOG.md](../../CHANGELOG.md) v0.3-K / [docs/design.md §15-16](../design.md) 参照。
+
 - **Issue**: ori-apv (Phase J epic = ori-c4w)
 - **内包**: ori-0ok (eslint.config.ori.js ヘッダの旧 CLI 案内修正)
 - **後続**: ori-osm (J2: 旧 packages/arch-adapter-* 撤去 + npm deprecate)、ori-XXX (J3: greenfield acceptance retry、別途起票)
