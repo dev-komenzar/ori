@@ -2,7 +2,7 @@
   "name": "@ori-ori/arch-adapter-generic-bundled",
   "version": "0.0.0",
   "private": true,
-  "description": "Source for the generic arch adapter — built to .apm/contexts/adapters/generic/ via scripts/build-adapters.mjs",
+  "description": "Source for the generic arch adapter — built to .apm/skills/ori-arch/adapters/generic/ via scripts/build-adapters.mjs",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",

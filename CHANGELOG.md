@@ -8,15 +8,17 @@ ori (織) — DDD-driven slice/page scaffolding with CoDD coherence.
 
 ### v0.3-K: runtime artifact を consuming skill bundle に co-locate
 
-Phase K の最初の PR。adapter の build output を `.apm/skills/ori-arch/adapters/` に移し、runtime artifact が消費 skill bundle と同じ tree に常駐する layout に揃える。template の SSoT は `packages/arch-adapters/<name>/templates/` に格上げし、build step が bundle と共に template をコピーする。
+Phase K で旧 `.apm/contexts/` (cross-skill 共有 SSoT) を全廃し、runtime artifact (adapter bundle / pattern / schema / manifest テンプレ) を全て consuming skill bundle と同 tree に常駐させる layout に揃えた。各 resolver は `import.meta.url` 基準の bundle-adjacent 解決のみで完結する。
 
-- **K1** ([`ori-6kd.2`](https://github.com/dev-komenzar/ori/issues)) — adapter bundle を `.apm/contexts/adapters/` → `.apm/skills/ori-arch/adapters/` に移動。templates SSoT を `packages/arch-adapters/<name>/templates/` に格上げ。`resolveAdaptersDir` を `--adapters-dir` + bundle-adjacent の 2 候補のみに簡略化 (apm_modules walk / `$ORI_ADAPTERS_DIR` env / legacy parent-of-repo fallback を削除)
+- **K1** ([`ori-6kd.2`](https://github.com/dev-komenzar/ori/issues)) — adapter bundle を `.apm/skills/ori-arch/adapters/` に co-locate。templates SSoT を `packages/arch-adapters/<name>/templates/` に格上げ。`resolveAdaptersDir` を `--adapters-dir` + bundle-adjacent の 2 候補のみに簡略化 (apm_modules walk / `$ORI_ADAPTERS_DIR` env / legacy parent-of-repo fallback を削除)
+- **K2** ([`ori-6kd.4`](https://github.com/dev-komenzar/ori/issues)) — `architecture-md-schema.md` と `patterns/` を `.apm/skills/ori-arch/` 配下に co-locate、`resolvePatternsDir` を bundle-adjacent 1 候補に簡略化
+- **K3** ([`ori-6kd.3`](https://github.com/dev-komenzar/ori/issues)) — `{slice,page}-manifest.yaml.tpl` を `.apm/skills/ori-flow/templates/` に co-locate、`loadTemplate` を bundle-adjacent (`dirname(import.meta.url)/../templates`) に変更、`skill-scripts-build.md` を `docs/skill-scripts-build.md` に移管、`.apm/contexts/` dir を物理撤去
 
 ### v0.3-J: npm package 廃止 → APM 単独配布
 
-`@ori-ori/arch-adapter-*` を含む adapter は APM bundle (`.apm/skills/ori-arch/adapters/<name>/`、Phase J 時点では `.apm/contexts/adapters/<name>/`) に統合され、npm 上の publish は停止します。配布は `apm install dev-komenzar/ori` のみ。
+`@ori-ori/arch-adapter-*` を含む adapter は APM bundle (`.apm/skills/ori-arch/adapters/<name>/`) に統合され、npm 上の publish は停止します。配布は `apm install dev-komenzar/ori` のみ。
 
-- **J1** ([`ori-apv`](https://github.com/dev-komenzar/ori/pull/34)) — adapter を「template + JSON injection」分離構造に再設計、`.apm/contexts/adapters/{eslint,rust,generic}/` に bundle (Phase K1 で `.apm/skills/ori-arch/adapters/` に移動)、ori-arch skill は dynamic import で skill 隣接から解決
+- **J1** ([`ori-apv`](https://github.com/dev-komenzar/ori/pull/34)) — adapter を「template + JSON injection」分離構造に再設計、当時は `.apm/contexts/adapters/{eslint,rust,generic}/` に bundle (Phase K1 で `.apm/skills/ori-arch/adapters/` に移動)、ori-arch skill は dynamic import で skill 隣接から解決
 - **J2** ([`ori-osm`](https://github.com/dev-komenzar/ori/issues)) — 旧 `packages/arch-adapter-{eslint,rust,generic}/` を物理撤去。pnpm workspace から消失し、`pnpm -r publish` の対象外に。既存 publish 済 `@ori-ori/arch-adapter-{eslint,rust,generic}@0.2.0` は npm deprecate 強化 ([`ori-u5d`](https://github.com/dev-komenzar/ori/issues) 内包、`scripts/npm-deprecate-adapters.sh` 参照)
 
 破壊的変更:

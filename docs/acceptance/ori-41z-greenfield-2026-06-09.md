@@ -9,8 +9,8 @@ prep セッション (commit `55cf085` on `task/ori-41z-greenfield-flow-new-slic
 
 1. `node .claude/skills/ori-flow/scripts/new-slice.js save-bookmark --type=command` で
    `.ori/slices/save-bookmark/` を scaffold
-2. AI が `apm_modules/dev-komenzar/ori/.apm/contexts/patterns/ddd-vsa-hex/stacks/typescript/example-slice/task-management/slices/complete-task/` を
-   **on-demand 参照** (本ログの「Read tool call 履歴」セクション参照)
+2. AI が `apm_modules/dev-komenzar/ori/.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/example-slice/task-management/slices/complete-task/` を
+   **on-demand 参照** (本ログの「Read tool call 履歴」セクション参照)。当時のログは `.apm/contexts/patterns/...` を指していたが、Phase K2 (`ori-6kd.4`) で path 改称済
 3. example-slice の 5 層構造を Bookmark ドメインに **adapt** して
    `apps/ori-h4b-accept-1780991140/src/bookmark-keeping/` 配下に slice を生成
 4. 物理 copy 検査 + eslint (architecture.md ルール) + vitest + vite build で検証

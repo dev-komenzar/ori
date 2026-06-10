@@ -41,7 +41,7 @@ node .apm/skills/ori-flow/scripts/new-slice.js <id> [--type=command|query]
 node .apm/skills/ori-flow/scripts/new-page.js <id>
 ```
 
-manifest テンプレートは `.apm/contexts/templates/slice-manifest.yaml.tpl` / `page-manifest.yaml.tpl` から読み込まれる（SSoT）。
+manifest テンプレートは `.apm/skills/ori-flow/templates/slice-manifest.yaml.tpl` / `page-manifest.yaml.tpl` から読み込まれる（SSoT）。bundle 隣接 (`scripts/` の sibling) にあるため APM install 後もそのまま解決される。
 
 ## 引数
 

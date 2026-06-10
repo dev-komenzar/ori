@@ -2,7 +2,7 @@
   "name": "@ori-ori/arch-adapter-rust-bundled",
   "version": "0.0.0",
   "private": true,
-  "description": "Source for the rust arch adapter — built to .apm/contexts/adapters/rust/ via scripts/build-adapters.mjs",
+  "description": "Source for the rust arch adapter — built to .apm/skills/ori-arch/adapters/rust/ via scripts/build-adapters.mjs",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",

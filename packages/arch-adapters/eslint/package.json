@@ -2,7 +2,7 @@
   "name": "@ori-ori/arch-adapter-eslint-bundled",
   "version": "0.0.0",
   "private": true,
-  "description": "Source for the eslint arch adapter — built to .apm/contexts/adapters/eslint/ via scripts/build-adapters.mjs",
+  "description": "Source for the eslint arch adapter — built to .apm/skills/ori-arch/adapters/eslint/ via scripts/build-adapters.mjs",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
