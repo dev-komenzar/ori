@@ -1,15 +1,13 @@
 {
   "name": "@ori-ori/coherence",
   "version": "0.2.0",
-  "description": "Propagation graph and change detection for ori",
+  "private": true,
+  "description": "Propagation graph and change detection for ori (skill-only, APM-bundled)",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/dev-komenzar/ori",
     "directory": "packages/coherence"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "type": "module",
   "files": ["dist"],

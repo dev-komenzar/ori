@@ -6,6 +6,18 @@ ori (織) — DDD-driven slice/page scaffolding with CoDD coherence.
 
 ## Unreleased
 
+### v0.3-N: `@ori-ori/slice-runner` + `@ori-ori/coherence` を private 化 (Phase M の余波 cleanup)
+
+Phase M (`ori-1pe`) で `@ori-ori/parser` を private 化したのと同条件 (現状 public published / 内部 skill からのみ利用 / 外部 consumer 0) で残っていた 2 package を、同パターンに揃える cleanup。slice-runner は `ori-flow` / `ori-model` skill の esbuild bundle に inline 済、coherence は slice-runner 経由で同 skill bundle に間接 inline 済のため、APM 利用者側に影響なし。
+
+- **N1** ([`ori-hqr`](https://github.com/dev-komenzar/ori/issues)) — `packages/slice-runner/package.json` および `packages/coherence/package.json` に `"private": true` 追加 + `publishConfig` 削除 (pnpm workspace 内には残置、`workspace:*` 依存は従来通り)。既存 publish 済 `@ori-ori/slice-runner@<=0.2.0` / `@ori-ori/coherence@<=0.2.0` を npm deprecate 強化 (`scripts/npm-deprecate-runner-coherence.sh`)
+
+破壊的変更:
+
+- `pnpm add @ori-ori/slice-runner` / `pnpm add @ori-ori/coherence` は v0.3 以降サポート対象外。APM 経由 (`apm install dev-komenzar/ori`) で配布される skill bundle 内にロジックが embed されるため、外部から library として再利用する用途は廃止。
+
+この PR で `@ori-ori/*` の npm publishable package は **全て** placeholder 状態 (`@ori-ori/templates` 系) または bundled に移行済となり、`@ori-ori/cli` deprecate stub を除いて新規 publish 対象 package は無くなった (Phase J → L → M → N の skill-only モデル徹底 cleanup 完了)。
+
 ### v0.3-M: `@ori-ori/parser` を private 化 (skill-only モデル徹底)
 
 `@ori-ori/parser` の npm publish を停止し、Phase J の `@ori-ori/arch-adapter-*` と同じ「APM bundle 単独配布」方針に揃える。parser は ori 内部 skill (ori-arch / ori-doctor / arch-adapters) からのみ利用されており、外部 plugin consumer は実在しない。skill bundle は esbuild `bundle: true` で parser ソースをインライン化済のため、APM 利用者側に影響なし。
