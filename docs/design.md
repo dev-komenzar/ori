@@ -638,7 +638,18 @@ slice/page manifest の `app:` field を skill が解決する順序:
    - **要素 N 個**(monorepo) → manifest に `app:` 必須、なければ skill 停止 + bd issue にエラー記録
 3. config なし → `/ori-init` 未実行エラー
 
-slice 出力 path は `apps/<app>/src/<bc>/slices/<slice-id>/...`(BC top-level の `domain/` と `shared/contracts/events/` も `apps/<app>/src/<bc>/` 配下)。
+### `<source_root>` の解決ロジック(skill 共通)
+
+`<app>` 解決後、code/test を書く実 directory `<source_root>` は以下で resolve:
+
+1. **`.ori/architecture.md` が canonical**: `root.path` (single-root) または `roots[<id>].path` (multi-root、manifest の `root:` field で選択) を採用
+   - 典型 greenfield: `apps/<app>/src` / `apps/<app>/src-tauri/src`
+   - brownfield 例: 既存 monorepo の `promptnotes/` subdir に `.ori/` を被せた case では `promptnotes/src` 等
+2. **fallback**: `.ori/architecture.md` 未生成なら `<workspace.apps[<app>].path>/src`(典型: `apps/<app>/src`)
+
+slice 出力 path は `<source_root>/<bc>/slices/<slice-id>/...`(BC top-level の `domain/` と `shared/contracts/events/` も `<source_root>/<bc>/` 配下)。
+
+**brownfield 適用例**: 既存 repo の subdir(例: `promptnotes/src/`)を source root にしたい場合、`.ori/config.yaml` で `workspace.apps[0].path: promptnotes` を設定する。これで fallback path は `promptnotes/src` に解決され、`/ori-arch` 実行後は `.ori/architecture.md root.path: promptnotes/src` が canonical となる。
 
 ---
 
