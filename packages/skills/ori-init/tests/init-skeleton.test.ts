@@ -238,6 +238,52 @@ describe("ori-init create-skeleton.sh — skeleton creation (ori-1ih)", () => {
   });
 });
 
+describe("ori-init create-skeleton.sh — --app-name override (ori-gag)", () => {
+  it("uses the explicit --app-name value in workspace.apps[]", async () => {
+    const dest = await mkdtemp(join(tmpdir(), "ori-init-appname-"));
+    try {
+      await runScript(dest, ["--app-name", "checkout-svc"]);
+      const config = yamlParse(
+        await readFile(join(dest, ".ori/config.yaml"), "utf8"),
+      ) as { ori: { workspace: { apps: Array<{ name: string; path: string }> } } };
+      expect(config.ori.workspace.apps).toEqual([
+        { name: "checkout-svc", path: "apps/checkout-svc" },
+      ]);
+    } finally {
+      await rm(dest, { recursive: true, force: true });
+    }
+  });
+
+  it("sanitizes a user-supplied --app-name the same way as basename derivation", async () => {
+    const dest = await mkdtemp(join(tmpdir(), "ori-init-appname-"));
+    try {
+      // Uppercase + underscore + spaces — must be normalized to [a-z0-9-].
+      await runScript(dest, ["--app-name", "My App_Name"]);
+      const config = yamlParse(
+        await readFile(join(dest, ".ori/config.yaml"), "utf8"),
+      ) as { ori: { workspace: { apps: Array<{ name: string; path: string }> } } };
+      expect(config.ori.workspace.apps[0]?.name).toBe("my-app-name");
+    } finally {
+      await rm(dest, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects --app-name that sanitizes to empty (exit 2)", async () => {
+    const dest = await mkdtemp(join(tmpdir(), "ori-init-appname-"));
+    try {
+      // Surfacing the typo is better than silently falling back to "app",
+      // which would mask the mistake until the user opens config.yaml.
+      await expect(runScript(dest, ["--app-name", "///"])).rejects.toMatchObject({
+        code: 2,
+      });
+      // .ori/ must NOT have been created when the input is rejected.
+      expect(await fileExists(join(dest, ".ori/config.yaml"))).toBe(false);
+    } finally {
+      await rm(dest, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("ori-init create-skeleton.sh — bd integration (ori-ks7)", () => {
   it("runs `bd init` after skeleton creation so /ori-flow has a SSoT immediately", async () => {
     const dest = await mkdtemp(join(tmpdir(), "ori-init-bd-"));
