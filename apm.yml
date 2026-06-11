@@ -1,5 +1,5 @@
 name: ori
-version: 0.2.0
+version: 0.3.0
 description: DDD-driven feature scaffolding with CoDD-style coherence + per-feature TDD
 author: takuya.kometan@gmail.com
 license: MIT
