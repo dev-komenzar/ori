@@ -284,6 +284,121 @@ describe("ori-init create-skeleton.sh — --app-name override (ori-gag)", () => 
   });
 });
 
+describe("ori-init create-skeleton.sh — current_agent resolution (ori-zpy)", () => {
+  type ConfigShape = { ori: { current_agent: string } };
+
+  async function readAgent(dest: string): Promise<string> {
+    const cfg = yamlParse(
+      await readFile(join(dest, ".ori/config.yaml"), "utf8"),
+    ) as ConfigShape;
+    return cfg.ori.current_agent;
+  }
+
+  it("uses the explicit --agent value and surfaces the override on stdout", async () => {
+    const dest = await mkdtemp(join(tmpdir(), "ori-init-agent-"));
+    try {
+      const { stdout } = await runScript(dest, ["--agent", "opencode"]);
+      expect(stdout).toMatch(/using --agent override: opencode/);
+      expect(await readAgent(dest)).toBe("opencode");
+    } finally {
+      await rm(dest, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects --agent values outside the supported set (exit 2)", async () => {
+    const dest = await mkdtemp(join(tmpdir(), "ori-init-agent-"));
+    try {
+      await expect(runScript(dest, ["--agent", "bogus"])).rejects.toMatchObject({
+        code: 2,
+      });
+      // Reject before any filesystem mutation so a typo is recoverable
+      // without --force.
+      expect(await fileExists(join(dest, ".ori/config.yaml"))).toBe(false);
+    } finally {
+      await rm(dest, { recursive: true, force: true });
+    }
+  });
+
+  it("falls back to claude with an INFO note when no agent markers exist", async () => {
+    const dest = await mkdtemp(join(tmpdir(), "ori-init-agent-"));
+    try {
+      const { stderr } = await runScript(dest);
+      expect(stderr).toMatch(/no agent markers found/);
+      expect(await readAgent(dest)).toBe("claude");
+    } finally {
+      await rm(dest, { recursive: true, force: true });
+    }
+  });
+
+  it("auto-detects a single non-claude marker (opencode) — the ori-zpy regression case", async () => {
+    const dest = await mkdtemp(join(tmpdir(), "ori-init-agent-"));
+    try {
+      // Reproduce the promptnotes-vcsdd dry-run: only .opencode/ present.
+      await mkdir(join(dest, ".opencode"), { recursive: true });
+      const { stdout } = await runScript(dest);
+      expect(stdout).toMatch(/detected agent: opencode/);
+      expect(await readAgent(dest)).toBe("opencode");
+    } finally {
+      await rm(dest, { recursive: true, force: true });
+    }
+  });
+
+  it("warns and picks claude by priority when multiple markers are present", async () => {
+    const dest = await mkdtemp(join(tmpdir(), "ori-init-agent-"));
+    try {
+      await mkdir(join(dest, ".claude"), { recursive: true });
+      await mkdir(join(dest, ".opencode"), { recursive: true });
+      const { stderr } = await runScript(dest);
+      // Both must appear in the warning so the user can decide whether to
+      // re-run with --agent — silently picking one would mask the choice.
+      expect(stderr).toMatch(/multiple agent markers detected/);
+      expect(stderr).toMatch(/claude/);
+      expect(stderr).toMatch(/opencode/);
+      expect(await readAgent(dest)).toBe("claude");
+    } finally {
+      await rm(dest, { recursive: true, force: true });
+    }
+  });
+
+  it("detects copilot via .github/copilot-instructions.md (file, not dir)", async () => {
+    const dest = await mkdtemp(join(tmpdir(), "ori-init-agent-"));
+    try {
+      await mkdir(join(dest, ".github"), { recursive: true });
+      await writeFile(
+        join(dest, ".github/copilot-instructions.md"),
+        "# copilot\n",
+        "utf8",
+      );
+      await runScript(dest);
+      expect(await readAgent(dest)).toBe("copilot");
+    } finally {
+      await rm(dest, { recursive: true, force: true });
+    }
+  });
+
+  it("detects cursor via .cursorrules file alone (no .cursor/ dir)", async () => {
+    const dest = await mkdtemp(join(tmpdir(), "ori-init-agent-"));
+    try {
+      await writeFile(join(dest, ".cursorrules"), "rules\n", "utf8");
+      await runScript(dest);
+      expect(await readAgent(dest)).toBe("cursor");
+    } finally {
+      await rm(dest, { recursive: true, force: true });
+    }
+  });
+
+  it("--agent overrides auto-detection even when markers are present", async () => {
+    const dest = await mkdtemp(join(tmpdir(), "ori-init-agent-"));
+    try {
+      await mkdir(join(dest, ".opencode"), { recursive: true });
+      await runScript(dest, ["--agent", "codex"]);
+      expect(await readAgent(dest)).toBe("codex");
+    } finally {
+      await rm(dest, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("ori-init create-skeleton.sh — bd integration (ori-ks7)", () => {
   it("runs `bd init` after skeleton creation so /ori-flow has a SSoT immediately", async () => {
     const dest = await mkdtemp(join(tmpdir(), "ori-init-bd-"));

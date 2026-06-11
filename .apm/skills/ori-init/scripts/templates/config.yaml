@@ -97,4 +97,4 @@ ori:
       spawn:
         mode: manual
         instructions: "In VSCode Copilot Chat, run: @workspace /ori-{phase} {slice_id}  (model: {model})"
-  current_agent: claude
+  current_agent: __CURRENT_AGENT__
