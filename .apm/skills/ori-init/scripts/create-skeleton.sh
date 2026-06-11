@@ -6,16 +6,17 @@
 # source of truth for `.ori/` initialization — invoked directly by the
 # /ori-init skill; no npm library dependency.
 #
-# Usage: create-skeleton.sh [--force] [--dest <dir>]
+# Usage: create-skeleton.sh [--force] [--dest <dir>] [--app-name <name>]
 #
 # Exit codes:
 #   0  success
 #   1  --dest invalid, missing template, or filesystem error
-#   2  usage error (unknown flag)
+#   2  usage error (unknown flag or invalid --app-name)
 set -euo pipefail
 
 FORCE=false
 DEST=""
+APP_NAME_ARG=""
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TPL_DIR="$SCRIPT_DIR/templates"
@@ -25,9 +26,12 @@ usage() {
 Usage: create-skeleton.sh [options]
 
 Options:
-  --force         Overwrite existing .ori/ files when present
-  --dest <dir>    Destination directory (default: current working directory)
-  -h, --help      Show this help and exit
+  --force             Overwrite existing .ori/ files when present
+  --dest <dir>        Destination directory (default: current working directory)
+  --app-name <name>   App name written to .ori/config.yaml workspace.apps[0].name
+                      (default: derived from --dest folder basename).
+                      Sanitized to [a-z0-9-]; empty after sanitize → exit 2.
+  -h, --help          Show this help and exit
 EOF
 }
 
@@ -35,6 +39,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --force)     FORCE=true; shift ;;
     --dest)      DEST="${2:-}"; shift 2 ;;
+    --app-name)  APP_NAME_ARG="${2:-}"; shift 2 ;;
     -h|--help)   usage; exit 0 ;;
     *) echo "ERROR: unknown argument: $1" >&2; usage; exit 2 ;;
   esac
@@ -52,13 +57,30 @@ if [[ ! -f "$TPL_DIR/config.yaml" || ! -f "$TPL_DIR/domain-scaffold.md.tpl" ]]; 
   exit 1
 fi
 
-# Derive app name from --dest folder. Mirrors the (now-removed) CLI's
-# deriveAppName: lowercase, non-[a-z0-9-] → '-', collapse '-', trim,
-# fallback "app".
-folder="$(basename "$DEST")"
-app_name="$(printf '%s' "$folder" | tr '[:upper:]' '[:lower:]' \
-  | sed -e 's/[^a-z0-9-]\{1,\}/-/g' -e 's/-\{2,\}/-/g' -e 's/^-//' -e 's/-$//')"
-[[ -z "$app_name" ]] && app_name="app"
+# Resolve app name. Default derives from --dest folder basename, but
+# --app-name overrides it so the /ori-init skill can let the user
+# customize when the cwd basename is too long or word-split differently
+# than they want (ori-gag). Same sanitization applies to either source:
+# lowercase, non-[a-z0-9-] → '-', collapse '-', trim hyphens. The
+# basename path falls back to "app" on empty; a user-supplied value
+# that sanitizes to empty is rejected (exit 2) instead of silently
+# becoming "app" — that would mask a typo.
+sanitize_app_name() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' \
+    | sed -e 's/[^a-z0-9-]\{1,\}/-/g' -e 's/-\{2,\}/-/g' -e 's/^-//' -e 's/-$//'
+}
+
+if [[ -n "$APP_NAME_ARG" ]]; then
+  app_name="$(sanitize_app_name "$APP_NAME_ARG")"
+  if [[ -z "$app_name" ]]; then
+    echo "ERROR: --app-name '$APP_NAME_ARG' sanitizes to empty (allowed: [a-z0-9-])" >&2
+    exit 2
+  fi
+else
+  folder="$(basename "$DEST")"
+  app_name="$(sanitize_app_name "$folder")"
+  [[ -z "$app_name" ]] && app_name="app"
+fi
 
 # Directories — mirrors the (now-removed) CLI's DIRS table.
 DIRS=(
