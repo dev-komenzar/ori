@@ -6,6 +6,16 @@ ori (織) — DDD-driven slice/page scaffolding with CoDD coherence.
 
 ## Unreleased
 
+### v0.3-M: `@ori-ori/parser` を private 化 (skill-only モデル徹底)
+
+`@ori-ori/parser` の npm publish を停止し、Phase J の `@ori-ori/arch-adapter-*` と同じ「APM bundle 単独配布」方針に揃える。parser は ori 内部 skill (ori-arch / ori-doctor / arch-adapters) からのみ利用されており、外部 plugin consumer は実在しない。skill bundle は esbuild `bundle: true` で parser ソースをインライン化済のため、APM 利用者側に影響なし。
+
+- **M1** ([`ori-1pe`](https://github.com/dev-komenzar/ori/issues)) — `packages/parser/package.json` に `"private": true` 追加 + `publishConfig` 削除 (pnpm workspace 内には残置、`workspace:*` 依存は従来通り)。既存 publish 済 `@ori-ori/parser@<=0.2.0` を npm deprecate 強化 (`scripts/npm-deprecate-parser.sh`)
+
+破壊的変更:
+
+- `pnpm add @ori-ori/parser` は v0.3 以降サポート対象外。APM 経由 (`apm install dev-komenzar/ori`) で配布される skill bundle 内に parser ロジックが embed されるため、外部から library として再利用する用途は廃止。必要なら architecture.md は markdown として直接 parse 可能 (deps: `gray-matter` / `mdast-util-from-markdown` 相当)。
+
 ### v0.3-K: runtime artifact を consuming skill bundle に co-locate
 
 Phase K で旧 `.apm/contexts/` (cross-skill 共有 SSoT) を全廃し、runtime artifact (adapter bundle / pattern / schema / manifest テンプレ) を全て consuming skill bundle と同 tree に常駐させる layout に揃えた。各 resolver は `import.meta.url` 基準の bundle-adjacent 解決のみで完結する。
