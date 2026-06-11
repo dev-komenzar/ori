@@ -4,7 +4,9 @@ ori (織) — DDD-driven slice/page scaffolding with CoDD coherence.
 
 ローカル変更ログ。npm scope は `@ori-ori/*`、monorepo 配下の全 publishable パッケージは同期 version で release する。
 
-## Unreleased
+## v0.3.0 — 2026-06-11
+
+skill-only execution model への全面移行が完了する release。Phase J 〜 N で `packages/cli` / `packages/templates` / `packages/arch-adapter-*` 撤去 + `@ori-ori/parser` / `slice-runner` / `coherence` の private 化を完遂し、APM single package (`apm install dev-komenzar/ori`) のみが配布動線となる。新規 npm publish 対象 package は存在しない。
 
 ### v0.3-N: `@ori-ori/slice-runner` + `@ori-ori/coherence` を private 化 (Phase M の余波 cleanup)
 
@@ -27,6 +29,16 @@ Phase M (`ori-1pe`) で `@ori-ori/parser` を private 化したのと同条件 (
 破壊的変更:
 
 - `pnpm add @ori-ori/parser` は v0.3 以降サポート対象外。APM 経由 (`apm install dev-komenzar/ori`) で配布される skill bundle 内に parser ロジックが embed されるため、外部から library として再利用する用途は廃止。必要なら architecture.md は markdown として直接 parse 可能 (deps: `gray-matter` / `mdast-util-from-markdown` 相当)。
+
+### v0.3-L: `packages/cli/` 物理撤去 + `@ori-ori/cli` strong deprecate
+
+design.md L1244 で v0.3 において「`packages/cli` 撤去 + `@ori-ori/*` 4 packages を npm deprecate」と明文化されていた積み残しを解消。Phase B (`/ori-init` skill 化) 以降 skill-only execution model に移行済で `packages/cli/` 配下は dead code 化していたため、workspace から物理撤去し、`@ori-ori/cli` npm 側は deprecate message を strong 化した。
+
+- **L1** ([`ori-7dx`](https://github.com/dev-komenzar/ori/issues)) — `packages/cli/` (1505 行) を repo から削除。root `package.json` から `cli` script 削除、`pnpm-lock.yaml` 更新。`docs/design.md` の package layout 図 / cli 関連記述を「撤去済」文言に更新。`pnpm -r test` / `pnpm -r typecheck` green、副作用として `ori-ehd` (cli vitest が citty / @ori-ori/parser を解決できない P3 bug) も自動解消
+
+破壊的変更:
+
+- `pnpm add -g @ori-ori/cli` および `npx @ori-ori/cli` は v0.3 以降サポート対象外。`ori init` / `ori slice new` / `ori page new` / `ori arch` 等の CLI 動線は全廃され、`apm install dev-komenzar/ori` で配布される `.apm/skills/ori-*/` の skill scripts を直接 invoke する (`node .apm/skills/ori-init/scripts/...` 等)。published `@ori-ori/cli@<=0.2.0` は npm 上に保持されるが deprecate message で APM 誘導される
 
 ### v0.3-K: runtime artifact を consuming skill bundle に co-locate
 
