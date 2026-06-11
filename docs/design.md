@@ -992,7 +992,7 @@ packages/                        # TS monorepo(開発時 SSoT)
 
 ### npm package 戦略
 
-- **`@ori-ori/cli` および `@ori-ori/arch-adapter-*` 系を deprecate**
+- **`@ori-ori/cli` / `@ori-ori/arch-adapter-*` / `@ori-ori/parser` を deprecate**
   - placeholder package (publish 名前温存目的、機能なし) — `@ori-ori/templates` 等
     ```bash
     npm deprecate @ori-ori/<name>@'*' \
@@ -1002,6 +1002,11 @@ packages/                        # TS monorepo(開発時 SSoT)
     ```bash
     npm deprecate @ori-ori/arch-adapter-eslint@'<=0.2.0' \
       "Now bundled into .apm/skills/ori-arch/adapters/eslint via APM. Use 'apm install dev-komenzar/ori' instead. See https://github.com/dev-komenzar/ori"
+    ```
+  - 内部 library で bundled に移行済 package — `@ori-ori/parser` (v0.3-M で `private: true`、skill bundle 内に esbuild で inline 済、新規 publish 停止)
+    ```bash
+    npm deprecate @ori-ori/parser@'<=0.2.0' \
+      "Now bundled into ori skill scripts via APM. External library consumption is no longer supported. Use 'apm install dev-komenzar/ori' instead."
     ```
 - 配布は APM 単独
 - CI 用途: APM-installed skill scripts を直接 node で実行
@@ -1297,6 +1302,16 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 - ○ Phase K4(`ori-6kd.1`): Phase K greenfield acceptance retry — `apm install dev-komenzar/ori` 後の skill bundle で `/ori-flow new-slice` / `new-page` / `/ori-arch render-architecture` が動作することを 2-session pattern で確認
 
 得られた pattern: **「runtime artifact は常に consuming skill bundle 隣に置く」** — esbuild bundle output (`scripts/*.js`)、template/asset (`templates/`, `patterns/`)、adapter (`adapters/`) いずれも `import.meta.url` 基準で bundle-adjacent に解決する。`.apm/<top-level>/` (旧 `contexts/`) のような cross-skill 共有 dir は導入しない — 共有が必要なら最も依存度の高い skill に co-locate し、他 skill は path 参照のみで再利用する。
+
+#### Phase M — `@ori-ori/parser` を private 化 (skill-only モデル徹底)(`ori-1pe`)
+
+動機: Phase J で `@ori-ori/arch-adapter-*` の npm publish を停止して以降、`@ori-ori/parser` だけが「内部 skill からのみ利用される library」のまま public publish 状態で残っていた。Phase J 着手時点では「parser は library 形状なので外部 plugin 再利用 motivation があり得る」として `ori-1pe` に deferred されたが、実 consumer は 0 で、skill bundle は esbuild `bundle: true` で parser ソースを inline 済 (consumer は `pnpm add` 不要)。public API 表面を残す cost (refactor 毎に invisible consumer を想定) > 公開維持の benefit と判断し、Phase J と同パターン (`private: true` + npm deprecate 強化) に揃える。
+
+スコープ:
+
+- ✓ Phase M1(`ori-1pe`): `packages/parser/package.json` に `"private": true` 追加 + `publishConfig` 削除、`@ori-ori/parser@<=0.2.0` を npm deprecate 強化 (`scripts/npm-deprecate-parser.sh`)、CHANGELOG / design.md §npm package 戦略を整合
+
+ヤキ刃の残余 (`slice-runner` / `coherence` も現状 public published) は別 issue として起票し、Phase M スコープには含めない。
 
 ### v0.4 以降(将来想定)
 

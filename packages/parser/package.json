@@ -1,15 +1,13 @@
 {
   "name": "@ori-ori/parser",
   "version": "0.2.0",
-  "description": "Markdown / frontmatter / section parsing for ori",
+  "private": true,
+  "description": "Markdown / frontmatter / section parsing for ori (skill-only, APM-bundled)",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/dev-komenzar/ori",
     "directory": "packages/parser"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "type": "module",
   "files": ["dist"],
