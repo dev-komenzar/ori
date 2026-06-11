@@ -992,7 +992,7 @@ packages/                        # TS monorepo(開発時 SSoT)
 
 ### npm package 戦略
 
-- **`@ori-ori/cli` / `@ori-ori/arch-adapter-*` / `@ori-ori/parser` を deprecate**
+- **`@ori-ori/cli` / `@ori-ori/arch-adapter-*` / `@ori-ori/parser` / `@ori-ori/slice-runner` / `@ori-ori/coherence` を deprecate**
   - placeholder package (publish 名前温存目的、機能なし) — `@ori-ori/templates` 等
     ```bash
     npm deprecate @ori-ori/<name>@'*' \
@@ -1003,10 +1003,14 @@ packages/                        # TS monorepo(開発時 SSoT)
     npm deprecate @ori-ori/arch-adapter-eslint@'<=0.2.0' \
       "Now bundled into .apm/skills/ori-arch/adapters/eslint via APM. Use 'apm install dev-komenzar/ori' instead. See https://github.com/dev-komenzar/ori"
     ```
-  - 内部 library で bundled に移行済 package — `@ori-ori/parser` (v0.3-M で `private: true`、skill bundle 内に esbuild で inline 済、新規 publish 停止)
+  - 内部 library で bundled に移行済 package — `@ori-ori/parser` (v0.3-M), `@ori-ori/slice-runner` / `@ori-ori/coherence` (v0.3-N) はいずれも `private: true`、skill bundle 内に esbuild で inline 済、新規 publish 停止
     ```bash
     npm deprecate @ori-ori/parser@'<=0.2.0' \
       "Now bundled into ori skill scripts via APM. External library consumption is no longer supported. Use 'apm install dev-komenzar/ori' instead."
+    npm deprecate @ori-ori/slice-runner@'<=0.2.0' \
+      "Now bundled into ori skill scripts (.apm/skills/ori-flow / ori-model 等) via APM. External library consumption is no longer supported. Use 'apm install dev-komenzar/ori' instead."
+    npm deprecate @ori-ori/coherence@'<=0.2.0' \
+      "Now bundled into ori skill scripts via APM (through @ori-ori/slice-runner). External library consumption is no longer supported. Use 'apm install dev-komenzar/ori' instead."
     ```
 - 配布は APM 単独
 - CI 用途: APM-installed skill scripts を直接 node で実行
@@ -1311,7 +1315,17 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 
 - ✓ Phase M1(`ori-1pe`): `packages/parser/package.json` に `"private": true` 追加 + `publishConfig` 削除、`@ori-ori/parser@<=0.2.0` を npm deprecate 強化 (`scripts/npm-deprecate-parser.sh`)、CHANGELOG / design.md §npm package 戦略を整合
 
-ヤキ刃の残余 (`slice-runner` / `coherence` も現状 public published) は別 issue として起票し、Phase M スコープには含めない。
+ヤキ刃の残余 (`slice-runner` / `coherence` も現状 public published) は Phase N(`ori-hqr`) に切り出し。
+
+#### Phase N — `@ori-ori/slice-runner` + `@ori-ori/coherence` を private 化 (Phase M の余波 cleanup)(`ori-hqr`)
+
+動機: Phase M で parser を private 化した時点で、同条件 (現状 public published / 内部 skill からのみ利用 / 外部 consumer 0) で残っていた 2 package。slice-runner は `ori-flow` / `ori-model` skill の esbuild bundle に inline 済、coherence は slice-runner 経由で同 skill bundle に間接 inline 済のため、APM 利用者側に影響なし。Phase M と同パターンに揃え、`@ori-ori/*` の npm publishable package を placeholder + deprecate stub のみに収束させる。
+
+スコープ:
+
+- ✓ Phase N1(`ori-hqr`): `packages/slice-runner/package.json` および `packages/coherence/package.json` に `"private": true` 追加 + `publishConfig` 削除、`@ori-ori/slice-runner@<=0.2.0` / `@ori-ori/coherence@<=0.2.0` を npm deprecate 強化 (`scripts/npm-deprecate-runner-coherence.sh`)、CHANGELOG / design.md §npm package 戦略を整合
+
+Phase N 完了時点で、`@ori-ori/*` の npm publishable package は **全て** placeholder 状態 (`@ori-ori/templates` 系) または bundled に移行済となり、`@ori-ori/cli` deprecate stub を除いて新規 publish 対象 package は無くなる (Phase J → L → M → N の skill-only モデル徹底 cleanup 完了)。
 
 ### v0.4 以降(将来想定)
 

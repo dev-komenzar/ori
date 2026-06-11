@@ -2,6 +2,8 @@
 
 Change detection and propagation for the ori coherence graph.
 
+> **Internal package (v0.3-N〜)**: This package is `private: true` and not published to npm. It is consumed only by `@ori-ori/slice-runner` (which itself is bundled into ori-flow / ori-model skills via esbuild). External library use is not supported — install ori via `apm install dev-komenzar/ori` and invoke the skill scripts instead. Previously published `@ori-ori/coherence@<=0.2.0` is deprecated on npm.
+
 ## Concepts
 
 - **Node**: a file (`file` propagation level) or section (`{#id}`-anchored H2/H3).
