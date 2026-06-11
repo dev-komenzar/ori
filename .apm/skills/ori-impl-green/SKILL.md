@@ -1,9 +1,9 @@
 ---
 name: ori-impl-green
-description: /ori-flow phase 4。failing test を GREEN にする最小実装を apps/<app>/src/<bc>/slices/<id>/ 配下に書く（DDD-VSA-Hex レイアウト準拠）
+description: /ori-flow phase 4。failing test を GREEN にする最小実装を <source_root>/<bc>/slices/<id>/ 配下に書く（DDD-VSA-Hex レイアウト準拠。<source_root> は `.ori/architecture.md` root.path または `apps[].path`/src で resolve）
 ---
 
-ユーザが `/ori-impl-green <slice-id>` を呼ぶ、または `/ori-flow` 内部から phase 4 として起動した際に、**phase 3 で書いた failing test を GREEN にする最小実装を `apps/<app>/src/<bc>/slices/<slice-id>/` 配下に書く**。**過剰な抽象化は phase 5（refactor）の責務**。
+ユーザが `/ori-impl-green <slice-id>` を呼ぶ、または `/ori-flow` 内部から phase 4 として起動した際に、**phase 3 で書いた failing test を GREEN にする最小実装を `<source_root>/<bc>/slices/<slice-id>/` 配下に書く**。**過剰な抽象化は phase 5（refactor）の責務**。`<source_root>` は `.ori/architecture.md` の `root.path`（単一 root の場合）または `roots[<id>].path`（multi-root）、なければ `.ori/config.yaml` `workspace.apps[<app>].path + "/src"` で resolve します（後述）。
 
 ## 引数
 
@@ -20,16 +20,17 @@ description: /ori-flow phase 4。failing test を GREEN にする最小実装を
 - 入力：
   - `.ori/slices/<id>/spec.md`
   - `.ori/slices/<id>/manifest.yaml`（`bc:` と `app:` の解決に必要）
-  - `.ori/config.yaml`（`workspace.apps:` から `app:` 解決）
-  - `apps/<app>/src/<bc>/slices/<slice-id>/tests/*.test.ts`（phase 3 で RED 確認済み）
+  - `.ori/config.yaml`（`workspace.apps:` から `app:` 解決、fallback として `apps[].path`/src を `<source_root>` に使う）
+  - `.ori/architecture.md`（あれば `root.path` / `roots[<id>].path` を canonical な `<source_root>` として優先採用）
+  - `<source_root>/<bc>/slices/<slice-id>/tests/*.test.ts`（phase 3 で RED 確認済み）
   - `.apm/instructions/ddd-typescript.instructions`（実装規約）
 - 出力：
-  - `apps/<app>/src/<bc>/slices/<slice-id>/domain/...`
-  - `apps/<app>/src/<bc>/slices/<slice-id>/application/...`
-  - `apps/<app>/src/<bc>/slices/<slice-id>/infrastructure/...`（必要時）
-  - `apps/<app>/src/<bc>/slices/<slice-id>/tests/` 配下の全テストが GREEN
+  - `<source_root>/<bc>/slices/<slice-id>/domain/...`
+  - `<source_root>/<bc>/slices/<slice-id>/application/...`
+  - `<source_root>/<bc>/slices/<slice-id>/infrastructure/...`（必要時）
+  - `<source_root>/<bc>/slices/<slice-id>/tests/` 配下の全テストが GREEN
 
-## `<app>` `<bc>` の解決
+## `<app>` `<bc>` `<source_root>` の解決
 
 skill 起動時に以下の順序で resolve:
 
@@ -40,10 +41,15 @@ skill 起動時に以下の順序で resolve:
      - 要素 1 個 → その entry を採用
      - 要素 N 個 → エラー停止（manifest に `app:` を追加するよう user に促す）
    - config 未存在 → `/ori-init` 未実行エラー
+3. **`<source_root>`**（code/test を書く base directory）：
+   - **優先**: `.ori/architecture.md` が存在し `root.path`（単一 root）または `roots[<id>].path`（multi-root、manifest の `root:` field で選択）が設定されていればそれを採用
+   - **fallback**: `.ori/architecture.md` 未生成なら `<workspace.apps[<app>].path>/src`（典型: `apps/<app>/src`）
+   - **brownfield 例**: 既存 monorepo の `promptnotes/` subdir に `.ori/` を被せた場合、`workspace.apps[0].path: promptnotes` を設定すれば `<source_root>` は `promptnotes/src` に解決される
+4. **slice base**：`<source_root>/<bc>/slices/<slice-id>/`（出力先 path はこれを固定値として組み立てる）
 
 ## 禁止事項
 
-- **`.ori/slices/<id>/src/` への出力は絶対に禁止**。`.ori/slices/<id>/` は SSoT メタ専用（manifest.yaml / spec.md / status.yaml / notes.md / plan.md / review.md のみ）。code は必ず `apps/<app>/src/<bc>/slices/<slice-id>/` 配下に書く
+- **`.ori/slices/<id>/src/` への出力は絶対に禁止**。`.ori/slices/<id>/` は SSoT メタ専用（manifest.yaml / spec.md / status.yaml / notes.md / plan.md / review.md のみ）。code は必ず `<source_root>/<bc>/slices/<slice-id>/` 配下に書く
 - skill 起動時に出力先 path を resolve 済み変数に固定し、相対 path で書く際も resolve 済み base から組み立てる
 - 出力直前に `pwd` 相当を確認、`.ori/slices/<id>/src/` が存在したら停止 + bd issue にエラー記録
 
@@ -51,8 +57,8 @@ skill 起動時に以下の順序で resolve:
 
 | ルール | 内容 |
 |--------|------|
-| ディレクトリ | `apps/<app>/src/<bc>/slices/<slice-id>/{domain,application,infrastructure,presentation,tests}/` |
-| BC 共有 | aggregate / event 等の BC 共有型は `apps/<app>/src/<bc>/{domain,shared/contracts/events}/`（Phase 10 types 生成領域、slice からは import） |
+| ディレクトリ | `<source_root>/<bc>/slices/<slice-id>/{domain,application,infrastructure,presentation,tests}/`（典型: `apps/<app>/src/...`） |
+| BC 共有 | aggregate / event 等の BC 共有型は `<source_root>/<bc>/{domain,shared/contracts/events}/`（Phase 10 types 生成領域、slice からは import） |
 | Branded types | `type NoteId = string & { readonly __brand: 'NoteId' }` 形式 |
 | Smart constructor | VO は `class.create(raw): Result<VO, Error>` 形式。直接 new を export しない |
 | Result type | エラーは throw せず `Result<T, E>`（または `Either`）で返す |
@@ -63,8 +69,8 @@ skill 起動時に以下の順序で resolve:
 ## 手順
 
 1. **前提確認**：
-   - manifest.yaml と `.ori/config.yaml` から `<app>` `<bc>` を resolve
-   - 出力 base を `apps/<app>/src/<bc>/slices/<slice-id>/` に固定
+   - manifest.yaml と `.ori/config.yaml` / `.ori/architecture.md` から `<app>` `<bc>` `<source_root>` を resolve
+   - 出力 base を `<source_root>/<bc>/slices/<slice-id>/` に固定
    - `pnpm -F <app> test <base>/tests` を Bash で実行し RED であることを確認（phase 3 完了の検証）
    - 既に GREEN なら停止し phase 3 へ差し戻す（`/ori-test-red` の "GREEN-on-first-run" と同等）
 2. **テストを 1 本ずつ通す**：
@@ -102,7 +108,7 @@ skill 起動時に以下の順序で resolve:
    - それでも失敗 → 停止して人間に判断を委ねる
 9. **完了**：
    ```bash
-   bd close ori-impl-green-<slice-id> --reason="all tests green; <N> files added under apps/<app>/src/<bc>/slices/<slice-id>/"
+   bd close ori-impl-green-<slice-id> --reason="all tests green; <N> files added under <source_root>/<bc>/slices/<slice-id>/"
    ```
 
 ## 出力テンプレート
@@ -148,7 +154,7 @@ export const captureAutoSave =
 - **副作用を domain に持ち込まない**：DB / clock / random は interface で抽象化
 - **サブ issue を切らない**：checklist 更新で対応
 - **テストを書かない**：phase 3 が観点を尽くしている前提。漏れたら phase 3 に戻る
-- **`.ori/slices/<id>/` には絶対書かない**：code は必ず `apps/<app>/src/<bc>/slices/<slice-id>/` 配下
+- **`.ori/slices/<id>/` には絶対書かない**：code は必ず `<source_root>/<bc>/slices/<slice-id>/` 配下
 
 ## 次のアクション
 
