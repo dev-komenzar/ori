@@ -40,7 +40,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
 
 1. **slice 存在確認**：
    ```bash
-   bash scripts/check-slice-exists.sh <slice-id>
+   bash ./scripts/check-slice-exists.sh <slice-id>
    ```
    - exit 0: 存在 → 次のステップへ
    - exit 2: 類似候補あり → ユーザに「これですか？」と確認、Yes なら正しい id で再開
@@ -48,7 +48,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
 2. **manifest.yaml の読み込み**：`.ori/slices/<id>/manifest.yaml` を Read。`derives_from:` が空ならエラー停止し「先に DDD phase で domain を整備するか、manifest に upstream を追記してください」と案内
 3. **upstream section の取得**：
    ```bash
-   bash scripts/resolve-upstream.sh <slice-id>
+   bash ./scripts/resolve-upstream.sh <slice-id>
    ```
    派生元 section のパスとハッシュを取得
 4. **矛盾検出**：複数 upstream が同じ概念について異なる規定を持つ場合、停止して `/ori-propose` を促す（自動マージしない）

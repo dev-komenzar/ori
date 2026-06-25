@@ -114,7 +114,7 @@ ori:
 4. **public entry 作成**: 各 slice の `<public_entry>` を作って、外から触られていた API
    を re-export。それ以外を internal にして cross-slice の import を全部この経路に
    集約。
-5. **lint enforce**: `.ori/architecture.md` を書き、`node .apm/skills/ori-arch/scripts/export.js`
+5. **lint enforce**: `.ori/architecture.md` を書き、`node ./scripts/export.js` (ori-arch skill bundle 相対)
    で adapter config を生成 → CI に組み込み、新規違反を block。
 
 ### ddd-vsa-hex から離脱する場合

@@ -60,7 +60,7 @@ description: ori プロジェクトの健康診断。.ori/ を歩き schema / st
 1. **`.ori/` 存在確認**：なければ「`/ori-init` で初期化してください」と返す
 2. **スクリプトで全検査を実行**：
    ```bash
-   bash .apm/skills/ori-doctor/scripts/run-checks.sh
+   bash ./scripts/run-checks.sh
    ```
    個別検査は以下で構成：
    - `check-domain-schema.sh` — ドメイン文書の frontmatter + anchor 検証
@@ -70,7 +70,7 @@ description: ori プロジェクトの健康診断。.ori/ を歩き schema / st
    - `check-proposals.sh` — pending proposal カウント
    - `lint.js` — `.ori/` の Markdown anchor / id 規約検証（JS）：
      ```bash
-     node .apm/skills/ori-doctor/scripts/lint.js [<path>] [--strict]
+     node ./scripts/lint.js [<path>] [--strict]
      ```
 3. **結果を集約**してレポートを生成
 4. **報告 only**：自動修復は行わない

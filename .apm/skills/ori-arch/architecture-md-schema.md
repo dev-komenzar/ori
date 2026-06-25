@@ -280,7 +280,7 @@ Each slice/page derives_from `page-grouping:<id>` for change-propagation.
 
 ## Adapter contract
 
-`/ori-arch` exports the spec and invokes the adapter (`.apm/skills/ori-arch/scripts/adapters/<id>.js`).
+`/ori-arch` exports the spec and invokes the adapter (`./scripts/adapters/<id>.js`, relative to the skill bundle).
 Adapters implement:
 
 ```ts
@@ -312,7 +312,7 @@ The MVP adapters in v0.1 scope (all integrated into APM bundle, not separate npm
 
 v0.2+ candidates: `dependency-cruiser` (TS/JS), `import-linter` (Python), `ArchUnit` (JVM).
 
-**Adapter 配置**: `.apm/skills/ori-arch/scripts/adapters/<adapter-id>.js` (esbuild bundle
+**Adapter 配置**: skill bundle 内の `./scripts/adapters/<adapter-id>.js` (esbuild bundle
 内に統合)。npm package としては配布しない(`@ori-ori/arch-adapter-*` は廃止)。
 
 Contributing new adapter は `docs/contributing/adding-adapter.md` 参照。
