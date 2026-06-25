@@ -7,6 +7,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "consola": "^3.2.3"
+    "@ori-ori/coherence": "workspace:*",
+    "@ori-ori/slice-runner": "workspace:*",
+    "consola": "^3.2.3",
+    "yaml": "^2.4.1"
   }
 }

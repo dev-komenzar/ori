@@ -165,9 +165,18 @@ importers:
 
   packages/skills/ori-sync:
     dependencies:
+      '@ori-ori/coherence':
+        specifier: workspace:*
+        version: link:../../coherence
+      '@ori-ori/slice-runner':
+        specifier: workspace:*
+        version: link:../../slice-runner
       consola:
         specifier: ^3.2.3
         version: 3.4.2
+      yaml:
+        specifier: ^2.4.1
+        version: 2.9.0
 
   packages/slice-runner:
     dependencies:
