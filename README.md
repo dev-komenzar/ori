@@ -70,13 +70,14 @@ ori/
 
 ```bash
 # 1. インストール
+# ターゲットディレクトリで
 apm install dev-komenzar/ori
 
 # 2. プロジェクトを scaffold
-$ cd my-project
+$ claude/opencode/...                          # Launch your agent
 $ /ori-init                                    # .ori/ skeleton + config.yaml (silent)
-$ /ori-arch                                    # pattern=ddd-vsa-hex / framework=typescript[-tauri] を選択 → template scaffold
 $ /ori-distill                                 # AI が distill-ddd phase 1-11 を対話実行
+$ /ori-arch                                    # pattern=ddd-vsa-hex / framework=typescript[-tauri] を選択 → template scaffold
 $ /ori-flow app-startup                        # 1 slice を 7 phase で実装
 $ /ori-sync                                    # 変更伝播計算
 ```

@@ -129,6 +129,9 @@ ori:
 
 **これが distill-ddd 系の最終 phase**。完了したら実装に進む：
 
+まず `ls .ori/architecture.md` で architecture.md の有無を確認し、**無ければ `/ori-arch` を最初に案内する**（`/ori-flow` は `.ori/architecture.md` 前提で動作する）。
+
+- **architecture 未確定**：`/ori-arch` — pattern (ddd-vsa-hex 等) / stack を決めて `.ori/architecture.md` を render。完了後に下記メインパスへ
 - **メインパス**：`/ori-flow <first-id>` — 1 slice / page を 7 phase で実装開始
   - 推奨：slice → page の順（domain ロジック先行）
 - **scaffold だけ済ませて休む**：page の新規作成を提案し beads issue だけ作っておく
