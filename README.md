@@ -196,6 +196,25 @@ $ /ori-flow switch-edit-target
 | ドメインを直さず、複数 slice の spec で局所対応 | 同じバグの暗黒コピーが各所に発生。CoDD の意義を失う |
 | review を skip | adversarial 視点なしで「自分の修正は正しい」と確信してしまう |
 
+## CI smoke (Slice DoD chain)
+
+`/ori-flow` のうち **deterministic な script-level 部分** (`/ori-init` → `/ori-arch render` → `install-tauri-scaffold.sh` → `/ori-doctor sweep`) を fresh project 上で非対話駆動する smoke が `ci/smoke/` 配下にあります。
+
+- **Dockerfile** (`ci/smoke/Dockerfile`) — node 22 + pnpm 10 + rust stable + tauri-cli 2 の base image
+- **driver** (`ci/smoke/run-smoke.sh`) — skeleton 生成 → architecture render → minimal `pnpm tauri init` 相当 → specta scaffold → cargo check (export-types) → 空 slice manifest → `check-dod-sweep.sh` が `rule:dod-1` を検出することまでを assert
+- **workflow** (`.github/workflows/dod-smoke.yml`) — main push / PR (関連 path 変更時) / `workflow_dispatch` で発火
+
+ローカル再現:
+
+```bash
+docker build -t ori-smoke -f ci/smoke/Dockerfile ci/smoke
+docker run --rm -v "$PWD":/workspace -w /workspace ori-smoke
+# cargo check を skip したい場合: -e ORI_SMOKE_SKIP_CARGO=1
+# 作業 dir を変えたい場合:        -e ORI_SMOKE_WORK=/tmp/foo
+```
+
+LLM 駆動の phase (`/ori-test-red` / `/ori-impl-green` / `/ori-refactor` / `/ori-review`) は本 smoke の **scope 外** です — 別途 manual / agent-driven smoke で確認します (ref: `docs/smoke-reports/ori-fzr-13.md`)。
+
 ## 状態
 
 🚧 **作業中**：MVP scaffold 段階。動作可能な機能はまだ提供されていません。

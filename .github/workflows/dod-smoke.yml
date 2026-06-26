@@ -1,0 +1,49 @@
+name: dod-smoke
+
+# CI smoke for the Slice DoD enforcement chain (/ori-init → /ori-arch render →
+# install-tauri-scaffold → /ori-doctor sweep). Verifies the deterministic,
+# script-level parts of /ori-flow against a fresh user-project layout.
+#
+# Scope and rationale: see ci/smoke/run-smoke.sh header and
+# docs/smoke-reports/ori-fzr-13.md.
+
+on:
+  pull_request:
+    paths:
+      - '.apm/skills/ori-init/**'
+      - '.apm/skills/ori-arch/**'
+      - '.apm/skills/ori-doctor/**'
+      - '.apm/skills/ori-flow/**'
+      - 'ci/smoke/**'
+      - '.github/workflows/dod-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.apm/skills/ori-init/**'
+      - '.apm/skills/ori-arch/**'
+      - '.apm/skills/ori-doctor/**'
+      - '.apm/skills/ori-flow/**'
+      - 'ci/smoke/**'
+      - '.github/workflows/dod-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  dod-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build smoke image
+        run: docker build -t ori-smoke -f ci/smoke/Dockerfile ci/smoke
+
+      - name: Run smoke driver
+        # The image's CMD is `bash ci/smoke/run-smoke.sh`; we mount the repo so
+        # the driver picks up the current branch's .apm/skills/ as the bundle
+        # under test.
+        run: |
+          docker run --rm \
+            -v "$PWD":/workspace \
+            -w /workspace \
+            -e ORI_SMOKE_WORK=/tmp/ori-smoke-work \
+            ori-smoke
