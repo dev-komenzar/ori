@@ -10,7 +10,7 @@
 // Output: ../src/__BC_NAME__/shared/ipc/bindings.ts
 //
 // The bindings.ts is the *single* cross-root contract surface for the
-// {{BC_NAME}} BC. Hand-editing it is prohibited (the next specta run
+// __BC_NAME__ BC. Hand-editing it is prohibited (the next specta run
 // will overwrite the file).
 
 use specta_typescript::Typescript;
