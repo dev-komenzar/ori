@@ -131,19 +131,13 @@ description: /ori-flow phase 2。spec.md を読み、下流 phase の beads issu
      )"
      ```
    - **refactor**：観点（重複除去・抽象化候補）を列挙。空でも良い
-   - **review**：レビュー観点を列挙 (stack=typescript-tauri 時は Slice DoD 4 rules を追加)
+   - **review**：spec ↔ impl の意味的乖離に絞った観点を列挙。**DoD 個別 rules は checklist に書かない** (`/ori-review` が 3 structural gate で構造強制するので drift 源になる、`.apm/skills/ori-review/SKILL.md` "なぜ DoD 個別 rules を review checklist にしないか" 参照)
      ```bash
      bd update ori-review-<id> --description="$(cat <<'EOF'
      - [ ] spec.md と impl の挙動乖離
      - [ ] 層配置（副作用が domain/ に漏れていないか）
      - [ ] テスト網羅性（unicode whitespace 等の edge case）
      - [ ] branded types の漏れ
-
-     Slice DoD 検査 (stack=typescript-tauri):
-     - [ ] rule 1: `manifest.yaml#expected_deliverables.sub_layers` 宣言全てに content がある
-     - [ ] rule 2: `dod.test.ts` が bindings 経由のみで、`application/*` を直 import していない
-     - [ ] rule 3: `dod.test.ts` が `setupProductionBuilder()` を使い fake fixture を import していない
-     - [ ] rule 4: `commands.rs` 更新後に bindings.ts が再生成済 (specta-build hook 動作)
      EOF
      )"
      ```
