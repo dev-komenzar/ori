@@ -64,19 +64,27 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Auto-detect project root (same convention as run-checks.sh).
+# Auto-detect project root (PWD-first; SCRIPT_DIR is last-resort fallback).
+# Why PWD-first: when ori bundle is installed inside a user project, SCRIPT_DIR
+# points into the ori repo, so `git -C "$SCRIPT_DIR" rev-parse` resolves to the
+# ori repo root and the user's .ori/ becomes invisible (ori-fzr.15).
 if [[ -z "$PROJECT_ROOT" ]]; then
-  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-  PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
+  PWD_DIR="$(pwd)"
+  PROJECT_ROOT="$(git -C "$PWD_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
+  if [[ -n "$PROJECT_ROOT" && ! -d "$PROJECT_ROOT/.ori" ]]; then PROJECT_ROOT=""; fi
   if [[ -z "$PROJECT_ROOT" ]]; then
-    d="$SCRIPT_DIR"
+    d="$PWD_DIR"
     while [[ "$d" != "/" ]]; do
       [[ -d "$d/.ori" ]] && { PROJECT_ROOT="$d"; break; }
       d="$(dirname "$d")"
     done
   fi
+  if [[ -z "$PROJECT_ROOT" ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
+  fi
 fi
-[[ -d "$PROJECT_ROOT/.ori" ]] || { echo "ERROR: .ori/ not found under $PROJECT_ROOT" >&2; exit 2; }
+[[ -n "$PROJECT_ROOT" && -d "$PROJECT_ROOT/.ori" ]] || { echo "ERROR: .ori/ not found under ${PROJECT_ROOT:-<unresolved>}" >&2; exit 2; }
 cd "$PROJECT_ROOT"
 
 ARCH="$PROJECT_ROOT/.ori/architecture.md"
