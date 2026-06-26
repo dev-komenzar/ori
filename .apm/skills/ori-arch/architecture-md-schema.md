@@ -72,8 +72,25 @@ cross_bc:                     # cross-BC bridge(app 内、MVP は単一 event-bu
   via: [apps/<app>/src/shared/contracts, apps/<app>/src/shared/events]
   same_event_bus: true        # MVP: in-process 単一 bus(app 内)、分散 bus は v0.2+
 page_map_marker: phase-11b    # opt-in: enables phase 11b auto-update of UI layer section
+phase_hooks:                  # MANDATORY (may be empty `{}`); /ori-arch always emits this block
+  flow-impl-red-pre:          # phase name = one of distill-ddd / DoD phases consumed by /ori-flow
+    - cmd: cargo run --bin export-types   # bash command to invoke
+      cwd: apps/<app>/src-tauri           # optional; cwd for the command (default = repo root)
+      reason: "rebuild specta bindings before red boundary tests"  # optional human note
+  flow-impl-green-post:
+    - cmd: cargo run --bin export-types
+      cwd: apps/<app>/src-tauri
+      reason: "resync TS bindings after green impl (Slice DoD rule 4)"
 ---
 ```
+
+`phase_hooks` lists shell commands `/ori-flow` should run at named phase
+transitions. The block is REQUIRED in every architecture.md emitted by
+`/ori-arch` (use `phase_hooks: {}` when no hooks are needed, e.g. the plain
+`typescript` stack with no `cross_root` contract). The schema is
+deliberately loose (`record<string, hook[]>`) so new stack templates can
+declare hooks at any phase without a parser change. Consumers (`/ori-flow`,
+`/ori-doctor`) treat missing entries as "no-op for that phase".
 
 ### Single-root shorthand (v0.1 default)
 
