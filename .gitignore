@@ -35,3 +35,6 @@ coverage/
 *.db
 .beads-credential-key
 .claude/settings.local.json
+
+# Oh My OpenAgents
+.omo/run-continuation
