@@ -4,6 +4,57 @@ ori (織) — DDD-driven slice/page scaffolding with CoDD coherence.
 
 ローカル変更ログ。npm scope は `@ori-ori/*`、monorepo 配下の全 publishable パッケージは同期 version で release する。
 
+## v0.4.0 — 2026-06-26
+
+**Slice DoD enforcement** を skill chain 全体に通した release。`pattern.md` の Slice Definition of Done (4 rule) を SSoT として、`/ori-arch` → `/ori-derive` → `/ori-plan` → `/ori-impl-red` → `/ori-impl-green` → `/ori-doctor` → `/ori-review` が一気通貫で DoD を生成・enforcement する形に揃った。typescript-tauri stack では stub commands.rs / specta bindings rebuild / `setupProductionBuilder.ts` / boundary 経由 test を skill chain が機械的に emit する。並行して v0.3 で導入した skill-only execution model への積み残し追従 (`/ori-sync` / `/ori-propose`) と DDD doc frontmatter の `ori:` block 統一を完了した。配布動線は v0.3 から引き続き APM single package (`apm install dev-komenzar/ori`) のみで、新規 npm publish 対象 package は無い。
+
+### v0.4-O: Slice DoD enforcement epic (`ori-fzr`)
+
+ddd-vsa-hex pattern の slice 完成判定を normative 化し、全 skill が SSoT 参照で derive する構造に揃えた。**hardcoded template を skill 内に持たず、`pattern.md` / instructions / example-slice を SSoT として参照する**方針に転換している。
+
+- **O1 — pattern SSoT 確定** ([`ori-fzr.1`](https://github.com/dev-komenzar/ori/issues)) `pattern.md` に "Slice Definition of Done" 4 rule (sub_layers 全埋め / boundary 経路 / production wiring / cross_root 同期) を Dependency rules の後に追加。`ai-notes.md` で AI agent への enforcement 指示として再展開
+- **O2 — typescript-tauri stack 具体化** ([`ori-fzr.2`](https://github.com/dev-komenzar/ori/issues)) Test Contract instantiation + `phase_hooks` (flow-impl-red-pre / green-post で tauri-specta 再生成) を stack template に追加
+- **O3 — example-slice 参照実装** ([`ori-fzr.3`](https://github.com/dev-komenzar/ori/issues)) complete-task slice に boundary test 4 ケース + `setupProductionBuilder.ts` + bindings.ts skeleton を配置 (AI agent が template として読める形)
+- **O4 — instructions 整合化** ([`ori-fzr.4`](https://github.com/dev-komenzar/ori/issues)) `.apm/instructions/` 6 file (feature-manifest / feature-spec / ddd-rust / ddd-typescript / ui-test / task-management) を DoD と整合
+- **O5 — `/ori-init` specta scaffold 同梱** ([`ori-fzr.5`](https://github.com/dev-komenzar/ori/issues)) typescript-tauri stack 用に `install-tauri-scaffold.sh` / `export-types.rs.tpl` / `specta-build.sh` / `setupProductionBuilder.ts.tpl` を skill bundle に追加。`/ori-arch` から `pnpm tauri init` 完了後に call される
+- **O6 — `/ori-derive` SSoT 参照化** ([`ori-fzr.6`](https://github.com/dev-komenzar/ori/issues)) spec.md に boundary test / stub commands.rs / production fixture を必ず derive。出力テンプレート section を削除し feature-spec instruction を SSoT 化
+- **O7 — `/ori-plan` checklist 拡張** ([`ori-fzr.7`](https://github.com/dev-komenzar/ori/issues)) 下流 test-red / impl-green / review issue description に b3 (stub emit) + p3 (production wiring) checklist を生成 (stack=typescript-tauri 時のみ)
+- **O8 — `/ori-impl-red` b3 emit** ([`ori-fzr.8`](https://github.com/dev-komenzar/ori/issues)) typescript-tauri stack で `stub commands.rs (Err("pending"))` → `invoke_handler!` 登録 → specta rebuild → `setupProductionBuilder` pending case → `dod.test.ts` emit → vitest RED を一気通貫で実行
+- **O9 — `/ori-impl-green` Tauri DoD flow** ([`ori-fzr.9`](https://github.com/dev-komenzar/ori/issues)) stub→real impl 置換、production adapter wiring、specta rebuild post-step を SSoT 参照で documented。hardcoded code template を削除
+- **O10 — `/ori-review` 簡素化** ([`ori-fzr.10`](https://github.com/dev-komenzar/ori/issues)) DoD checklist を撤去し、3 mechanical structural gate (boundary test green / arch lint pass / public_entry 整合性) に集約。DoD 個別 rule の強制責務は `ori-doctor` / `dod.test.ts` / arch adapter / specta-build hook に分散。`/ori-plan` の review checklist からも DoD 検査 block を revert
+- **O11 — `phase_hooks` 全 stack 出力** ([`ori-fzr.11`](https://github.com/dev-komenzar/ori/issues)) `/ori-arch` 生成 architecture.md の frontmatter に `phase_hooks` block を必須化 (cross_root 無し stack でも空 `{}` 出力)。schema / migration path を documented
+- **O12 — `/ori-doctor` DoD sweep** ([`ori-fzr.12`](https://github.com/dev-komenzar/ori/issues)) `check-dod-sweep.sh` 追加。rule:dod-1〜4 を check し `--dod-sweep --emit-issues` で `slice:<id>` + `rule:<id>` label により bd issue を idempotent 起票
+- **O13 — integration smoke** ([`ori-fzr.13`](https://github.com/dev-komenzar/ori/issues)) fresh project で step 1-8 を end-to-end 確認 (PASS 7 / FAIL 1)。残 defect を O14 / O15 / O16 に起票
+- **O14 — `__BC_NAME__` sentinel 統一 (fix)** ([`ori-fzr.14`](https://github.com/dev-komenzar/ori/issues)) `export-types.rs.tpl` の `{{BC_NAME}}` 残置を `__BC_NAME__` に統一 (`install-tauri-scaffold.sh` の sed 置換と整合)
+- **O15 — `PROJECT_ROOT` auto-detect (fix)** ([`ori-fzr.15`](https://github.com/dev-komenzar/ori/issues)) `/ori-doctor` 配下 7 script を PWD-first 検出に変更 (`SCRIPT_DIR` が ori repo を指して user project の `.ori/` が見えない bug 修正)
+- **O16 — CI DoD smoke driver** ([`ori-fzr.16`](https://github.com/dev-komenzar/ori/issues)) `ci/smoke/Dockerfile` (node22 + pnpm10 + rust + tauri-cli 2) + `run-smoke.sh` + `.github/workflows/dod-smoke.yml` 追加。create-skeleton → render-architecture → tauri scaffold → cargo check → `check-dod-sweep.sh` rule:dod-1 検出までを deterministic に CI smoke
+
+### v0.4-P: skill-only execution model 積み残し追従
+
+v0.3.0 で完了したはずの skill-only model 移行のうち、未追従だった skill を追従させた。
+
+- **P1 — `/ori-sync` MVP→実装** ([`ori-56e`](https://github.com/dev-komenzar/ori/issues)) `git diff --since=<ref>` で `.ori/domain/` 変更を検知、`derives_from` / `relations` を辿って影響 slice / page を特定し各 `status.yaml` の `dirty[]` に idempotent 追記。`--check` (CI 用 exit 1) + `--force <path>` (`/ori-review-proposals` 橋渡し) mode 追加。旧 `detect-changes.sh` (SKILL.md から未参照) を削除
+- **P2 — `/ori-propose` skill-only 化** (`ori-propose`) 存在しない `ori propose` CLI 呼び出しから、AI が Write tool で `.ori/proposals/` 配下を直接生成する手順に置換。ファイル名規約 / frontmatter schema / 5 セクション template / target 引用 guardrail を SKILL.md に内蔵
+- **P3 — skill script path 統一** ([`ori-dpw`](https://github.com/dev-komenzar/ori/issues)) 8 SKILL.md の `.apm/skills/<name>/scripts/<x>.js` 絶対 path を `./scripts/<x>` (bundle 相対) に書き換え、18 skill の裸 `bash scripts/<x>.sh` / `node scripts/<x>.js` に `./` prefix。install 場所 (`.apm/` vs `.claude/skills/`) 非依存に
+
+### v0.4-Q: DDD doc frontmatter 統一 (`coherence:` → `ori:` block)
+
+- **Q1 — 12 DDD skill SKILL.md 改修** ([`ori-ywk`](https://github.com/dev-komenzar/ori/pull/54)) `coherence:` (distill-ddd 上流残り) を `design.md §5` の `ori:` block (`node_id` / `type` / `depends_on` / `modules`) に揃える。Phase 1〜11b の node_id 規約 (`discovery:overview` / `event-storming:timeline` / `bounded-context:collection` 等) を明示。13 個の `lint-domain.sh` も `^ori:` 検出 + 必須 field check に更新
+- **Q2 — parser schema 置換 + bundle 再生成** ([`ori-1mg`](https://github.com/dev-komenzar/ori/pull/54)) `OriCoherenceSchema` を撤去し `OriBlockSchema` (`schema.propagation_level` 含む) を新設。`OriFrontmatterSchema` は `ori:` block のみ validate。`pnpm -r run build` で parser + adapter (3) + skill bundle (11) を再生成、14 package typecheck + 148 test 全 pass
+
+破壊的変更:
+
+- 既存 consumer repo の `.ori/domain/*.md` は frontmatter migration が必要 (旧 `coherence:` → 新 `ori:` block)。migration script の配布は別 issue ([`ori-gxh`](https://github.com/dev-komenzar/ori/issues))
+
+### v0.4-R: 利用者 project 向け task management instruction 配布
+
+- **R1 — tier 構造 instruction を APM 配布** ([`ori-98p`](https://github.com/dev-komenzar/ori/pull/53)) `.apm/instructions/task-management.instructions.md` を新設。beads marketplace 公式 BOUNDARIES.md (bd = Strategic / TodoWrite = Tactical) と整合する tier 構造 (epic → child → TodoWrite) / epic 化 trigger / lazy promote (γ rule) / Mode-Epic / Mode-Resume / Mode-Flat dispatch rule / phase=label / session 終了時 notes 進捗保存を documented。`bd setup claude` が CLAUDE.md に書き込む旧 strict template (`do NOT use TodoWrite`) との矛盾を解消し、meta 固有参照 (`ori-9fg` / `task-management-rule`) を generic 化
+
+### その他 fix / chore
+
+- README クイックスタートを `/ori-distill` → `/ori-arch` の順に修正、`/ori-arch` が pattern/stack 確定の前提として明示 (`fix(skills): DDD next-step ガイダンス`)
+- `/ori-init` の `.ori/.gitignore` を `state/` のみから cargo `target/` / `node_modules/` / `dist/` / `build/` / `.gradle/` / `__pycache__` 等に拡張 (phase 10 build artifact 596 file 誤コミット実例への対処)
+
 ## v0.3.0 — 2026-06-11
 
 skill-only execution model への全面移行が完了する release。Phase J 〜 N で `packages/cli` / `packages/templates` / `packages/arch-adapter-*` 撤去 + `@ori-ori/parser` / `slice-runner` / `coherence` の private 化を完遂し、APM single package (`apm install dev-komenzar/ori`) のみが配布動線となる。新規 npm publish 対象 package は存在しない。
