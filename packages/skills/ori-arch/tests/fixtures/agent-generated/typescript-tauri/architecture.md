@@ -84,6 +84,15 @@ cross_slice:
 cross_bc:
   via: [apps/myapp/src/shared/contracts, apps/myapp/src/shared/events]
   same_event_bus: true
+phase_hooks:
+  flow-impl-red-pre:
+    - cmd: cargo run --bin export-types
+      cwd: apps/myapp/src-tauri
+      reason: "regenerate tauri-specta bindings before authoring red boundary tests"
+  flow-impl-green-post:
+    - cmd: cargo run --bin export-types
+      cwd: apps/myapp/src-tauri
+      reason: "resync TS bindings after rust impl changes (DoD rule 4)"
 decisions:
   platforms: [web, desktop]
   os_integration: tauri

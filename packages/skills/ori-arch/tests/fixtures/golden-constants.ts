@@ -1,11 +1,9 @@
 /**
- * GOLDEN (golden test): stacks/<stack>/architecture.md.tpl を SUBSTITUTIONS
+ * GOLDEN (golden test): architect-expert agent 生成結果の期待依存グラフ IR。
+ * 元は stacks/<stack>/architecture.md.tpl を SUBSTITUTIONS
  * (APP_NAME=myapp / BC_NAME=task-management / BC_NAME_RS=task_management) で
- * render した期待出力の依存グラフ IR。
- *
- * ori-c79.4 で tpl から抽出し、architect-expert agent の生成結果 (fixtures/)
- * がこの golden に一致することを検証する。"agent の安定期間" の safety net。
- * stacks/<stack>/architecture.md.tpl 削除 (ori-c79.6) 後はこちらが唯一の期待値 SSoT。
+ * render した出力から抽出 (ori-c79.4)。ori-c79.6 で tpl を削除した後は
+ * こちらが唯一の期待値 SSoT (phase_hooks: DoD rule 4 の binding 再生成設定も保持)。
  */
 export const GOLDEN = {
   "typescript": {
@@ -141,7 +139,8 @@ export const GOLDEN = {
       "same_event_bus": true
     },
     "cross_root": [],
-    "page_map_marker": "phase-11b"
+    "page_map_marker": "phase-11b",
+    "phase_hooks": {}
   },
   "typescriptTauri": {
     "version": 1,
@@ -379,6 +378,22 @@ export const GOLDEN = {
         "auto_generated": true
       }
     ],
-    "page_map_marker": null
+    "page_map_marker": null,
+    "phase_hooks": {
+      "flow-impl-red-pre": [
+        {
+          "cmd": "cargo run --bin export-types",
+          "cwd": "apps/myapp/src-tauri",
+          "reason": "regenerate tauri-specta bindings before authoring red boundary tests"
+        }
+      ],
+      "flow-impl-green-post": [
+        {
+          "cmd": "cargo run --bin export-types",
+          "cwd": "apps/myapp/src-tauri",
+          "reason": "resync TS bindings after rust impl changes (DoD rule 4)"
+        }
+      ]
+    }
   }
 } as const;

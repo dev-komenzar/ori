@@ -45,6 +45,7 @@ cross_bc:
   via: [apps/myapp/src/shared/contracts, apps/myapp/src/shared/events]
   same_event_bus: true
 page_map_marker: phase-11b
+phase_hooks: {}
 decisions:
   platforms: [web]
   os_integration: none

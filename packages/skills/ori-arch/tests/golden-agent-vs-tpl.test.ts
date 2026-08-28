@@ -10,8 +10,9 @@ import {
 import { GOLDEN } from "./fixtures/golden-constants.js";
 
 /**
- * golden test (ori-c79.4): architect-expert agent の生成結果 vs 既存固定
- * テンプレート (stacks/<stack>/architecture.md.tpl) の期待出力。
+ * golden test (ori-c79.4 / ori-c79.6): architect-expert agent の生成結果を
+ * 期待出力 (GOLDEN = 旧 stacks/<stack>/architecture.md.tpl 由来の依存グラフ IR)
+ * と diff 検証する。
  *
  * LLM 出力は本文の散文が揺れるため、**依存グラフ IR** (frontmatter 由来の
  * roots / layer_sets / slice_internal / cross_slice / cross_bc / cross_root)
@@ -19,61 +20,22 @@ import { GOLDEN } from "./fixtures/golden-constants.js";
  *
  * - `fixtures/agent-generated/<stack>/architecture.md` … agent が生成すると
  *   想定される representative output (fixture)
- * - `fixtures/golden-constants.ts` … tpl を render した期待出力の IR (GOLDEN)
- *
- * stacks/<stack>/architecture.md.tpl を削除する ori-c79.6 では、下の「GOLDEN ≡
- * tpl render」describe block のみを除去し、fixture ≡ GOLDEN 検証を残す。
+ * - `fixtures/golden-constants.ts` … 旧 tpl を render した期待出力の IR (GOLDEN)。
+ *   ori-c79.6 で stacks/<stack>/architecture.md.tpl を削除した後はこちらが唯一の
+ *   期待値 SSoT。
  */
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..", "..", "..", "..");
-const PATTERN_ROOT = join(
-  REPO_ROOT,
-  ".apm",
-  "skills",
-  "ori-arch",
-  "patterns",
-  "ddd-vsa-hex",
-);
 const FIXTURES_ROOT = join(__dirname, "fixtures", "agent-generated");
-
-const SUBSTITUTIONS = {
-  APP_NAME: "myapp",
-  BC_NAME: "task-management",
-  BC_NAME_RS: "task_management",
-} as const;
 
 type Stack = "typescript" | "typescript-tauri";
 type Golden = (typeof GOLDEN)["typescript"] | (typeof GOLDEN)["typescriptTauri"];
-
-function render(tpl: string, vars: Record<string, string>): string {
-  return tpl.replace(/\{\{(\w+)\}\}/g, (whole, key: string) => {
-    const v = vars[key];
-    if (v === undefined) throw new Error(`unresolved placeholder: ${whole}`);
-    return v;
-  });
-}
 
 interface Rendered {
   raw: string;
   spec: ArchitectureSpec;
   data: Record<string, unknown>;
-}
-
-async function renderTpl(stack: Stack): Promise<Rendered> {
-  const tplPath = join(
-    PATTERN_ROOT,
-    "stacks",
-    stack,
-    "architecture.md.tpl",
-  );
-  const tpl = await readFile(tplPath, "utf8");
-  const raw = render(tpl, SUBSTITUTIONS);
-  return {
-    raw,
-    spec: parseArchitectureSpec(raw),
-    data: parseFrontmatter(raw).data,
-  };
 }
 
 async function loadFixture(stack: Stack): Promise<Rendered> {
@@ -113,21 +75,10 @@ function assertMatchesGolden(
   if (golden.cross_bc) {
     expect(doc.data.cross_bc, `${label}: cross_bc`).toEqual(golden.cross_bc);
   }
+  expect(doc.data.phase_hooks ?? null, `${label}: phase_hooks`).toEqual(
+    golden.phase_hooks ?? null,
+  );
 }
-
-describe("golden test — GOLDEN constants が現行 tpl render と一致する", () => {
-  it("typescript", async () => {
-    assertMatchesGolden(await renderTpl("typescript"), GOLDEN.typescript, "tpl/typescript");
-  });
-
-  it("typescript-tauri", async () => {
-    assertMatchesGolden(
-      await renderTpl("typescript-tauri"),
-      GOLDEN.typescriptTauri,
-      "tpl/typescript-tauri",
-    );
-  });
-});
 
 describe("golden test — agent 生成結果 (fixture) が GOLDEN と一致する", () => {
   it("typescript: single-root IR が golden と等価", async () => {

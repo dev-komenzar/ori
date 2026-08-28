@@ -58,20 +58,22 @@ pnpm install
   bootstrap 系 (`package.json` / `tsconfig.json` / `Cargo.toml` /
   `tauri.conf.json` / `build.rs` / `capabilities/default.json` /
   `src/main.rs` 等) を upstream の最新形式で揃える。
-- `/ori-arch` （ステップ 3） — pattern (`ddd-vsa-hex`) / stack
-  (`typescript-tauri`) を対話で決め、内部で
-  `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/architecture.md.tpl`
-  を render → target の `.ori/architecture.md` に両 root (`ts` + `rs`) と
-  cross-root 関係 (tauri-specta による bindings 生成) を 1 ファイルで宣言:
+- `/ori-arch` （ステップ 3） — **architect-expert agent** が要件対話
+  (platforms=[web, desktop] / os_integration=tauri / ui_native=web) から
+  `.ori/architecture.md` 1 ファイルを生成。両 root (`ts` + `rs`) と
+  cross-root 関係 (tauri-specta による bindings 生成) が宣言される。
+  旧 render コマンドは tpl 廃止後 guidance のみを返す:
 
   ```bash
   node .apm/skills/ori-arch/scripts/render-architecture.js \
     --pattern ddd-vsa-hex \
     --stack typescript-tauri \
     --bc task-management
+  # → exit 2: "architect-expert agent が要件対話から生成します"
   ```
 
-  `{{BC_NAME}}` (kebab) / `{{BC_NAME_RS}}` (snake) は kebab→snake で自動導出。
+  BC 名は kebab (`task-management`) / snake (`task_management`) を
+  agent が識別子規則に従って両 root に設定する。
 
 ## 3. 推奨される構造
 
@@ -224,8 +226,9 @@ pnpm tauri build               # 各 OS のインストーラを生成
 ## 関連リンク
 
 - [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md) — pattern 本体
-- [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/architecture.md.tpl`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/architecture.md.tpl) — render 前の multi-root テンプレート
+- [`.apm/agents/architect-expert.agent.md`](../../.apm/agents/architect-expert.agent.md) — architecture.md 生成 agent (multi-root の decision 例: os_integration=tauri)
 - [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/) — AI 専用 worked example (TS + Rust)
+- [`packages/skills/ori-arch/tests/fixtures/golden-constants.ts`](../../packages/skills/ori-arch/tests/fixtures/golden-constants.ts) — agent 生成結果の期待 IR (旧 `architecture.md.tpl` 由来、ori-c79.6 で tpl 廃止)
 - [`packages/arch-adapter-rust/README.md`](../../packages/arch-adapter-rust/README.md) — Rust adapter
 - [Tauri 2 公式ドキュメント](https://tauri.app/)
 - [tauri-specta リポジトリ](https://github.com/specta-rs/tauri-specta)

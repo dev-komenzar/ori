@@ -57,7 +57,8 @@
 | ori-c79.1 | `architect-expert.agent.md` 新設 (guardrails / questions / generation_procedure) | b5340cf |
 | ori-c79.3 | ori-doctor に guardrails g-1..g-8 検証ロジック (lint.js) | a2b6848 |
 | ori-c79.4 | golden test (agent 生成結果 vs 既存 tpl、IR 正規化 diff) | a22e537 |
-| ori-c79.6 | stacks/*/architecture.md.tpl 削除 (golden test 検証後) | 予定 |
+| ori-c79.5 | 本 decision record | 98e9cd5 |
+| ori-c79.6 | stacks/*/architecture.md.tpl 削除 (golden test が phase_hooks 含め期待値 SSoT を引継ぎ) | ori-c79.6 commit |
 
 ## 参照
 
