@@ -13,6 +13,10 @@ DDD + vsa-hex パターンの核 (`invariants`) は常に維持し、言語 / �
 なく、「要件 → architecture.md」の 1 つの生成手順で CLI (server のみ) から
 web + ios + android + desktop までの multiplatform をカバーします。
 
+固定ガイド (`docs/start/typescript-web.md` / `docs/start/tauri-v2.md`) の選択肢は
+**参考実装**であり、要件が一致すれば同型の出力を再現できますが、要件が異なれば
+`questions` / `generation_procedure` に従って自由に組み合わせます。
+
 ## invariants
 
 DDD + vsa-hex の**不変部分**。`pattern.md` / 既存 `stacks/*/architecture.md.tpl` から
@@ -90,3 +94,119 @@ invariants:
         generator: <generator-name>
         auto_generated: true
 ```
+
+## guardrails
+
+生成される `.ori/architecture.md` が満たすべき**検証ルール**。doctor (ori-c79.3) がこの
+YAML を機械 parse し、生成結果に各 `check` を適用して適合判定する。guardrail 違反は
+「単なる好み」ではなく、SSoT としての architecture.md が不正であることを意味する。
+
+```yaml
+guardrails:
+  - id: g-1
+    target: frontmatter
+    check: parseArchitectureSpec() が pass する (version=1、root か roots[] が必須)
+    failure: 依存グラフ SSoT として解釈できない frontmatter
+  - id: g-2
+    target: layer_sets
+    check: 使用する layer_set id は全て invariants.layer_graph に存在し、layers / cross_layer / same_layer / public_entry_required が一致する
+    failure: 未知の layer_set または invariants を書き換えた dependency rule
+  - id: g-3
+    target: slice_internal
+    check: 宣言された slice_internal id (root の layer.slice_internal) は全て invariants.slice_internal に存在し、sub_layers / rules が一致する
+    failure: 一方向 pipeline を破る sub-layer 定義
+  - id: g-4
+    target: cross_slice
+    check: prohibited_direct が true、via が [shared/contracts, shared/events] を含む
+    failure: slice 直 import が lint で reject されない設定
+  - id: g-5
+    target: cross_bc
+    check: BC 間は app-level shared/contracts + shared/events 経由、same_event_bus が true
+    failure: BC をまたぐ直接依存の温床
+  - id: g-6
+    target: public_entry
+    check: 全 root で public_entry_required が true、public_entry が 1 ファイルに解決される
+    failure: slice 内部への直 import が可能な設定
+  - id: g-7
+    target: cross_root
+    check: "auto_generated: true の生成物は手書き対象外で、generator が明示されている"
+    failure: 生成物と手書きの境界が消える
+  - id: g-8
+    target: decision_points
+    check: platforms / os_integration / ui_native 等の decision_point が全て確定済み (未回答のまま生成しない)
+    failure: 要件未確定のままの architecture.md (後で大きな書き換えが必要)
+```
+
+## questions
+
+要件対話で埋める **decision_points**。各質問は「推奨 + 上書き可」で提示し、回答を
+`generation_procedure` の入力にする。`affects` は回答が architecture.md のどのフィールド
+を決めるかを示す。
+
+```yaml
+questions:
+  platforms:
+    prompt: "配信/実行ターゲットを列挙してください。例: server / web / ios / android / desktop / cli"
+    options: [server, web, ios, android, desktop, cli]
+    default: [web]
+    affects: roots の構成、layer_sets の選択 (UI 有無)
+  os_integration:
+    prompt: OS 統合 (native API / window / tray / ファイルシステム 等) が必要ですか
+    options: [none, tauri, electron, capacitor, react-native]
+    default: none
+    affects: "cross_root の要否 (例: tauri-specta)、forbidden_imports の有無"
+  ui_native:
+    prompt: UI は web 技術 (DOM) / ネイティブ widget / ハイブリッド のどれですか
+    options: [web, native, hybrid]
+    default: web
+    affects: ui-widget / ui-page layer の採用、presentation の実装形態
+  language:
+    prompt: 各プラットフォームの実装言語を確定してください
+    options: [typescript, rust, swift, kotlin, ...]
+    default: typescript
+    affects: roots[].language / adapter、slice_internal の選択 (ts / rs)
+  bc_names:
+    prompt: "最初の BC 名を決めてください (識別子規則: TS=kebab-case / Rust=snake_case)"
+    default: (ユーザ入力)
+    affects: roots[].slice_root と public_entry パス
+  cross_root_contracts:
+    prompt: root 間で共有する生成物 (type bridge 等) があれば宣言してください
+    default: []
+    affects: cross_root エントリ、phase_hooks の要否
+```
+
+## generation_procedure
+
+要件から `.ori/architecture.md` を 1 ファイル生成する手順。CLI (server のみ) から
+multiplatform (web+ios+android+desktop) まで同一手順で扱う。
+
+```yaml
+generation_procedure:
+  steps:
+    - id: elicit
+      action: questions を順に提示し回答を得る (推奨を示し上書きを許可する)
+    - id: decide
+      action: decision_points を確定し roots (id / language / adapter / slice_root / public_entry) と layer_sets を決める
+    - id: compose
+      action: invariants から layer graph / slice_internal / boundaries を選択・結合して frontmatter を組み立てる
+    - id: generate
+      action: .ori/architecture.md 本文 (layout / rules / regenerate 手順) を書く。page map 等の auto-generated 領域は marker で保護する
+    - id: self-check
+      action: 生成結果に guardrails を適用し全 pass を確認する (ori-doctor と同一基準)
+    - id: confirm
+      action: 生成物をユーザに提示し確定を得る。違反があれば修正して再生成
+  output_rules:
+    - 生成物は .ori/architecture.md 1 ファイルのみ (bootstrap 系は upstream framework init に委譲)
+    - shared / domain は常に invariants の層構造に従う
+    - decision_point の回答は生成物のコメントや本文の "Decisions" 節に残す
+```
+
+## 注意
+
+- **知らない stack を捏造しない**: 既存の実績 (typescript / typescript-tauri) から
+  要件差分を設計し、未検証の組み合わせは「実験的」と明記する。
+- **guardrails は交渉しない**: ユーザ要望が invariants と衝突する場合、理由を説明して
+  不変部分は守ったまま decision_points 側で折衷案を提示する。
+- **market 参考実装**: LobeHub (React のみで Web+Mobile+Electron)、Bluesky (Expo RN で
+  Web+iOS+Android 一本化 + `*.web` / `*.android` / `*.ios` 分岐) は「1 コードベースで
+  複数配信」の参考にできるが、ori の layer vocabulary にそのまま当てはめない。
