@@ -2,18 +2,28 @@
 
 ori 自体は言語非依存です。プロジェクトの実装スタックに応じて **pattern**
 (`.apm/skills/ori-arch/patterns/<pattern>/`) と **アーキテクチャ adapter** を組み合わせ、
-次の三段構えで slice ベース DDD scaffold を立ち上げます (design.md §17):
+次の三段構えで slice ベース DDD scaffold を立ち上げます (design.md §17)。
+
+> **ori の大フロー**:
+> 1. **DDD ドキュメント作成** — ori-init → **arch/stack 決定 (`/ori-arch`)** → distill-ddd
+>    (discovery 〜 ui-grouping)
+> 2. **slice / page ごとに ori-flow**（derive → plan → test-red → impl-green →
+>    refactor → review → finalize）
 
 1. `/ori-init` — `.ori/` skeleton + `config.yaml` を **silent** に生成
 2. **upstream framework init** — `pnpm create vite@latest` / `pnpm tauri init` 等を
    ユーザ自身に走ってもらい、`package.json` / `tsconfig.json` / `vitest.config.ts` /
    `eslint.config.js` / `.gitignore` / `README.md` 等 bootstrap 系を揃える
-3. `/ori-arch` — **architect-expert agent** (`.apm/agents/architect-expert.agent.md`) が要件対話
-   (platforms / os_integration / ui_native 等) から `.ori/architecture.md` 1 ファイルを生成。
-   DDD + vsa-hex の核 (invariants) は不変で、ビルド/配信/OS 統合の差は decision_points として
-   対話で確定する。固定 `stacks/<stack>/architecture.md.tpl` の cartesian product 方式は
-   ori-c79 で置き換え済み (旧 tpl は [golden test](../../packages/skills/ori-arch/tests/golden-agent-vs-tpl.test.ts)
-   の期待値 SSoT に引き継がれた)
+3. `/ori-arch` — **architect-expert agent** (`.apm/agents/architect-expert.agent.md`) を
+   fresh context で spawn して `architecture.md` を生成 (ori-6pb)。
+   - スキル本体 (メイン session) が要件対話 (platforms / os_integration / ui_native 等、
+     `questions:` ベース) を実施し、decision_points を確定
+   - agent が invariants から IR を組み立て `.ori/architecture.md` 1 ファイルを生成 +
+     guardrails (g-1..g-8) 自己検証
+   - スキル本体が doctor (`lint.js`) で機械検証し、ユーザ確定を取る
+   - DDD + vsa-hex の核 (invariants) は不変で、ビルド/配信/OS 統合の差は decision_points。
+     固定 `stacks/<stack>/architecture.md.tpl` の cartesian product 方式は ori-c79 で
+     置き換え済み (旧 tpl は golden test の期待値 SSoT に引き継がれた)
 
 `example-slice/` (`.apm/skills/ori-arch/patterns/<p>/stacks/<s>/example-slice/`) は target に
 物理コピーされず、AI 専用の study material として skill 側に保持され `/ori-flow new-slice`
@@ -60,8 +70,8 @@ mkdir -p apps/my-app && cd apps/my-app
 pnpm create vite@latest . --template vanilla-ts      # package.json / tsconfig.json 等が揃う
 cd ../..
 
-# 4. architecture.md を render
-/ori-arch                                            # pattern / stack を対話で決め render-architecture を実行
+# 4. architecture.md を生成 (arch/stack 決定)
+/ori-arch                                            # fresh-context で architect-expert agent を spawn (ori-6pb)
 pnpm install
 
 # 5. 最初の slice を AI と対話で派生

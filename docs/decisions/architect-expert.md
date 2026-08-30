@@ -49,6 +49,22 @@
 
 **確定**: CLI (`platforms=[server]`、UI なし) から multiplatform (web+ios+android+desktop) まで、**1 つの生成手順** (`generation_procedure`) でカバー。テンプレートの cartesian product をしない。
 
+### Q8. 実行方式の配線 (ori-6pb、2026-08-31 追記)
+
+**確定**: agent は ori-review → ori-reviewer と同じ **fresh-context spawn 方式**で `/ori-arch`
+(DDD ドキュメント作成期の arch/stack 決定 step) に配線する。
+
+- **メイン session (ori-arch skill)**: 要件対話を実施 (headless subagent はユーザと
+  対話できないため)。対話構造は agent の `questions:` が SSoT
+- **spawn**: `.apm/agents/architect-expert.agent.md` を system prompt とする fresh-context
+  agent に入力パック (decision_points / app / BC / 生成先) を渡し、
+  compose → generate → self-check を実行させる
+- **ハンドオフ**: スキル本体が doctor (`lint.js`) guardrails g-1..g-8 で機械検証 →
+  ユーザ確定。往復は最大 2 回
+- **slice-runner には載せない**: slice-runner の 7 phase は per-slice の flow 用であり、
+  arch 決定は DDD ドキュメント作成期の pre-flow step。spawn はスキルレベルの Task agent
+  方式 (ori-review と同一)
+
 ## 実装
 
 | issue | 内容 | commit |
