@@ -14,13 +14,12 @@ ori 自体は言語非依存です。プロジェクトの実装スタックに�
 2. **upstream framework init** — `pnpm create vite@latest` / `pnpm tauri init` 等を
    ユーザ自身に走ってもらい、`package.json` / `tsconfig.json` / `vitest.config.ts` /
    `eslint.config.js` / `.gitignore` / `README.md` 等 bootstrap 系を揃える
-3. `/ori-arch` — **architect-expert agent** (`.apm/agents/architect-expert.agent.md`) を
-   fresh context で spawn して `architecture.md` を生成 (ori-6pb)。
-   - スキル本体 (メイン session) が要件対話 (platforms / os_integration / ui_native 等、
-     `questions:` ベース) を実施し、decision_points を確定
-   - agent が invariants から IR を組み立て `.ori/architecture.md` 1 ファイルを生成 +
-     guardrails (g-1..g-8) 自己検証
-   - スキル本体が doctor (`lint.js`) で機械検証し、ユーザ確定を取る
+3. `/ori-arch` — **`/ori-architect` スキルに委譲**して `architecture.md` を生成 (ori-8gz)。
+   - ori-architect (メイン session で実行) が要件対話 (platforms / os_integration /
+     ui_native 等、`questions:` ベース) を実施し decision_points を確定
+   - invariants から IR を組み立て `.ori/architecture.md` 1 ファイルを生成 +
+     guardrails (g-1..g-8) 自己検証 (doctor `lint.js`)
+   - ユーザ確定を取る
    - DDD + vsa-hex の核 (invariants) は不変で、ビルド/配信/OS 統合の差は decision_points。
      固定 `stacks/<stack>/architecture.md.tpl` の cartesian product 方式は ori-c79 で
      置き換え済み (旧 tpl は golden test の期待値 SSoT に引き継がれた)
@@ -46,7 +45,7 @@ ori 自体は言語非依存です。プロジェクトの実装スタックに�
 
 凡例:
 
-- ✅ **available** — 生成フロー (architect-expert agent) / `example-slice/` / adapter ともに同梱
+- ✅ **available** — 生成フロー (ori-architect スキル) / `example-slice/` / adapter ともに同梱
 - 🛠 **experimental** — adapter は使えるが pattern stack はまだ。手動で `.ori/architecture.md` を書く必要あり
 - 📋 **planned** — 将来予定。インデックスにスロットだけ確保
 
@@ -71,7 +70,7 @@ pnpm create vite@latest . --template vanilla-ts      # package.json / tsconfig.j
 cd ../..
 
 # 4. architecture.md を生成 (arch/stack 決定)
-/ori-arch                                            # fresh-context で architect-expert agent を spawn (ori-6pb)
+/ori-arch                                            # /ori-architect に委譲して要件対話から生成 (ori-8gz)
 pnpm install
 
 # 5. 最初の slice を AI と対話で派生
@@ -80,14 +79,14 @@ node .apm/skills/ori-flow/scripts/new-slice.js <slice-id>   # workflow から sl
 /ori-flow <slice-id>                                 # 7-phase TDD を回す
 ```
 
-スタックごとに違うのはステップ 3 (upstream init コマンド) とステップ 4 (`/ori-arch` で architect-expert agent に対話させる) だけで、その後のワークフローは共通です。スタック固有の
+スタックごとに違うのはステップ 3 (upstream init コマンド) とステップ 4 (`/ori-arch` → `/ori-architect` で要件対話させる) だけで、その後のワークフローは共通です。スタック固有の
 差分 (依存・lint 設定・ビルド手順) は各ガイドに集約しています。
 
 ## スタック追加の提案
 
 未対応のスタックを追加したい場合は、agent ベースの制約に従います:
 
-1. **requirement dialogue** — architect-expert agent に対話させ、新スタックの
+1. **requirement dialogue** — `/ori-architect` に対話させることで、新スタックの
    decision_points (language / adapter / cross_root 等) が既存の guardrails を
    満たす出力を生成できることを確認する (`questions:` / `generation_procedure:` 参照)
 2. `.apm/skills/ori-arch/patterns/<pattern>/stacks/<stack>/example-slice/` に worked sample を追加 (AI が `/ori-flow new-slice` で参照する study material)

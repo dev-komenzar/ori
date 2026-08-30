@@ -1,5 +1,5 @@
 /**
- * GOLDEN (golden test): architect-expert agent 生成結果の期待依存グラフ IR。
+ * GOLDEN (golden test): ori-architect (旧 architect-expert agent) 生成結果の期待依存グラフ IR。
  * 元は stacks/<stack>/architecture.md.tpl を SUBSTITUTIONS
  * (APP_NAME=myapp / BC_NAME=task-management / BC_NAME_RS=task_management) で
  * render した出力から抽出 (ori-c79.4)。ori-c79.6 で tpl を削除した後は

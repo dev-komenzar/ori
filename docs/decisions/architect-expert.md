@@ -1,8 +1,9 @@
-# architect-expert (ori-c79) — 固定 stack テンプレートから agent 動的生成へ転換
+# architect-expert (ori-c79) — 固定 stack テンプレートから動的生成 (agent → スキル) へ転換
 
 - **Issue**: ori-c79 (architect-expert agent: マルチプラットフォーム対応の設計)
-- **Status**: 2026-08-28 grill-me セッションで Q1〜Q7 確定 → 実装完了 (commit 8dd34e1 / b5340cf / a2b6848 / a22e537 / c79.6 予定)
-- **後続**: ori-c79.6 (stacks/*/architecture.md.tpl 削除、golden test 検証後)
+- **Status**: 2026-08-28 grill-me セッションで Q1〜Q7 確定 → 実装完了 (8dd34e1 / b5340cf / a2b6848 / a22e537 / 98e9cd5 / 5923109)
+- **更新 (2026-08-31, ori-8gz)**: agent → スキル (`/ori-architect`) に書き直し。Q5・Q8 は **supersede**、Q9 を追記
+- **後続**: ori-8gz (agent→スキル変換、完了) / ori-6pb (spawn 配線、ori-8gz で廃止)
 
 ## 背景
 
@@ -49,7 +50,29 @@
 
 **確定**: CLI (`platforms=[server]`、UI なし) から multiplatform (web+ios+android+desktop) まで、**1 つの生成手順** (`generation_procedure`) でカバー。テンプレートの cartesian product をしない。
 
-### Q8. 実行方式の配線 (ori-6pb、2026-08-31 追記)
+### Q9. agent → スキルへの書き直し (ori-8gz、2026-08-31) — Q5・Q8 を supersede
+
+**確定**: architect-expert を agent (fresh-context subagent) として配線する案 (Q8) は
+**撤回**し、`.apm/skills/ori-architect/SKILL.md` に書き直した。
+
+- **理由**: 要件対話 (ヒアリング) は headless subagent では実行できない。
+  ori の agent は「ヒアリング不要の fresh-context 判定」にのみ使う — 実例は
+  `ori-reviewer` (review は指定構造を判定するだけ)
+- **変換内容**:
+  - 構造セクション 4 つ (invariants / guardrails / questions / generation_procedure) は
+    スキル本文にそのまま継承 — doctor の機械 parse 契約は不変
+  - `## 手順` (elicit → decide → compose → generate → self-check → confirm) を追加し、
+    メイン session が対話から生成まで一貫して実行
+  - self-check は doctor (`lint.js`) の guardrails g-1..g-8
+  - `/ori-arch` 手順 6 は `/ori-architect` への委譲 (spawn の役割分担図は不要)
+- **agent と skill の境界** (ori 実行モデルとして明文化):
+  - **skill** = メイン session で実行、ユーザ対話可能 (ori-init / ori-distill / ori-flow phases / ori-architect)
+  - **agent** = fresh-context subagent、ユーザ対話不可、判定・生成の切り出しに限定 (ori-reviewer)
+
+### Q8. 実行方式の配線 (ori-6pb、2026-08-31 追記) — **ori-8gz で supersede (撤回)**
+
+> 下記は fresh-context spawn 方式を想定した旧決定。ヒアリングが subagent で
+> 実行できないため Q9 に置き換え (spawn の役割分担は ori-architect の手順に一元化)。
 
 **確定**: agent は ori-review → ori-reviewer と同じ **fresh-context spawn 方式**で `/ori-arch`
 (DDD ドキュメント作成期の arch/stack 決定 step) に配線する。
@@ -74,7 +97,11 @@
 | ori-c79.3 | ori-doctor に guardrails g-1..g-8 検証ロジック (lint.js) | a2b6848 |
 | ori-c79.4 | golden test (agent 生成結果 vs 既存 tpl、IR 正規化 diff) | a22e537 |
 | ori-c79.5 | 本 decision record | 98e9cd5 |
-| ori-c79.6 | stacks/*/architecture.md.tpl 削除 (golden test が phase_hooks 含め期待値 SSoT を引継ぎ) | ori-c79.6 commit |
+| ori-c79.6 | stacks/*/architecture.md.tpl 削除 (golden test が phase_hooks 含め期待値 SSoT を引継ぎ) | 5923109 |
+| ori-6pb | ori-arch への spawn 配線 (Q8) — **ori-8gz で廃止** | a1f2482 |
+| ori-8gz.1 | ori-architect SKILL.md 新設 + ori-arch 委譲 + agent 削除 (Q9) | 5cbbc9a |
+| ori-8gz.2 | doctor / golden test / render guidance の参照先を ori-architect に更新 | 702242e |
+| ori-8gz.3 | docs / decision record / README 追従 (本更新) | ori-8gz.3 commit |
 
 ## 参照
 

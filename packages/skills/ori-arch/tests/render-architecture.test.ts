@@ -71,7 +71,7 @@ beforeAll(async () => {
 }, 60_000);
 
 describe("render-architecture — end-to-end (ori-62h)", () => {
-  it("exits 2 with architect-expert guidance when the stack tpl was removed (ori-c79.6)", async () => {
+  it("exits 2 with ori-architect guidance when the stack tpl was removed (ori-c79.6)", async () => {
     const dir = await setupTmp("myapp");
     const r = await runScript(["--pattern", "ddd-vsa-hex", "--stack", "typescript"], dir);
     expect(r.code, `stderr:\n${r.stderr}`).toBe(2);

@@ -58,7 +58,7 @@ pnpm install
   bootstrap 系 (`package.json` / `tsconfig.json` / `Cargo.toml` /
   `tauri.conf.json` / `build.rs` / `capabilities/default.json` /
   `src/main.rs` 等) を upstream の最新形式で揃える。
-- `/ori-arch` （ステップ 3） — **architect-expert agent** が要件対話
+- `/ori-arch` （ステップ 3） — **`/ori-architect` スキル** が要件対話
   (platforms=[web, desktop] / os_integration=tauri / ui_native=web) から
   `.ori/architecture.md` 1 ファイルを生成。両 root (`ts` + `rs`) と
   cross-root 関係 (tauri-specta による bindings 生成) が宣言される。
@@ -69,7 +69,7 @@ pnpm install
     --pattern ddd-vsa-hex \
     --stack typescript-tauri \
     --bc task-management
-  # → exit 2: "architect-expert agent が要件対話から生成します"
+  # → exit 2: "ori-architect スキルが要件対話から生成します"
   ```
 
   BC 名は kebab (`task-management`) / snake (`task_management`) を
@@ -226,7 +226,7 @@ pnpm tauri build               # 各 OS のインストーラを生成
 ## 関連リンク
 
 - [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md) — pattern 本体
-- [`.apm/agents/architect-expert.agent.md`](../../.apm/agents/architect-expert.agent.md) — architecture.md 生成 agent (multi-root の decision 例: os_integration=tauri)
+- [`.apm/skills/ori-architect/SKILL.md`](../../.apm/skills/ori-architect/SKILL.md) — architecture.md 生成スキル (multi-root の decision 例: os_integration=tauri)
 - [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/) — AI 専用 worked example (TS + Rust)
 - [`packages/skills/ori-arch/tests/fixtures/golden-constants.ts`](../../packages/skills/ori-arch/tests/fixtures/golden-constants.ts) — agent 生成結果の期待 IR (旧 `architecture.md.tpl` 由来、ori-c79.6 で tpl 廃止)
 - [`packages/arch-adapter-rust/README.md`](../../packages/arch-adapter-rust/README.md) — Rust adapter

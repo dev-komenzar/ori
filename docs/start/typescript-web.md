@@ -48,7 +48,7 @@ pnpm install
 - **upstream framework init** （ステップ 2） — `pnpm create vite@latest`
   等で `apps/<app>/` 配下に bootstrap 系ファイルを揃える。ori は
   network / 対話 / 既存ファイル削除リスクを避けるため自動実行しない。
-- `/ori-arch` （ステップ 3） — **architect-expert agent** (`.apm/agents/architect-expert.agent.md`)
+- `/ori-arch` （ステップ 3） — **`/ori-architect` スキル** (`.apm/skills/ori-architect/SKILL.md`)
   が要件対話 (platforms / os_integration / ui_native) から `.ori/architecture.md`
   1 ファイルだけを生成する。単一 root TypeScript (web) は下記の decision パターンで
   生成される (旧 tpl render コマンドは tpl 廃止後 guidance のみを返す):
@@ -58,7 +58,7 @@ pnpm install
     --pattern ddd-vsa-hex \
     --stack typescript \
     --bc task-management
-  # → exit 2: "architect-expert agent が要件対話から生成します"
+  # → exit 2: "ori-architect スキルが要件対話から生成します"
   ```
 
 `.ori/architecture.md` は default で既存ファイルを保護 (`--force` で上書き)。
@@ -91,7 +91,7 @@ apps/<app>/src/
     └── ui-flow.test.ts                    # page -> widget -> slice
 ```
 
-主要ルール (architect-expert agent が生成する `.ori/architecture.md` に
+主要ルール (ori-architect が生成する `.ori/architecture.md` に
 guardrails として宣言・検証される):
 
 - **slice 公開面は `index.ts` のみ。** 他 slice からは `slices/<slice>/index.ts` 経由でしか触れません
@@ -154,7 +154,7 @@ unit / integration テストを追加します。
 ## 関連リンク
 
 - [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md) — pattern 本体 (Summary / Tradeoffs / Layer responsibilities 等)
-- [`.apm/agents/architect-expert.agent.md`](../../.apm/agents/architect-expert.agent.md) — architecture.md 生成 agent (invariants / guardrails / questions / generation_procedure)
+- [`.apm/skills/ori-architect/SKILL.md`](../../.apm/skills/ori-architect/SKILL.md) — architecture.md 生成スキル (invariants / guardrails / questions / generation_procedure)
 - [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/example-slice/`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/example-slice/) — AI 専用 worked example
 - [`packages/skills/ori-arch/tests/fixtures/golden-constants.ts`](../../packages/skills/ori-arch/tests/fixtures/golden-constants.ts) — agent 生成結果の期待 IR (旧 `architecture.md.tpl` 由来、ori-c79.6 で tpl 廃止)
 - [`packages/arch-adapter-eslint/README.md`](../../packages/arch-adapter-eslint/README.md) — adapter の仕様
