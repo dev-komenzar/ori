@@ -1,14 +1,14 @@
 ---
 name: ori-arch
-description: pattern (DDD-VSA-Hex 等) と stack (typescript / typescript-tauri 等) を決定する代わりに、architect-expert agent (`.apm/agents/architect-expert.agent.md`) が要件対話 (platforms / os_integration / ui_native) から `.ori/architecture.md` を動的生成する。`/ori-init` の next step。
+description: pattern (DDD-VSA-Hex 等) と stack (typescript / typescript-tauri 等) を決定する代わりに、`/ori-architect` スキル (要件対話) が `.ori/architecture.md` を動的生成する。`/ori-init` の next step。
 ---
 
 `/ori-init` で `.ori/` skeleton が作られた後の **次のステップ** (ori の大フロー
 「1. DDD ドキュメント作成 = ori-init → ori-arch → ori-distill / 2. slice・page ごとの
 ori-flow」のうち、**arch/stack 決定**に相当)。要件 (platforms / os_integration /
 ui_native 等) を対話で引き出し、upstream の framework init (`pnpm create vite@latest`
-等) はユーザ自身に走ってもらい、最後に **architect-expert agent を fresh context で
-spawn** して `.ori/architecture.md` を 1 ファイル生成させます (手順 6)。
+等) はユーザ自身に走ってもらい、最後に **`/ori-architect` スキル**が要件対話から
+`.ori/architecture.md` を 1 ファイル生成します (手順 6)。
 
 > ori-c79 で固定 stack テンプレート (`stacks/<stack>/architecture.md.tpl`) の
 > cartesian product 方式を撤廃。DDD + vsa-hex の核 (invariants) は不変、
@@ -23,11 +23,11 @@ spawn** して `.ori/architecture.md` を 1 ファイル生成させます (手�
 1. **decide**：ユーザに要件 (platforms / os_integration / ui_native / language / BC 名) を聞き、
    decision_points を確定する (推奨 + 上書き可。ハイブリッド UI 対応)
 2. **upstream framework init**：各 stack ごとの bash 手順 (`pnpm create vite@latest`, `pnpm create tauri-app` 等) を **ユーザに案内** する。bootstrap 系ファイル (`package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, `.gitignore`, `README.md` 等) はここで生まれる。skill は自動実行しない (network / 対話 / 既存ファイル削除リスクを避ける)
-3. **ori artifact 追加**：**architect-expert agent を fresh context で spawn** し、
+3. **ori artifact 追加**：**`/ori-architect` スキルに委譲**して、
    `generation_procedure` (compose → generate → self-check) に従って
    `.ori/architecture.md` を 1 ファイルだけ生成させる (手順 6)。
-   スキル本体は要件対話と spawn 前後のハンドオフを担い、生成結果は doctor の
-   guardrails 検証 (g-1..g-8、lint.js) で機械チェックする (ori-6pb)
+   要件対話は ori-architect がメイン session で実施し、生成結果は doctor の
+   guardrails 検証 (g-1..g-8、lint.js) で機械チェックする。
 
 `example-slice/` (`.apm/skills/ori-arch/patterns/<pattern>/stacks/<stack>/example-slice/`) は
 **AI 専用の study material** であり target にはコピーしない。`/ori-flow new-slice <id>`
@@ -43,7 +43,7 @@ slice を直接生成する。「他人の `task-management` example を消し�
 2. **pattern を認識する**：
    - **ddd-vsa-hex** (default)：DDD 文脈、Vertical Slice Architecture、Hexagonal port-adapter
    - 将来：`hex` / `layered` などを追加予定 (現状は ddd-vsa-hex のみ実装)
-   - pattern は `invariants` (不変部分) の source であり、architect-expert agent の
+   - pattern は `invariants` (不変部分) の source であり、ori-architect スキルの
      `invariants:` / `guardrails:` がこの pattern から抽出されている。ユーザが
      「ddd-vsa-hex 以外」を望む場合は ori-c79 の guardrails と衝突するため理由を
      説明し、既存 pattern の範囲で折衷案を提示する
@@ -78,61 +78,35 @@ slice を直接生成する。「他人の `task-management` example を消し�
    (`package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, `.gitignore`,
    `README.md` 等) はこの段階で揃う。
 
-6. **architect-expert agent を spawn して `.ori/architecture.md` を生成する**：
+6. **`/ori-architect` に委譲して `.ori/architecture.md` を生成する**：
 
-   **スキル本体 (メイン session) と architect-expert agent の役割分担** —
-   `ori-review` → `ori-reviewer` と同じ fresh-context spawn 方式 (ori-6pb):
+   `.apm/skills/ori-architect/SKILL.md` を起動する (メイン session で実行。
+   要件対話が必要なため subagent にはしない — ori-8gz)。architect-expert の
+   agent 定義 (ori-c79) はこのスキルへ書き直され、対話 → 生成 → self-check を
+   一貫して担う。
 
    ```text
-   メイン session (ori-arch)                architect-expert agent (fresh context)
-   ────────────────────────────────          ──────────────────────────────────────
-   要件対話: questions: を提示・回答を確定 → decision_points を受領
-   upstream init guide (手順 5)              compose: invariants から IR を組み立て
-   spawn 準備: 入力パックを作成              generate: .ori/architecture.md を書く
-   guardrails 検証 (lint.js)       ←        self-check (g-1..g-8) 済みで返す
-   confirm (ユーザ確定)
+   /ori-architect (メイン session)
+   ├── elicit   — questions: を順に提示し回答を確定 (推奨 + 上書き可)
+   ├── decide   — decision_points 確定 (roots / layer_sets)
+   ├── compose  — invariants から IR を組み立て
+   ├── generate — .ori/architecture.md を書く (上書き可否を先に確認)
+   ├── self-check — doctor: node .apm/skills/ori-doctor/scripts/lint.js .ori
+   └── confirm  — ユーザ確定
    ```
 
-   (a) **要件対話 (メイン session)** — `architect-expert.agent.md` の `questions:`
-       を順に提示し回答を得る (推奨 + 上書き可)。回答を decision_points として確定:
+   起動時、以下を ori-architect に渡す:
+   - app 名 (`.ori/config.yaml` の `workspace.apps[0].name`)
+   - 手順 2-4 までに確定した前提 (pattern=ddd-vsa-hex / BC 名候補)
+   - upstream framework init 済みであること (手順 5)
 
-       ```text
-       platforms?        → [web] / [web, desktop] / [server] ...
-       os_integration?   → none / tauri / electron / capacitor ...
-       ui_native?        → web / native / hybrid
-       language?         → typescript / rust ...
-       BC 名?            → task-management (kebab) / task_management (snake)
-       ```
-
-       (headless subagent はユーザと対話できないため、要件対話はメイン session が
-       担い、agent の `questions:` を対話構造の SSoT として使う)
-
-   (b) **spawn (fresh context)** — `.apm/agents/architect-expert.agent.md` を
-       system prompt とする fresh-context agent を起動 (Task agent / harness の
-       subagent 機構、headless)。**入力パック**:
-
-       - decision_points: platforms / os_integration / ui_native / language
-       - app name / BC 名 (+ BC_NAME_RS=kebab→snake) / workspace 構成
-       - 生成先: `<cwd>/.ori/architecture.md`
-       - 制約: invariants は変更不可 / guardrails g-1..g-8 全 pass /
-         `## Decisions` に decision_points の回答を記録 / `phase_hooks:` を含める
-
-       **出力契約**: `<cwd>/.ori/architecture.md` (1 ファイル) + 変更点サマリ。
-       これ以外 ori は target にファイルを足さない。
-
-   (c) **guardrails 検証 (メイン session)** — spawn が返したら doctor で機械検証:
-       `node .apm/skills/ori-doctor/scripts/lint.js .ori` が g-1..g-8 全 pass するか
-       確認。fail したら agent に差し戻して修正 (往復は最大 2 回まで。超過したら
-       ユーザに報告して中断)
-
-   (d) **confirm** — 生成物をユーザに提示し確定を得る。既存
-       `.ori/architecture.md` がある場合、上書き可否を先に確認する (手順 6 の
-       対話の時点で聞いておくと安全)。
+   self-check で g-1..g-8 に fail した場合は ori-architect 内で修正を繰り返す
+   (往復は ori-architect の confirm まで。ユーザ報告は ori-arch が担う)。
 
    > 旧 tpl render コマンドは tpl 廃止後 guidance のみを返す:
    > ```bash
    > node ./scripts/render-architecture.js --pattern ddd-vsa-hex --stack typescript
-   > # → exit 2: "architect-expert agent が要件対話から生成します"
+   > # → exit 2: "ori-architect スキルが要件対話から生成します"
    > ```
    > 参照用に `architecture.md.tpl` を保持している bundle がある場合のみ
    > `--patterns-dir <dir>` 付きで render を実行できる。
@@ -166,7 +140,7 @@ ori-fzr.11 (2026-06-26) 以前に `/ori-arch` で生成された `.ori/architect
 
 移行手順:
 
-1. **agent で再生成する場合 (推奨)**: architect-expert agent に要件対話から
+1. **ori-architect で再生成する場合 (推奨)**: `/ori-architect` スキルに要件対話から
    `.ori/architecture.md` を再生成させる (この SKILL の手順 6)。手で加えていた変更は
    事前に diff を取って merge し直すこと。
 

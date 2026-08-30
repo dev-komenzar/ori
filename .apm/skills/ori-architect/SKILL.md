@@ -1,27 +1,53 @@
 ---
-name: architect-expert
-description: /ori-arch の architecture.md 生成担当。固定 stack テンプレート (stacks/*/architecture.md.tpl) の cartesian product の代わりに、要件対話 (platforms / os_integration / ui_native 等) から .ori/architecture.md を動的生成する。DDD + vsa-hex の核 (invariants) は不変、ビルド/配信/OS 統合の差は decision_points として対話で埋める。
-model: claude-opus-4-7
+name: ori-architect
+description: /ori-arch から委譲され、要件対話 (platforms / os_integration / ui_native 等) から `.ori/architecture.md` を動的生成する。DDD + vsa-hex の核 (invariants) は不変、ビルド/配信/OS 統合の差は decision_points としてメイン session で対話確定する。/ori-init → /ori-arch の次に呼ばれる。
 ---
+
+`/ori-arch` の「ori artifact 追加」step として動作する。**このスキルはメイン session で
+実行される** (要件対話 = ヒアリングが必要なため。subagent は headless でユーザと対話できない —
+ori-c79 で agent として定義したが ori-8gz でスキルへ書き直した)。
+
+## 入力 / 出力
+
+- 入力：
+  - ユーザ要件（platforms / os_integration / ui_native / language / BC 名）— 対話で引き出す
+  - app 名（`.ori/config.yaml` の `workspace.apps[0].name`）
+  - upstream framework init 済みの `apps/<app>/`（`/ori-arch` の手順 5 で案内済み）
+- 出力：`.ori/architecture.md` 1 ファイルのみ。それ以外 ori は target にファイルを足さない
+  - frontmatter: ArchitectureSpec (`version: 1`、root/roots、layer_sets、slice_internal、
+    cross_slice、cross_bc、cross_root、`phase_hooks:`)
+  - 本文: `## Decisions` に decision_points の回答を記録
+
+## 手順
+
+1. **elicit** — `questions:` を順に提示し、ユーザの回答を得る（推奨 + 上書き可。ハイブリッド UI 対応）
+2. **decide** — decision_points を確定し、roots（id / language / adapter / slice_root /
+   public_entry）と layer_sets を決める
+3. **compose** — `invariants:` から layer graph / slice_internal / boundaries を選択・結合して
+   frontmatter を組み立てる
+4. **generate** — `.ori/architecture.md` を書く（前回生成物がある場合は上書き可否を先に確認）
+5. **self-check** — guardrails g-1..g-8 を検証する：`node .apm/skills/ori-doctor/scripts/lint.js .ori`
+   が全 pass すること（fail したら修正して再生成）
+6. **confirm** — 生成物をユーザに提示し確定を得る
 
 ## ロール
 
 あなたは ori workflow の **architecture expert** です。利用者の要件を対話で引き出し、
-`.ori/architecture.md` (依存グラフの SSoT) を 1 ファイル動的生成します。
-DDD + vsa-hex パターンの核 (`invariants`) は常に維持し、言語 / 配信先 / OS 統合の差は
+`.ori/architecture.md`（依存グラフの SSoT）を 1 ファイル動的生成します。
+DDD + vsa-hex パターンの核（`invariants`）は常に維持し、言語 / 配信先 / OS 統合の差は
 スタック側の変数として要件対話から確定します。テンプレートの cartesian product では
-なく、「要件 → architecture.md」の 1 つの生成手順で CLI (server のみ) から
+なく、「要件 → architecture.md」の 1 つの生成手順で CLI（server のみ）から
 web + ios + android + desktop までの multiplatform をカバーします。
 
-固定ガイド (`docs/start/typescript-web.md` / `docs/start/tauri-v2.md`) の選択肢は
+固定ガイド（`docs/start/typescript-web.md` / `docs/start/tauri-v2.md`）の選択肢は
 **参考実装**であり、要件が一致すれば同型の出力を再現できますが、要件が異なれば
 `questions` / `generation_procedure` に従って自由に組み合わせます。
 
 ## invariants
 
-DDD + vsa-hex の**不変部分**。`pattern.md` / 既存 `stacks/*/architecture.md.tpl` から
+DDD + vsa-hex の**不変部分**。`pattern.md` / 旧 `stacks/*/architecture.md.tpl` から
 抽出した共通項で、どの stack を選んでも維持しなければならない。doctor がこの YAML を
-機械 parse して生成結果を検証する (ori-c79.3)。
+機械 parse して生成結果を検証する。
 
 ```yaml
 invariants:
@@ -97,7 +123,7 @@ invariants:
 
 ## guardrails
 
-生成される `.ori/architecture.md` が満たすべき**検証ルール**。doctor (ori-c79.3) がこの
+生成される `.ori/architecture.md` が満たすべき**検証ルール**。doctor がこの
 YAML を機械 parse し、生成結果に各 `check` を適用して適合判定する。guardrail 違反は
 「単なる好み」ではなく、SSoT としての architecture.md が不正であることを意味する。
 
@@ -177,8 +203,9 @@ questions:
 
 ## generation_procedure
 
-要件から `.ori/architecture.md` を 1 ファイル生成する手順。CLI (server のみ) から
-multiplatform (web+ios+android+desktop) まで同一手順で扱う。
+要件から `.ori/architecture.md` を 1 ファイル生成する手順の機械可読仕様。
+(手順の実行はこの SKILL.md 冒頭の「手順」に従う。この YAML は doctor 等の
+参照用。)
 
 ```yaml
 generation_procedure:
@@ -199,6 +226,7 @@ generation_procedure:
     - 生成物は .ori/architecture.md 1 ファイルのみ (bootstrap 系は upstream framework init に委譲)
     - shared / domain は常に invariants の層構造に従う
     - decision_point の回答は生成物のコメントや本文の "Decisions" 節に残す
+    - "frontmatter に phase_hooks: block を含める (hook 不要な stack は phase_hooks: {})"
 ```
 
 ## 注意
