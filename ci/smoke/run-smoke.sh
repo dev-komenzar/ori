@@ -5,7 +5,7 @@
 # Scope (what this driver IS):
 #   - drives the bash/node scripts owned by /ori-init, /ori-arch, /ori-doctor
 #     in the same sequence /ori-flow would (manifest scaffold → architecture
-#     render → tauri scaffold → DoD sweep)
+#     seed (agent-output fixture) → tauri scaffold → DoD sweep)
 #   - asserts file outputs, sentinel substitution, and check-dod-sweep.sh
 #     heuristics against a known empty slice
 #   - runs `cargo check` on the tauri scaffold so the specta entry-point
@@ -98,12 +98,21 @@ assert_file "$WORK/.ori/.gitignore"
 assert_grep "current_agent: claude" "$WORK/.ori/config.yaml"
 assert_grep "name: $APP_NAME" "$WORK/.ori/config.yaml"
 
-# ----- step 2: /ori-arch render-architecture.js ------------------------------
-log "step 2: render-architecture.js (/ori-arch render)"
-( cd "$WORK" && node "$SKILLS_DIR/ori-arch/scripts/render-architecture.js" \
-    --pattern ddd-vsa-hex --stack typescript-tauri --bc "$BC_NAME" )
-
+# ----- step 2: seed .ori/architecture.md (agent 生成の決定的代替) ------------
+# ori-c79 で固定 stack テンプレート (stacks/*/architecture.md.tpl) を廃止し、
+# .ori/architecture.md は architect-expert agent が要件対話から生成する
+# (LLM は CI では回せない)。ここでは golden test の agent 生成 fixture
+# (typescript-tauri) を smoke の app / BC 名に置換して seed する —
+# 新フローの決定的 stand-in であり、golden test (期待値 SSoT) と同一 source。
+log "step 2: seed architecture.md from golden agent-output fixture (typescript-tauri)"
 ARCH="$WORK/.ori/architecture.md"
+AGENT_FIXTURE="$ORI_ROOT/packages/skills/ori-arch/tests/fixtures/agent-generated/typescript-tauri/architecture.md"
+[[ -f "$AGENT_FIXTURE" ]] || fail "agent-output fixture missing: $AGENT_FIXTURE"
+sed -e "s/task_management/${BC_NAME//-/_}/g" \
+    -e "s/task-management/$BC_NAME/g" \
+    -e "s/myapp/$APP_NAME/g" \
+    "$AGENT_FIXTURE" > "$ARCH"
+
 assert_file "$ARCH"
 # ori-fzr.2 / ori-fzr.11 outputs that downstream sweep depends on:
 assert_grep "cross_root:"   "$ARCH"
