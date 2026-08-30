@@ -61,7 +61,7 @@ description: ori プロジェクトの健康診断。.ori/ を歩き schema / st
 
 ### 9. architecture.md guardrails 検証 (ori-c79.3)
 
-`.ori/architecture.md` が存在する場合、`architect-expert.agent.md` の構造セクション
+`.ori/architecture.md` が存在する場合、`ori-architect` SKILL.md の構造セクション
 (`invariants` / `guardrails`) を YAML fenced block から machine parse し、guardrails
 g-1..g-8 を適用して適合判定する (lint.js 内で自動実行)。
 
@@ -75,7 +75,7 @@ g-1..g-8 を適用して適合判定する (lint.js 内で自動実行)。
 - `g-8` — decision_points (platforms / os_integration / ui_native) の回答が `## Decisions` 節
   か frontmatter `decisions:` に記録されている
 
-agent bundle (`.apm/agents/architect-expert.agent.md`) が見つからない場合は検証をスキップ
+ori-architect SKILL.md (`.apm/skills/ori-architect/SKILL.md`) が見つからない場合は検証をスキップ
 (旧 doctor 挙動を維持)。報告のみで自動修正はしない。
 
 - `rule:dod-1` — `manifest.yaml` の `expected_deliverables.sub_layers` で宣言した layer が `<source_root>/<bc>/slices/<slice-id>/<layer>/` (TS) or `apps/<app>/src-tauri/src/<bc_rs>/slices/<slice_rs>/<layer>.rs` (Rust) に実体を持つか
@@ -105,7 +105,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
      ```bash
      node ./scripts/lint.js [<path>] [--strict]
      ```
-     `<path>/architecture.md` が存在する場合は `architect-expert.agent.md` の guardrails
+     `<path>/architecture.md` が存在する場合は `ori-architect` SKILL.md の guardrails
      g-1..g-8 適合判定も同時に実行する
 3. **`/ori-doctor --dod-sweep` 指定時**: 上記に加えて DoD sweep を **issue auto-emit mode** で再実行：
    ```bash
@@ -164,7 +164,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 ═══ Architecture Guardrails ═══
 ✗ [g-3] slice_internal "slice-internal-ts" (layer_set "ddd-vsa-hex-ts" の domain) が architecture.md に未宣言
 ✗ [g-8] decision_points の回答記録がない (## Decisions 節 か frontmatter decisions: が必要)
-  fix: /ori-arch で architect-expert agent に再生成させる (要件対話から)
+  fix: /ori-architect で再生成させる (要件対話から)
 
 ═══ Summary ═══
 ✗ 4 errors  ⚠ 2 warnings  ℹ 2 info
@@ -188,5 +188,5 @@ recommended action: fix broken cross-ref first (blocks /ori-flow on edit-past-no
 - **orphan domain パス**：意図的なら無視、不要なら削除を検討
 - **beads 不整合パス**：`bd dolt push` / `bd dolt pull` で再同期、`bd orphans` で個別対処
 - **DoD 違反パス**: 該当 slice の missing artifact を `/ori-impl-red` (b3 stub) / `/ori-impl-green` (real impl + production wiring + specta post) で生成。`rule:dod-4` は `bash apm-scripts/specta-build.sh --app-dir apps/<app>` で再同期
-- **architecture.md guardrails 違反パス**: `/ori-arch` を再実行し architect-expert agent に要件対話から再生成させる。`g-8` だけの場合は `## Decisions` 節か frontmatter `decisions:` への回答記録を追加 (自動修正しない)
+- **architecture.md guardrails 違反パス**: `/ori-architect` で要件対話から再生成させる (ori-arch 手順 6 経由)。`g-8` だけの場合は `## Decisions` 節か frontmatter `decisions:` への回答記録を追加 (自動修正しない)
 - **全部 green パス**：`/ori-feature-status` で次の作業候補を選ぶ

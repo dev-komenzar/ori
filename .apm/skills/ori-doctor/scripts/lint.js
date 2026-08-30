@@ -24333,23 +24333,23 @@ function checkDecisionPoints(spec, raw, issues2, file) {
 async function runGuardrailsCheck(archPath) {
   const issues2 = [];
   const here = dirname(fileURLToPath(import.meta.url));
-  const agentPath = resolve(here, "..", "..", "..", "agents", "architect-expert.agent.md");
-  let agentRaw;
+  const skillPath = resolve(here, "..", "..", "ori-architect", "SKILL.md");
+  let skillRaw;
   try {
-    agentRaw = await readFile(agentPath, "utf8");
+    skillRaw = await readFile(skillPath, "utf8");
   } catch {
     consola.verbose(
-      `guardrails: agent bundle \u4E0D\u5728 (${agentPath}) \u2014 \u691C\u8A3C\u30B9\u30AD\u30C3\u30D7`
+      `guardrails: ori-architect SKILL.md \u4E0D\u5728 (${skillPath}) \u2014 \u691C\u8A3C\u30B9\u30AD\u30C3\u30D7`
     );
     return issues2;
   }
-  const agent = extractStructuredSections(agentRaw);
-  if (!agent.invariants || !agent.guardrails) {
+  const architect = extractStructuredSections(skillRaw);
+  if (!architect.invariants || !architect.guardrails) {
     push2(
       issues2,
       archPath,
       "g-1",
-      "architect-expert.agent.md \u306B invariants / guardrails \u69CB\u9020\u30BB\u30AF\u30B7\u30E7\u30F3\u304C\u7121\u3044 (agent \u66F4\u65B0\u304C\u5FC5\u8981)"
+      "ori-architect SKILL.md \u306B invariants / guardrails \u69CB\u9020\u30BB\u30AF\u30B7\u30E7\u30F3\u304C\u7121\u3044 (ori-architect \u66F4\u65B0\u304C\u5FC5\u8981)"
     );
     return issues2;
   }
@@ -24367,9 +24367,9 @@ async function runGuardrailsCheck(archPath) {
     ["g-1", () => {
     }],
     // parse 成功で pass (上で検証済み)
-    ["g-2", () => checkLayerSets(spec, agent.invariants, issues2, archPath)],
-    ["g-3", () => checkSliceInternal(spec, agent.invariants, issues2, archPath)],
-    ["g-4", () => checkBoundaries(spec, raw, agent.invariants, issues2, archPath)],
+    ["g-2", () => checkLayerSets(spec, architect.invariants, issues2, archPath)],
+    ["g-3", () => checkSliceInternal(spec, architect.invariants, issues2, archPath)],
+    ["g-4", () => checkBoundaries(spec, raw, architect.invariants, issues2, archPath)],
     ["g-5", () => {
     }],
     // checkBoundaries 内で cross_bc まで処理
@@ -24377,7 +24377,7 @@ async function runGuardrailsCheck(archPath) {
     ["g-7", () => checkCrossRoot(spec, issues2, archPath)],
     ["g-8", () => checkDecisionPoints(spec, raw, issues2, archPath)]
   ]);
-  for (const guardrail of agent.guardrails) {
+  for (const guardrail of architect.guardrails) {
     const fn = validators.get(guardrail.id);
     if (fn) fn();
   }

@@ -10,7 +10,7 @@ import {
 import { GOLDEN } from "./fixtures/golden-constants.js";
 
 /**
- * golden test (ori-c79.4 / ori-c79.6): architect-expert agent の生成結果を
+ * golden test (ori-c79.4 / ori-c79.6): ori-architect (旧 architect-expert agent) の生成結果を
  * 期待出力 (GOLDEN = 旧 stacks/<stack>/architecture.md.tpl 由来の依存グラフ IR)
  * と diff 検証する。
  *
@@ -117,12 +117,12 @@ describe("golden test — agent 生成結果 (fixture) が GOLDEN と一致す�
 
   it("fixtures は agent の invariant layer_graph / slice_internal に適合する", async () => {
     const agentRaw = await readFile(
-      join(REPO_ROOT, ".apm", "agents", "architect-expert.agent.md"),
+      join(REPO_ROOT, ".apm", "skills", "ori-architect", "SKILL.md"),
       "utf8",
     );
     const invSection = agentRaw.slice(agentRaw.indexOf("## invariants"));
     const yamlBlock = invSection.match(/```yaml\s*\n([\s\S]*?)```/);
-    expect(yamlBlock, "agent に invariants YAML が必要").not.toBeNull();
+    expect(yamlBlock, "ori-architect SKILL.md に invariants YAML が必要").not.toBeNull();
 
     for (const stack of ["typescript", "typescript-tauri"] as const) {
       const fixture = await loadFixture(stack);

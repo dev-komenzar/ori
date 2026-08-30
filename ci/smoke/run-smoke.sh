@@ -100,7 +100,7 @@ assert_grep "name: $APP_NAME" "$WORK/.ori/config.yaml"
 
 # ----- step 2: seed .ori/architecture.md (agent 生成の決定的代替) ------------
 # ori-c79 で固定 stack テンプレート (stacks/*/architecture.md.tpl) を廃止し、
-# .ori/architecture.md は architect-expert agent が要件対話から生成する
+# .ori/architecture.md は ori-architect スキルが要件対話から生成する
 # (LLM は CI では回せない)。ここでは golden test の agent 生成 fixture
 # (typescript-tauri) を smoke の app / BC 名に置換して seed する —
 # 新フローの決定的 stand-in であり、golden test (期待値 SSoT) と同一 source。

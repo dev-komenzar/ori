@@ -76,7 +76,7 @@ describe("render-architecture — end-to-end (ori-62h)", () => {
     const r = await runScript(["--pattern", "ddd-vsa-hex", "--stack", "typescript"], dir);
     expect(r.code, `stderr:\n${r.stderr}`).toBe(2);
     const all = r.stderr + r.stdout;
-    expect(all).toContain("architect-expert");
+    expect(all).toContain("ori-architect");
     expect(all).toContain("generation_procedure");
   });
 
@@ -88,7 +88,7 @@ describe("render-architecture — end-to-end (ori-62h)", () => {
     );
     expect(r.code, `stderr:\n${r.stderr}`).toBe(2);
     const all = r.stderr + r.stdout;
-    expect(all).toContain("architect-expert");
+    expect(all).toContain("ori-architect");
   });
 
   it("exits 2 on unknown pattern and lists available patterns", async () => {

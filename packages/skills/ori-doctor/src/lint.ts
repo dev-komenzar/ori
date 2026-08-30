@@ -75,9 +75,10 @@ async function lintFile(path: string): Promise<LintIssue[]> {
 // ──────────────────────────────────────────────────────────────────────────
 // guardrails 検証 (ori-c79.3)
 //
-// architect-expert.agent.md の構造セクション (invariants / guardrails) を YAML
+// ori-architect SKILL.md の構造セクション (invariants / guardrails) を YAML
 // fenced block から machine parse し、生成された <target>/architecture.md が
-// guardrails に適合するか検証する。agent bundle (.apm/agents/) が見つからなけ
+// guardrails に適合するか検証する。ori-architect SKILL.md (.apm/skills/ori-architect/) が
+// 見つからなけ
 // れば検証はスキップ (従来の doctor 挙動を維持)。
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -243,7 +244,7 @@ function checkSliceInternal(
       const siId = layer.slice_internal;
       if (!siId) continue;
       const expected = inv.slice_internal[siId];
-      if (!expected) continue; // agent 側の整合性は agent の責務
+      if (!expected) continue; // ori-architect 側の整合性は ori-architect の責務
       const actual = spec.slice_internal[siId];
       if (!actual) {
         push(
@@ -407,29 +408,30 @@ function checkDecisionPoints(
   );
 }
 
-/** <target>/architecture.md を architect-expert.agent.md の guardrails で検証する */
+/** <target>/architecture.md を ori-architect SKILL.md の guardrails で検証する */
 async function runGuardrailsCheck(archPath: string): Promise<LintIssue[]> {
   const issues: LintIssue[] = [];
   const here = dirname(fileURLToPath(import.meta.url));
-  const agentPath = resolve(here, "..", "..", "..", "agents", "architect-expert.agent.md");
+  // ori-8gz: agent → スキル変換。bundle 隣接 .apm/skills/ori-architect/SKILL.md
+  const skillPath = resolve(here, "..", "..", "ori-architect", "SKILL.md");
 
-  let agentRaw: string;
+  let skillRaw: string;
   try {
-    agentRaw = await readFile(agentPath, "utf8");
+    skillRaw = await readFile(skillPath, "utf8");
   } catch {
     consola.verbose(
-      `guardrails: agent bundle 不在 (${agentPath}) — 検証スキップ`,
+      `guardrails: ori-architect SKILL.md 不在 (${skillPath}) — 検証スキップ`,
     );
     return issues;
   }
 
-  const agent = extractStructuredSections(agentRaw);
-  if (!agent.invariants || !agent.guardrails) {
+  const architect = extractStructuredSections(skillRaw);
+  if (!architect.invariants || !architect.guardrails) {
     push(
       issues,
       archPath,
       "g-1",
-      "architect-expert.agent.md に invariants / guardrails 構造セクションが無い (agent 更新が必要)",
+      "ori-architect SKILL.md に invariants / guardrails 構造セクションが無い (ori-architect 更新が必要)",
     );
     return issues;
   }
@@ -447,16 +449,16 @@ async function runGuardrailsCheck(archPath: string): Promise<LintIssue[]> {
 
   const validators = new Map<string, () => void>([
     ["g-1", () => {}], // parse 成功で pass (上で検証済み)
-    ["g-2", () => checkLayerSets(spec, agent.invariants!, issues, archPath)],
-    ["g-3", () => checkSliceInternal(spec, agent.invariants!, issues, archPath)],
-    ["g-4", () => checkBoundaries(spec, raw, agent.invariants!, issues, archPath)],
+    ["g-2", () => checkLayerSets(spec, architect.invariants!, issues, archPath)],
+    ["g-3", () => checkSliceInternal(spec, architect.invariants!, issues, archPath)],
+    ["g-4", () => checkBoundaries(spec, raw, architect.invariants!, issues, archPath)],
     ["g-5", () => {}], // checkBoundaries 内で cross_bc まで処理
     ["g-6", () => checkPublicEntry(spec, issues, archPath)],
     ["g-7", () => checkCrossRoot(spec, issues, archPath)],
     ["g-8", () => checkDecisionPoints(spec, raw, issues, archPath)],
   ]);
 
-  for (const guardrail of agent.guardrails) {
+  for (const guardrail of architect.guardrails) {
     const fn = validators.get(guardrail.id);
     if (fn) fn();
   }

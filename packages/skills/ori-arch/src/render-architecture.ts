@@ -151,12 +151,12 @@ async function resolveTemplate(patternsDir: string, pattern: string, stack: stri
   const stacksDir = join(patternDir, "stacks");
   const stackDir = join(stacksDir, stack);
   if (await exists(stackDir)) {
-    // ori-c79: 固定 tpl は architect-expert agent の動的生成へ移行済み。
+    // ori-c79: 固定 tpl は ori-architect スキルの動的生成へ移行済み。
     // この stack に tpl が無いのは「未実装」ではなく「agent 生成が前提」。
     process.stderr.write(
       `Pattern "${pattern}" / stack "${stack}" に architecture.md.tpl がありません.\n` +
-      `DDD + vsa-hex の architecture.md は architect-expert agent が要件対話から生成します\n` +
-      `(.apm/agents/architect-expert.agent.md の questions / generation_procedure を参照).\n` +
+      `DDD + vsa-hex の architecture.md は ori-architect スキルが要件対話から生成します\n` +
+      `(.apm/skills/ori-architect/SKILL.md の questions / generation_procedure を参照).\n` +
       `参照用に tpl を保持している bundle を使う場合は --patterns-dir <path> を指定してください.\n`,
     );
     process.exit(2);
