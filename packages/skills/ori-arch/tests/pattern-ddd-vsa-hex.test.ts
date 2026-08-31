@@ -2,11 +2,7 @@ import { readFile, stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  parseArchitectureSpec,
-  parseFrontmatter,
-  type OriArchAdapter,
-} from "@ori-ori/parser";
+import { parseFrontmatter } from "@ori-ori/parser";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // packages/skills/ori-arch/tests/ -> repo root
@@ -19,40 +15,6 @@ const PATTERN_ROOT = join(
   "patterns",
   "ddd-vsa-hex",
 );
-
-// Load adapters from the bundled location — same path the skill resolves at
-// runtime via resolveAdaptersDir() (bundle-adjacent to the skill scripts/).
-// `pretest` (root package.json) runs build:adapters so these bundles are
-// guaranteed fresh.
-const ADAPTERS_DIR = join(
-  REPO_ROOT,
-  ".apm",
-  "skills",
-  "ori-arch",
-  "adapters",
-);
-const eslintMod = (await import(
-  join(ADAPTERS_DIR, "eslint", "index.js")
-)) as { default: OriArchAdapter };
-const rustMod = (await import(
-  join(ADAPTERS_DIR, "rust", "index.js")
-)) as { default: OriArchAdapter };
-const eslintAdapter: OriArchAdapter = eslintMod.default;
-const rustAdapter: OriArchAdapter = rustMod.default;
-
-const SUBSTITUTIONS = {
-  APP_NAME: "myapp",
-  BC_NAME: "task-management",
-  BC_NAME_RS: "task_management",
-} as const;
-
-function render(tpl: string, vars: Record<string, string>): string {
-  return tpl.replace(/\{\{(\w+)\}\}/g, (whole, key: string) => {
-    const v = vars[key];
-    if (v === undefined) throw new Error(`unresolved placeholder: ${whole}`);
-    return v;
-  });
-}
 
 async function fileExists(path: string): Promise<boolean> {
   try {
@@ -102,149 +64,6 @@ describe("pattern:ddd-vsa-hex — pattern.md / ai-notes.md (ori-p2f / design.md 
     expect(ori?.node_id).toBe("pattern:ddd-vsa-hex/ai-notes");
     expect(ori?.type).toBe("pattern-ai-notes");
     expect(ori?.applies_to).toBe("pattern:ddd-vsa-hex");
-  });
-});
-
-describe("pattern:ddd-vsa-hex — stacks/typescript/architecture.md.tpl", () => {
-  const tplPath = join(
-    PATTERN_ROOT,
-    "stacks",
-    "typescript",
-    "architecture.md.tpl",
-  );
-
-  it("contains the placeholders /ori-arch is expected to resolve", async () => {
-    const tpl = await readFile(tplPath, "utf8");
-    expect(tpl).toContain("{{APP_NAME}}");
-    expect(tpl).toContain("{{BC_NAME}}");
-    // typescript-only stack has no Rust BC name placeholder.
-    expect(tpl).not.toContain("{{BC_NAME_RS}}");
-  });
-
-  it("renders to a parsable ArchitectureSpec after substitution", async () => {
-    const tpl = await readFile(tplPath, "utf8");
-    const rendered = render(tpl, SUBSTITUTIONS);
-    const spec = parseArchitectureSpec(rendered);
-    expect(spec.version).toBe(1);
-    expect(spec.roots).toHaveLength(1);
-    const root = spec.roots[0]!;
-    expect(root.app).toBe("myapp");
-    expect(root.path).toBe("apps/myapp/src");
-    expect(root.layer_set).toBe("ddd-vsa-hex-ts");
-    expect(root.slice_root).toBe("task-management");
-    expect(root.slice_subdir).toBe("slices");
-    expect(root.public_entry).toBe("index.ts");
-    expect(spec.cross_slice.prohibited_direct).toBe(true);
-  });
-
-  it("compiles through the eslint adapter using the substituted app/BC names", async () => {
-    const tpl = await readFile(tplPath, "utf8");
-    const rendered = render(tpl, SUBSTITUTIONS);
-    const spec = parseArchitectureSpec(rendered);
-    const result = await eslintAdapter.export(spec, spec.roots[0]!);
-    expect(result.files).toHaveLength(1);
-    // ori-dm3: adapter emits at apps/<app>/eslint.config.ori.js with
-    // app-relative globs (src/...), not repo-root-relative apps/<app>/src/...
-    expect(result.files[0]!.path).toBe("apps/myapp/eslint.config.ori.js");
-    const content = result.files[0]!.content;
-    expect(content).toContain('"pattern": "src/task-management/shared/**"');
-    // ori-a46: slice_internal expands the slice pattern with subLayer capture
-    // (src/<bc>/slices/*/<subLayer>/**) so authors can be pinned per sub-layer.
-    expect(content).toContain('"pattern": "src/task-management/slices/*/*/**"');
-    expect(content).toContain('"pattern": "src/ui-widget/**"');
-    expect(content).toContain('"pattern": "src/ui-page/**"');
-  });
-});
-
-describe("pattern:ddd-vsa-hex — stacks/typescript-tauri/architecture.md.tpl", () => {
-  const tplPath = join(
-    PATTERN_ROOT,
-    "stacks",
-    "typescript-tauri",
-    "architecture.md.tpl",
-  );
-
-  it("contains every placeholder needed for both roots", async () => {
-    const tpl = await readFile(tplPath, "utf8");
-    expect(tpl).toContain("{{APP_NAME}}");
-    expect(tpl).toContain("{{BC_NAME}}");
-    expect(tpl).toContain("{{BC_NAME_RS}}");
-  });
-
-  it("renders to a two-root ArchitectureSpec with the Tauri cross-root binding", async () => {
-    const tpl = await readFile(tplPath, "utf8");
-    const rendered = render(tpl, SUBSTITUTIONS);
-    const spec = parseArchitectureSpec(rendered);
-    expect(spec.roots).toHaveLength(2);
-    const ts = spec.roots.find((r) => r.id === "ts")!;
-    const rs = spec.roots.find((r) => r.id === "rs")!;
-    expect(ts.path).toBe("apps/myapp/src");
-    expect(ts.slice_root).toBe("task-management");
-    expect(rs.path).toBe("apps/myapp/src-tauri/src");
-    expect(rs.slice_root).toBe("task_management");
-
-    expect(spec.cross_root).toHaveLength(1);
-    const xroot = spec.cross_root![0]!;
-    expect(xroot.from.root).toBe("rs");
-    expect(xroot.to.root).toBe("ts");
-    expect(xroot.generator).toBe("tauri-specta");
-    expect(xroot.to.path).toBe(
-      "apps/myapp/src/task-management/shared/ipc/bindings.ts",
-    );
-  });
-
-  it("eslint adapter compiles the TS root with raw-invoke forbidden_imports", async () => {
-    const tpl = await readFile(tplPath, "utf8");
-    const rendered = render(tpl, SUBSTITUTIONS);
-    const spec = parseArchitectureSpec(rendered);
-    const tsRoot = spec.roots.find((r) => r.id === "ts")!;
-    const result = await eslintAdapter.export(spec, tsRoot);
-    expect(result.files[0]!.path).toBe("apps/myapp/eslint.config.ori.js");
-    const content = result.files[0]!.content;
-    // ui-widget / ui-page must be blocked from importing @tauri-apps/api/core.
-    expect(content).toContain("@tauri-apps/api/core");
-    // The deny-message must steer authors toward the BC-rooted ipc/ bindings.
-    expect(content).toContain("task-management/shared/ipc");
-    // ori-dm3: forbidden_imports `files` globs are also app-relative.
-    expect(content).toContain("src/ui-widget/**");
-    expect(content).toContain("src/ui-page/**");
-    expect(content).not.toContain("apps/myapp/src/ui-widget/**");
-    expect(content).not.toContain("apps/myapp/src/ui-page/**");
-  });
-
-  it("rust adapter compiles the rs root to a self-contained tests/arch.rs", async () => {
-    const tpl = await readFile(tplPath, "utf8");
-    const rendered = render(tpl, SUBSTITUTIONS);
-    const spec = parseArchitectureSpec(rendered);
-    const rsRoot = spec.roots.find((r) => r.id === "rs")!;
-    const result = await rustAdapter.export(spec, rsRoot);
-    expect(result.files).toHaveLength(1);
-    expect(result.files[0]?.path).toBe("apps/myapp/src-tauri/tests/arch.rs");
-    const content = result.files[0]!.content;
-    expect(content).toContain("AUTO-GENERATED by ori-arch");
-    expect(content).toContain(
-      'const ROOT_PATH: &str = "apps/myapp/src-tauri/src"',
-    );
-    expect(content).toContain(
-      'const SLICE_BASE: &str = "apps/myapp/src-tauri/src/task_management/"',
-    );
-    expect(content).toContain('("domain", &["shared"])');
-  });
-
-  it("each adapter skips the other language root with a note", async () => {
-    const tpl = await readFile(tplPath, "utf8");
-    const rendered = render(tpl, SUBSTITUTIONS);
-    const spec = parseArchitectureSpec(rendered);
-    const tsRoot = spec.roots.find((r) => r.id === "ts")!;
-    const rsRoot = spec.roots.find((r) => r.id === "rs")!;
-
-    const rustOnTs = await rustAdapter.export(spec, tsRoot);
-    expect(rustOnTs.files).toHaveLength(0);
-    expect((rustOnTs.notes ?? []).join("\n")).toMatch(/skipped/);
-
-    const eslintOnRs = await eslintAdapter.export(spec, rsRoot);
-    expect(eslintOnRs.files).toHaveLength(0);
-    expect((eslintOnRs.notes ?? []).join("\n")).toMatch(/skipped/);
   });
 });
 

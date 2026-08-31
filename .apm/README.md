@@ -13,8 +13,12 @@ APM resolves the contents below into each AI harness's native format (`.claude/`
 | Path | Type | Purpose |
 |------|------|---------|
 | `instructions/` | Instructions | file-glob-scoped rule files applied automatically when AI touches matching paths |
-| `skills/` | Skills | user-invocable workflows (`/ori-init`, `/ori-flow`, `/ori-sync`, `/ori-derive`, …) — each carries its own `scripts/` (esbuild bundle) と必要に応じ `templates/` `patterns/` `adapters/` を bundle 隣接で同梱 |
-| `agents/` | Agents | `ori-reviewer` — fresh-context adversarial reviewer for review phase |
+| `skills/` | Skills | user-invocable workflows (`/ori-init`, `/ori-arch`, `/ori-architect`, `/ori-flow`, `/ori-sync`, `/ori-derive`, …) — each carries its own `scripts/` (esbuild bundle) と必要に応じ `templates/` `patterns/` `adapters/` を bundle 隣接で同梱 |
+| `agents/` | Agents | `ori-reviewer` — fresh-context adversarial reviewer (レビューはユーザ対話不要のため agent 方式のまま) |
+
+> ヒアリングが必要な step はスキルで実装する (agent は headless でユーザと対話できない)。
+> `ori-architect` (要件対話から `.ori/architecture.md` を動的生成) は ori-8gz で
+> agent → スキルへ書き直し済み。DDD+vsa-hex の invariants は不変、stack 差分は decision_points。
 
 > Phase K (2026-06-10) で旧 cross-skill 共有 SSoT は consuming skill 配下に co-locate され、`.apm/contexts/` は廃止。runtime artifact は常に consuming skill bundle と同 tree に常駐する。
 

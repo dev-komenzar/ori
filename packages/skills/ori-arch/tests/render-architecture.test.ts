@@ -10,6 +10,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // packages/skills/ori-arch/tests/ -> repo root
 const REPO_ROOT = join(__dirname, "..", "..", "..", "..");
 const SCRIPT = join(REPO_ROOT, ".apm/skills/ori-arch/scripts/render-architecture.js");
+// テスト専用の最小 pattern bundle (ori-c79.6: tpl 機構の回帰検証用)
+const PATTERNS_FIXTURE = join(__dirname, "fixtures", "patterns-dir");
 
 interface Run {
   code: number;
@@ -69,55 +71,24 @@ beforeAll(async () => {
 }, 60_000);
 
 describe("render-architecture — end-to-end (ori-62h)", () => {
-  it("renders ddd-vsa-hex / typescript to a parsable ArchitectureSpec", async () => {
+  it("exits 2 with ori-architect guidance when the stack tpl was removed (ori-c79.6)", async () => {
     const dir = await setupTmp("myapp");
     const r = await runScript(["--pattern", "ddd-vsa-hex", "--stack", "typescript"], dir);
-    expect(r.code, `stderr:\n${r.stderr}`).toBe(0);
-    const out = await readFile(join(dir, ".ori/architecture.md"), "utf8");
-    expect(out, "no unresolved placeholders").not.toMatch(/\{\{[A-Z_]+\}\}/);
-    const spec = parseArchitectureSpec(out);
-    expect(spec.roots).toHaveLength(1);
-    expect(spec.roots[0]!.app).toBe("myapp");
-    expect(spec.roots[0]!.path).toBe("apps/myapp/src");
-    expect(spec.roots[0]!.slice_root).toBe("task-management");
+    expect(r.code, `stderr:\n${r.stderr}`).toBe(2);
+    const all = r.stderr + r.stdout;
+    expect(all).toContain("ori-architect");
+    expect(all).toContain("generation_procedure");
   });
 
-  it("renders ddd-vsa-hex / typescript-tauri with both roots and BC_NAME_RS auto-derived from --bc", async () => {
+  it("exits 2 with guidance for typescript-tauri as well", async () => {
     const dir = await setupTmp("mytauri");
     const r = await runScript(
-      ["--pattern", "ddd-vsa-hex", "--stack", "typescript-tauri", "--bc", "user-account"],
+      ["--pattern", "ddd-vsa-hex", "--stack", "typescript-tauri"],
       dir,
     );
-    expect(r.code, `stderr:\n${r.stderr}`).toBe(0);
-    const out = await readFile(join(dir, ".ori/architecture.md"), "utf8");
-    expect(out).not.toMatch(/\{\{[A-Z_]+\}\}/);
-    const spec = parseArchitectureSpec(out);
-    expect(spec.roots).toHaveLength(2);
-    expect(spec.roots.find((r) => r.id === "ts")!.slice_root).toBe("user-account");
-    expect(spec.roots.find((r) => r.id === "rs")!.slice_root).toBe("user_account");
-  });
-
-  it("is idempotent — default skip when target exists, --force overwrites with new placeholders", async () => {
-    const dir = await setupTmp("myapp");
-    const r0 = await runScript(["--pattern", "ddd-vsa-hex", "--stack", "typescript"], dir);
-    expect(r0.code, r0.stderr).toBe(0);
-    const first = await readFile(join(dir, ".ori/architecture.md"), "utf8");
-
-    const r1 = await runScript(
-      ["--pattern", "ddd-vsa-hex", "--stack", "typescript", "--bc", "renamed"],
-      dir,
-    );
-    expect(r1.code, r1.stderr).toBe(0);
-    expect(await readFile(join(dir, ".ori/architecture.md"), "utf8")).toBe(first);
-
-    const r2 = await runScript(
-      ["--pattern", "ddd-vsa-hex", "--stack", "typescript", "--bc", "renamed", "--force"],
-      dir,
-    );
-    expect(r2.code, r2.stderr).toBe(0);
-    const overwritten = await readFile(join(dir, ".ori/architecture.md"), "utf8");
-    expect(overwritten).toContain("renamed");
-    expect(overwritten).not.toContain("task-management");
+    expect(r.code, `stderr:\n${r.stderr}`).toBe(2);
+    const all = r.stderr + r.stdout;
+    expect(all).toContain("ori-architect");
   });
 
   it("exits 2 on unknown pattern and lists available patterns", async () => {
@@ -140,7 +111,10 @@ describe("render-architecture — end-to-end (ori-62h)", () => {
 
   it("exits 2 when .ori/config.yaml is missing and --app is not given", async () => {
     const dir = await setupTmp(null);
-    const r = await runScript(["--pattern", "ddd-vsa-hex", "--stack", "typescript"], dir);
+    const r = await runScript(
+      ["--pattern", "demo", "--stack", "web", "--patterns-dir", PATTERNS_FIXTURE],
+      dir,
+    );
     expect(r.code).toBe(2);
     expect(r.stderr + r.stdout).toMatch(/config\.yaml/);
   });
@@ -149,8 +123,9 @@ describe("render-architecture — end-to-end (ori-62h)", () => {
     const dir = await setupTmp("ignored");
     const r = await runScript(
       [
-        "--pattern", "ddd-vsa-hex",
-        "--stack", "typescript-tauri",
+        "--pattern", "demo",
+        "--stack", "web",
+        "--patterns-dir", PATTERNS_FIXTURE,
         "--app", "explicit-app",
         "--bc", "billing",
         "--bc-rs", "billing_module",
@@ -161,8 +136,28 @@ describe("render-architecture — end-to-end (ori-62h)", () => {
     const out = await readFile(join(dir, ".ori/architecture.md"), "utf8");
     expect(out).toContain("apps/explicit-app/src");
     expect(out).not.toContain("ignored");
+    expect(out).toContain("billing");
+    expect(out).toContain("billing_module");
     const spec = parseArchitectureSpec(out);
-    expect(spec.roots.find((r) => r.id === "ts")!.slice_root).toBe("billing");
-    expect(spec.roots.find((r) => r.id === "rs")!.slice_root).toBe("billing_module");
+    expect(spec.roots[0]!.slice_root).toBe("billing");
+  });
+
+  it("is idempotent — default skip when target exists, --force overwrites", async () => {
+    const dir = await setupTmp("myapp");
+    const opts = ["--pattern", "demo", "--stack", "web", "--patterns-dir", PATTERNS_FIXTURE];
+    const r0 = await runScript([...opts, "--bc", "first"], dir);
+    expect(r0.code, r0.stderr).toBe(0);
+    const first = await readFile(join(dir, ".ori/architecture.md"), "utf8");
+    expect(first).toContain("first");
+
+    const r1 = await runScript([...opts, "--bc", "renamed"], dir);
+    expect(r1.code, r1.stderr).toBe(0);
+    expect(await readFile(join(dir, ".ori/architecture.md"), "utf8")).toBe(first);
+
+    const r2 = await runScript([...opts, "--bc", "renamed", "--force"], dir);
+    expect(r2.code, r2.stderr).toBe(0);
+    const overwritten = await readFile(join(dir, ".ori/architecture.md"), "utf8");
+    expect(overwritten).toContain("renamed");
+    expect(overwritten).not.toContain("first");
   });
 });

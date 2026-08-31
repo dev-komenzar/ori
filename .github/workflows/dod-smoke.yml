@@ -15,6 +15,7 @@ on:
       - '.apm/skills/ori-doctor/**'
       - '.apm/skills/ori-flow/**'
       - 'ci/smoke/**'
+      - 'packages/skills/ori-arch/tests/fixtures/**'
       - '.github/workflows/dod-smoke.yml'
   push:
     branches: [main]
@@ -24,6 +25,7 @@ on:
       - '.apm/skills/ori-doctor/**'
       - '.apm/skills/ori-flow/**'
       - 'ci/smoke/**'
+      - 'packages/skills/ori-arch/tests/fixtures/**'
       - '.github/workflows/dod-smoke.yml'
   workflow_dispatch:
 
