@@ -1,7 +1,7 @@
 # architect-expert (ori-c79) — 固定 stack テンプレートから動的生成 (agent → スキル) へ転換
 
 - **Issue**: ori-c79 (architect-expert agent: マルチプラットフォーム対応の設計)
-- **Status**: 2026-08-28 grill-me セッションで Q1〜Q7 確定 → 実装完了 (8dd34e1 / b5340cf / a2b6848 / a22e537 / 98e9cd5 / 5923109)
+- **Status**: 2026-08-28 grill-me セッションで Q1〜Q7 確定 → 実装完了 (c103ce4)
 - **更新 (2026-08-31, ori-8gz)**: agent → スキル (`/ori-architect`) に書き直し。Q5・Q8 は **supersede**、Q9 を追記
 - **後続**: ori-8gz (agent→スキル変換、完了) / ori-6pb (spawn 配線、ori-8gz で廃止)
 
@@ -90,18 +90,20 @@
 
 ## 実装
 
+> 実装コミットは squash merge により **c103ce4** (PR #55) に統合 (issue 粒度の履歴は bd 側を参照)。
+
 | issue | 内容 | commit |
 | --- | --- | --- |
-| ori-c79.2 | invariants 抽出・共通化 (`invariants:` セクション) | 8dd34e1 |
-| ori-c79.1 | `architect-expert.agent.md` 新設 (guardrails / questions / generation_procedure) | b5340cf |
-| ori-c79.3 | ori-doctor に guardrails g-1..g-8 検証ロジック (lint.js) | a2b6848 |
-| ori-c79.4 | golden test (agent 生成結果 vs 既存 tpl、IR 正規化 diff) | a22e537 |
-| ori-c79.5 | 本 decision record | 98e9cd5 |
-| ori-c79.6 | stacks/*/architecture.md.tpl 削除 (golden test が phase_hooks 含め期待値 SSoT を引継ぎ) | 5923109 |
-| ori-6pb | ori-arch への spawn 配線 (Q8) — **ori-8gz で廃止** | a1f2482 |
-| ori-8gz.1 | ori-architect SKILL.md 新設 + ori-arch 委譲 + agent 削除 (Q9) | 5cbbc9a |
-| ori-8gz.2 | doctor / golden test / render guidance の参照先を ori-architect に更新 | 702242e |
-| ori-8gz.3 | docs / decision record / README 追従 (本更新) | ori-8gz.3 commit |
+| ori-c79.2 | invariants 抽出・共通化 (`invariants:` セクション) | c103ce4 |
+| ori-c79.1 | `architect-expert.agent.md` 新設 (guardrails / questions / generation_procedure) | c103ce4 |
+| ori-c79.3 | ori-doctor に guardrails g-1..g-8 検証ロジック (lint.js) | c103ce4 |
+| ori-c79.4 | golden test (agent 生成結果 vs 既存 tpl、IR 正規化 diff) | c103ce4 |
+| ori-c79.5 | 本 decision record | c103ce4 |
+| ori-c79.6 | stacks/*/architecture.md.tpl 削除 (golden test が phase_hooks 含め期待値 SSoT を引継ぎ) | c103ce4 |
+| ori-6pb | ori-arch への spawn 配線 (Q8) — **ori-8gz で廃止** | c103ce4 |
+| ori-8gz.1 | ori-architect SKILL.md 新設 + ori-arch 委譲 + agent 削除 (Q9) | c103ce4 |
+| ori-8gz.2 | doctor / golden test / render guidance の参照先を ori-architect に更新 | c103ce4 |
+| ori-8gz.3 | docs / decision record / README 追従 (本更新) | c103ce4 |
 
 ## 参照
 
