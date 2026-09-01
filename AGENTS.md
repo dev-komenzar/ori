@@ -154,6 +154,125 @@ _Add your build and test commands here_
 # npm test
 ```
 
+## ori ハーネス状態遷移
+
+### 全体像
+
+```
+/ori-init → /ori-distill → /ori-arch → /ori-architect → /ori-flow <id> × N → /ori-sync
+                                                                                    ↓
+                                    ┌─── ドメイン変更時はここに戻る ←──────────────┘
+                                    ↓
+                              /ori-sync (dirty検出) → /ori-flow × N (7 phase) → /ori-finalize
+```
+
+### 7 phase flow（/ori-flow 内部）
+
+| # | phase | コマンド | 判定 | 差し戻し先 |
+|---|-------|---------|------|-----------|
+| 1 | derive | `/ori-derive <id>` | spec.md 合成完了 → 次へ | — |
+| 2 | plan | `/ori-plan <id>` | beads issues scaffold → 次へ | — |
+| 3 | test-red | `/ori-test-red <id>` | RED テスト着地 → 次へ | impl-green（GREEN-on-first 検出時） |
+| 4 | impl-green | `/ori-impl-green <id>` | 全 test GREEN → 次へ | test-red（self-fix 1回失敗時） |
+| 5 | refactor | `/ori-refactor <id>` | 品質改善 → 次へ | impl-green（regression 発生時） |
+| 6 | review | `/ori-review <id>` | 3 gate + reviewer → PASS/NEEDS_FIX/REJECT | test-red / impl-green / refactor / propose |
+| 7 | finalize | `/ori-finalize <id>` | verdict=PASS → dirty 解除 | — |
+
+### ガード（バイパス防止）
+
+| 層 | メカニズム | 違反時の動作 |
+|----|-----------|------------|
+| L1 | `/ori-sync` の出力で `/ori-flow` を「必須」と明示 | 提案ではなく強制。spec 直接編集禁止を宣言 |
+| L2 | `clear-dirty.sh` が `review.md` の verdict=PASS を確認 | 不在 or ≠PASS → 拒否 (exit 1) |
+| L3 | `/ori-doctor` `check-dirty-integrity.sh` が dirty=[] + review 未完了を検出 | 事後バレ。git diff で証跡残る |
+
+**アンチパターン（厳禁）**:
+- `sed -i 's/^dirty:.*/dirty: []/' status.yaml` 直打ち → L3 で検出
+- spec.md を `/ori-sync --force` で編集 → `--force` は廃止済
+- review skip → L2 で拒否
+
+### ドメイン変更伝播
+
+```
+domain/ 編集 → /ori-sync (dirtyマーク伝播)
+                 ↓
+            全 dirty slice に対して /ori-flow が必須
+                 ↓
+            /ori-finalize (review PASS → dirty解除)
+```
+
+**ルール**: dirty の手動解除は不可。`/ori-finalize` の `clear-dirty.sh` が review gate を通過した場合のみ解除される。
+
+### バグリカバリー
+
+```
+/ori-bug → triage 4分類:
+  case 1 (domain)     → domain/ 編集 → /ori-sync → /ori-flow
+  case 2 (impl)       → test追加 → /ori-impl-green → /ori-review
+  case 3 (spec)       → /ori-propose → /ori-review-proposals
+  case 4 (cross-slice)→ /ori-distill → 新slice → /ori-flow
+```
+
+### 診断コマンド
+
+| コマンド | 用途 |
+|---------|------|
+| `/ori-doctor` | 全診断（dirty integrity 含む）。report only、自動修復しない |
+| `/ori-feature-status` | slice/page 進捗俯瞰 |
+| `/ori-graph` | 依存グラフ可視化 |
+
+### Mermaid
+
+```mermaid
+stateDiagram-v2
+    [*] --> Init: /ori-init
+    Init --> DDD: /ori-distill
+    DDD --> Arch: /ori-arch → /ori-architect
+
+    Arch --> s7: /ori-flow <id>
+
+    state s7 {
+        Derive: derive
+        Plan: plan
+        TR: test-red
+        IG: impl-green
+        Refactor: refactor
+        Review: review
+        Finalize: finalize
+
+        Derive --> Plan
+        Plan --> TR
+        TR --> IG
+        IG --> Refactor
+        Refactor --> Review
+        Review --> Finalize: PASS
+        Review --> TR: NEEDS_FIX
+        Review --> IG: NEEDS_FIX
+        Review --> Refactor: NEEDS_FIX
+        Review --> Propose: REJECT
+    }
+
+    Finalize --> Derive: 次dirty
+    Finalize --> [*]: 完了
+
+    state dc {
+        DomEdit: domain編集
+        Sync: /ori-sync
+        DomEdit --> Sync
+        Sync --> Derive: 必須
+    }
+
+    state bug {
+        Triage: /ori-bug
+        Triage --> DomEdit: case1
+        Triage --> TR: case2
+        Triage --> Propose: case3
+        Triage --> Derive: case4
+    }
+
+    Propose --> RevProp: /ori-review-proposals
+```
+
 ## Architecture Overview
 
 _Add a brief overview of your project architecture_

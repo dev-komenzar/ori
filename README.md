@@ -13,6 +13,146 @@
 - **CoDD 流の変更伝播**（ドメイン文書 ↔ slice / page ↔ コードを単一グラフで管理）
 - **multi-CLI 配布**（[APM](https://github.com/microsoft/apm) 経由で Claude Code / Codex / OpenCode / Cursor / Copilot / Gemini / Windsurf 対応）
 
+## 状態遷移
+
+ori ハーネスの全 skill と状態遷移を俯瞰します。
+
+### メインフロー
+
+#### 1. プロジェクト立ち上げ
+
+| Step | コマンド | 状態変化 |
+|------|---------|---------|
+| 初期化 | `/ori-init` | `.ori/` skeleton 生成 |
+| DDD フェーズ 1-11 | `/ori-distill` | `.ori/domain/{discovery,aggregates,...}` 生成 |
+| Architecture 決定 | `/ori-arch` → `/ori-architect` | `.ori/architecture.md` 生成、pattern/stack 確定 |
+| 初回実装 | `/ori-flow <id>` | slice を 7 phase で完走 |
+
+#### 2. 1 slice 実装（7 phase）
+
+`/ori-flow <id>` の内部遷移。各 phase を手動で個別実行しても完全等価。
+
+| Phase | コマンド | 入力 → 出力 | beads issue |
+|-------|---------|------------|-------------|
+| 1. derive | `/ori-derive` | domain → `spec.md` | `ori-derive-<id>` |
+| 2. plan | `/ori-plan` | `spec.md` → beads issues | `ori-plan-<id>` |
+| 3. test-red | `/ori-test-red` | spec → failing tests | `ori-test-red-<id>` |
+| 4. impl-green | `/ori-impl-green` | tests → GREEN 実装 | `ori-impl-green-<id>` |
+| 5. refactor | `/ori-refactor` | 実装 → 品質改善 | `ori-refactor-<id>` |
+| 6. review | `/ori-review` | spec/impl → review.md | `ori-review-<id>` |
+| 7. finalize | `/ori-finalize` | review PASS → dirty 解除 | `ori-finalize-<id>` |
+
+**ガード**: `clear-dirty.sh` は `review.md` の verdict=PASS がないと dirty 解除を拒否する。`sed` 直打ちによる手動解除は `/ori-doctor` の `check-dirty-integrity.sh` が検出する。
+
+#### 3. ドメイン変更の伝播
+
+| Step | コマンド | 状態変化 |
+|------|---------|---------|
+| ドメイン編集 | `vim .ori/domain/aggregates.md` | 不変条件追加/変更 |
+| 変更検知 | `/ori-sync` | 影響 slice を dirty マーク。`/ori-flow` が必須 |
+| 伝播実装 | `/ori-flow <dirty-slice>` × N | 各 dirty slice を 7 phase |
+| 締め | `/ori-finalize <id>` | review PASS 確認 → dirty 解除 |
+
+**禁止**: spec 直接編集（SSoT 違反）、`status.yaml` 手動編集（review gate が拒否）。
+
+#### 4. バグ発見時のリカバリー
+
+| Step | コマンド | 振る舞い |
+|------|---------|---------|
+| triage | `/ori-bug` | 4 ケースに分類（domain / impl / spec / cross-slice） |
+| ケース 1 (domain) | `vim .ori/domain/` → `/ori-sync` → `/ori-flow` | ドメイン修正 → 伝播 |
+| ケース 2 (impl) | test 追加 → `/ori-impl-green` → `/ori-review` | 失敗テスト → 実装修正 |
+| ケース 3 (spec) | `/ori-propose` → `/ori-review-proposals` | upstream 修正提案 → 人間判断 |
+| ケース 4 (cross-slice) | `/ori-distill phase=workflows` → 新 slice → `/ori-flow` | シナリオ追加 → 統合 slice 作成 |
+
+#### 5. 健康診断と全体俯瞰
+
+| コマンド | 診断内容 |
+|---------|---------|
+| `/ori-doctor` | schema 健全性、hash 一致、dirty integrity、beads 同期、cross-reference、proposal 残存、orphan slice、DoD sweep、architecture guardrails (g-1..g-8) |
+| `/ori-feature-status` | slice/page の進捗・dirty/blocked/done 一覧 |
+| `/ori-graph` | Mermaid による依存グラフ可視化（dirty ノード強調） |
+
+#### 6. 防御線（バイパス防止）
+
+| 層 | どこ | 何を防ぐか |
+|----|------|----------|
+| L1 | `/ori-sync` | 「提案」ではなく「必須」。「spec.md 直接編集は SSoT 違反」を明示 |
+| L2 | `clear-dirty.sh` | `review.md` 不在 or verdict≠PASS なら dirty 解除を拒否 |
+| L3 | `/ori-doctor` | `status.yaml` 手動改竄（dirty=[] なのに review 未完了）を事後検出 |
+
+### Mermaid 状態遷移図
+
+```mermaid
+stateDiagram-v2
+    [*] --> Init: /ori-init
+    Init --> DDD: /ori-distill
+    DDD --> Arch: /ori-arch → /ori-architect
+    
+    Arch --> FlowDerive: /ori-flow <id>
+    
+    state "1 slice 7 phase" as s7 {
+        FlowDerive: derive<br/>domain→spec.md
+        FlowPlan: plan<br/>spec→issues
+        FlowTestRed: test-red<br/>failing tests
+        FlowImplGreen: impl-green<br/>GREEN実装
+        FlowRefactor: refactor<br/>品質改善
+        FlowReview: review<br/>3 gate + reviewer
+        FlowFinalize: finalize<br/>dirty解除
+        
+        FlowDerive --> FlowPlan
+        FlowPlan --> FlowTestRed
+        FlowTestRed --> FlowImplGreen
+        FlowImplGreen --> FlowRefactor
+        FlowRefactor --> FlowReview
+        FlowReview --> FlowFinalize: verdict=PASS
+        FlowReview --> FlowTestRed: NEEDS_FIX(spec)
+        FlowReview --> FlowImplGreen: NEEDS_FIX(impl)
+        FlowReview --> FlowRefactor: NEEDS_FIX(quality)
+        FlowReview --> FlowPropose: REJECT(spec誤り)
+    }
+    
+    FlowFinalize --> FlowDerive: 次 dirty slice
+    FlowFinalize --> [*]: 全slice完了
+    
+    state "ドメイン変更伝播" as dc {
+        DomainEdit: domain/ 編集
+        Sync: /ori-sync
+        DomainEdit --> Sync: dirtyマーク伝播
+        Sync --> FlowDerive: 必須 /ori-flow
+    }
+    
+    state "バグリカバリー" as bug {
+        BugTriage: /ori-bug 4分類
+        BugC1: case1 domain
+        BugC2: case2 impl
+        BugC3: case3 spec
+        BugC4: case4 cross
+        
+        BugTriage --> BugC1
+        BugTriage --> BugC2
+        BugTriage --> BugC3
+        BugTriage --> BugC4
+        
+        BugC1 --> DomainEdit
+        BugC2 --> FlowTestRed
+        BugC3 --> FlowPropose
+        BugC4 --> FlowDerive
+    }
+    
+    state "proposal" as prop {
+        FlowPropose: /ori-propose
+        ReviewProposals: /ori-review-proposals
+        FlowPropose --> ReviewProposals: 提案→人間判断
+    }
+    
+    state "診断" as diag {
+        Doctor: /ori-doctor
+        FeatStatus: /ori-feature-status
+        Graph: /ori-graph
+    }
+```
+
 ## ori は *oriented* なハーネスです
 
 ori は「AI に任意のコードを書かせるための薄いハーネス」ではありません。**「DDD ドキュメント → slice / page + DDD のコード骨格」というアーキテクチャまで指定する、opinionated（oriented）なハーネス**です。
