@@ -1,4 +1,4 @@
-import type { Phase } from "./phases.js";
+import type { Phase, ScenarioPhase } from "./phases.js";
 
 /**
  * beads (bd) integration. The runner shells out to `bd` and does not own
@@ -7,10 +7,11 @@ import type { Phase } from "./phases.js";
  * Naming convention:
  *   ori-slice-<id>            — slice epic
  *   ori-page-<id>             — page epic
+ *   ori-scenario-<id>         — scenario epic
  *   ori-<phase>-<id>          — phase issue (depends on previous phase)
  */
 
-export type EpicKind = "slice" | "page";
+export type EpicKind = "slice" | "page" | "scenario";
 
 export function formatEpicId(kind: EpicKind, id: string): string {
   return `ori-${kind}-${id}`;
@@ -23,6 +24,8 @@ export function formatIssueId(phase: Phase, id: string): string {
 export interface BeadsBridge {
   /** Create the epic + 7 phase issues with proper dependencies. */
   createSliceIssues(sliceId: string): Promise<void>;
+  /** Create the scenario epic + 4 phase issues with proper dependencies. */
+  createScenarioIssues(scenarioId: string): Promise<void>;
   /** Reopen the named phase issue and any downstream issues. */
   reopenPhase(sliceId: string, phase: Phase): Promise<void>;
   /** Append a comment to the named issue. */

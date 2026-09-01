@@ -45,3 +45,30 @@ export function nextPhase(current: Phase): Phase | null {
 export function isValidPhase(value: string): value is Phase {
   return (PHASES as readonly string[]).includes(value);
 }
+
+/**
+ * The four phases of a scenario workflow.
+ *
+ * 1. derive   — synthesize scenario spec from domain docs
+ * 2. generate — generate scenario test code
+ * 3. review   — adversarial review of scenario
+ * 4. finalize — clear dirty marks, update spec hash
+ */
+export const SCENARIO_PHASES = [
+  "derive",
+  "generate",
+  "review",
+  "finalize",
+] as const;
+
+export type ScenarioPhase = (typeof SCENARIO_PHASES)[number];
+
+export function nextScenarioPhase(current: ScenarioPhase): ScenarioPhase | null {
+  const idx = SCENARIO_PHASES.indexOf(current);
+  if (idx < 0 || idx === SCENARIO_PHASES.length - 1) return null;
+  return SCENARIO_PHASES[idx + 1] ?? null;
+}
+
+export function isValidScenarioPhase(value: string): value is ScenarioPhase {
+  return (SCENARIO_PHASES as readonly string[]).includes(value);
+}
