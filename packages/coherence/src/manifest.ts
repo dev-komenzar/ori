@@ -36,13 +36,25 @@ export const PageManifestSchema = z
   })
   .strict();
 
+export const ScenarioManifestSchema = z
+  .object({
+    scenario_id: z.string().regex(KEBAB, "scenario_id must be kebab-case"),
+    type: z.literal("scenario"),
+    derives_from: z.array(z.string()).default([]),
+    relations: z.array(RelationSchema).default([]),
+    implementation: ImplementationSchema.optional(),
+  })
+  .strict();
+
 export const ManifestSchema = z.discriminatedUnion("type", [
   SliceManifestSchema,
   PageManifestSchema,
+  ScenarioManifestSchema,
 ]);
 
 export type SliceManifest = z.infer<typeof SliceManifestSchema>;
 export type PageManifest = z.infer<typeof PageManifestSchema>;
+export type ScenarioManifest = z.infer<typeof ScenarioManifestSchema>;
 export type Manifest = z.infer<typeof ManifestSchema>;
 
 export function parseManifest(yaml: string): Manifest {

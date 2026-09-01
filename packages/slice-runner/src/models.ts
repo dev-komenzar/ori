@@ -1,6 +1,19 @@
 import type { Phase } from "./phases.js";
+import type { DirtyEntry } from "./status.js";
 
 export type CapabilityRole = "fast" | "deep" | "reasoning";
+
+export interface ScenarioStatus {
+  scenario_id: string;
+  derived_at: string;
+  beads: {
+    epic: string;
+    current_phase: Phase | null;
+    completion: Phase[];
+  };
+  phases: Partial<Record<Phase, import("./phases.js").PhaseRecord>>;
+  dirty: DirtyEntry[];
+}
 
 export interface AgentSpec {
   capability_to_model: Record<CapabilityRole, string>;
