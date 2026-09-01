@@ -38,3 +38,6 @@ coverage/
 
 # Oh My OpenAgents
 .omo/run-continuation
+
+# Playwright MCP
+.playwright-mcp/
