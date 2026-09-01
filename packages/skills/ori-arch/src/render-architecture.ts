@@ -15,6 +15,7 @@ interface ParsedArgs {
   bcRs?: string;
   dest: string;
   patternsDir?: string;
+  scenarioTestRunner?: string;
   force: boolean;
   help: boolean;
 }
@@ -35,6 +36,9 @@ Options:
                          Default: derived from --bc by kebab→snake.
   --dest <dir>           Destination directory. Default: current working directory.
   --patterns-dir <dir>   Patterns root. Overrides the skill-bundled default.
+  --scenario-test-runner <name>
+                         Scenario test runner (e.g. playwright, cypress, detox).
+                         Default: auto-inferred from stack (web→playwright, etc.)
   --force                Overwrite existing .ori/architecture.md.
   -h, --help             Show this help and exit.
 
@@ -77,6 +81,7 @@ function parseArgs(argv: string[]): ParsedArgs {
       case "--bc-rs":        out.bcRs = take(); break;
       case "--dest":         out.dest = take(); break;
       case "--patterns-dir": out.patternsDir = take(); break;
+      case "--scenario-test-runner": out.scenarioTestRunner = take(); break;
       case "--force":        out.force = true; break;
       case "-h":
       case "--help":         out.help = true; break;
@@ -90,6 +95,25 @@ function parseArgs(argv: string[]): ParsedArgs {
 
 function kebabToSnake(s: string): string {
   return s.replace(/-/g, "_");
+}
+
+/**
+ * Infer scenario test runner from stack name.
+ * - web / typescript → playwright
+ * - typescript-tauri → playwright (web UI) + tauri-driver (native)
+ * - mobile stacks → detox / appium
+ * Returns undefined if no inference is possible.
+ */
+function inferScenarioTestRunner(stack: string): string | undefined {
+  const s = stack.toLowerCase();
+  if (s.includes("tauri")) return "playwright";
+  if (s.includes("next") || s.includes("nuxt") || s.includes("remix") || s.includes("astro")) return "playwright";
+  if (s.includes("react") || s.includes("vue") || s.includes("angular") || s.includes("svelte")) return "playwright";
+  if (s.includes("web") || s === "typescript" || s === "javascript") return "playwright";
+  if (s.includes("detox")) return "detox";
+  if (s.includes("appium")) return "appium";
+  if (s.includes("cypress")) return "cypress";
+  return undefined;
 }
 
 async function exists(path: string): Promise<boolean> {
@@ -218,6 +242,46 @@ function render(tpl: string, vars: Record<string, string>): string {
   return out;
 }
 
+/**
+ * Inject scenario_test_runner into the frontmatter of rendered architecture.md.
+ * Inserts after cross_slice section (or at end of frontmatter if cross_slice not found).
+ */
+function injectScenarioTestRunner(content: string, runner: string): string {
+  const lines = content.split("\n");
+  const result: string[] = [];
+  let inFrontmatter = false;
+  let frontmatterEnd = -1;
+  let injected = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i] === "---") {
+      if (!inFrontmatter) {
+        inFrontmatter = true;
+        result.push(lines[i]!);
+      } else {
+        if (!injected) {
+          result.push(`scenario_test_runner:`);
+          result.push(`  runner: ${runner}`);
+          injected = true;
+        }
+        result.push(lines[i]!);
+        frontmatterEnd = i;
+        break;
+      }
+    } else if (inFrontmatter) {
+      result.push(lines[i]!);
+    } else {
+      result.push(lines[i]!);
+    }
+  }
+
+  for (let i = frontmatterEnd + 1; i < lines.length; i++) {
+    result.push(lines[i]!);
+  }
+
+  return result.join("\n");
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -241,11 +305,16 @@ async function main(): Promise<void> {
   const bcNameRs = args.bcRs ?? kebabToSnake(bcName);
 
   const tpl = await readFile(tplPath, "utf8");
-  const rendered = render(tpl, {
+  let rendered = render(tpl, {
     APP_NAME: appName,
     BC_NAME: bcName,
     BC_NAME_RS: bcNameRs,
   });
+
+  const scenarioRunner = args.scenarioTestRunner ?? inferScenarioTestRunner(args.stack);
+  if (scenarioRunner) {
+    rendered = injectScenarioTestRunner(rendered, scenarioRunner);
+  }
 
   try {
     parseArchitectureSpec(rendered);
@@ -269,6 +338,9 @@ async function main(): Promise<void> {
   consola.success(`Wrote ${relative(dest, target)}`);
   consola.info(`Pattern: ${args.pattern} / Stack: ${args.stack}`);
   consola.info(`App: ${appName} / BC: ${bcName}${args.stack.includes("tauri") ? ` / BC_RS: ${bcNameRs}` : ""}`);
+  if (scenarioRunner) {
+    consola.info(`Scenario Test Runner: ${scenarioRunner}${args.scenarioTestRunner ? " (user override)" : " (auto-inferred)"}`);
+  }
 }
 
 await main();

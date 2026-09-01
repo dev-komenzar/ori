@@ -16881,6 +16881,9 @@ Options:
                          Default: derived from --bc by kebab\u2192snake.
   --dest <dir>           Destination directory. Default: current working directory.
   --patterns-dir <dir>   Patterns root. Overrides the skill-bundled default.
+  --scenario-test-runner <name>
+                         Scenario test runner (e.g. playwright, cypress, detox).
+                         Default: auto-inferred from stack (web\u2192playwright, etc.)
   --force                Overwrite existing .ori/architecture.md.
   -h, --help             Show this help and exit.
 
@@ -16938,6 +16941,9 @@ function parseArgs(argv2) {
       case "--patterns-dir":
         out.patternsDir = take();
         break;
+      case "--scenario-test-runner":
+        out.scenarioTestRunner = take();
+        break;
       case "--force":
         out.force = true;
         break;
@@ -16956,6 +16962,17 @@ function parseArgs(argv2) {
 }
 function kebabToSnake(s2) {
   return s2.replace(/-/g, "_");
+}
+function inferScenarioTestRunner(stack) {
+  const s2 = stack.toLowerCase();
+  if (s2.includes("tauri")) return "playwright";
+  if (s2.includes("next") || s2.includes("nuxt") || s2.includes("remix") || s2.includes("astro")) return "playwright";
+  if (s2.includes("react") || s2.includes("vue") || s2.includes("angular") || s2.includes("svelte")) return "playwright";
+  if (s2.includes("web") || s2 === "typescript" || s2 === "javascript") return "playwright";
+  if (s2.includes("detox")) return "detox";
+  if (s2.includes("appium")) return "appium";
+  if (s2.includes("cypress")) return "cypress";
+  return void 0;
 }
 async function exists(path) {
   try {
@@ -17072,6 +17089,38 @@ function render(tpl, vars) {
   }
   return out;
 }
+function injectScenarioTestRunner(content, runner) {
+  const lines = content.split("\n");
+  const result = [];
+  let inFrontmatter = false;
+  let frontmatterEnd = -1;
+  let injected = false;
+  for (let i2 = 0; i2 < lines.length; i2++) {
+    if (lines[i2] === "---") {
+      if (!inFrontmatter) {
+        inFrontmatter = true;
+        result.push(lines[i2]);
+      } else {
+        if (!injected) {
+          result.push(`scenario_test_runner:`);
+          result.push(`  runner: ${runner}`);
+          injected = true;
+        }
+        result.push(lines[i2]);
+        frontmatterEnd = i2;
+        break;
+      }
+    } else if (inFrontmatter) {
+      result.push(lines[i2]);
+    } else {
+      result.push(lines[i2]);
+    }
+  }
+  for (let i2 = frontmatterEnd + 1; i2 < lines.length; i2++) {
+    result.push(lines[i2]);
+  }
+  return result.join("\n");
+}
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -17094,11 +17143,15 @@ async function main() {
   const bcName = args.bc;
   const bcNameRs = args.bcRs ?? kebabToSnake(bcName);
   const tpl = await readFile(tplPath, "utf8");
-  const rendered = render(tpl, {
+  let rendered = render(tpl, {
     APP_NAME: appName,
     BC_NAME: bcName,
     BC_NAME_RS: bcNameRs
   });
+  const scenarioRunner = args.scenarioTestRunner ?? inferScenarioTestRunner(args.stack);
+  if (scenarioRunner) {
+    rendered = injectScenarioTestRunner(rendered, scenarioRunner);
+  }
   try {
     parseArchitectureSpec(rendered);
   } catch (err) {
@@ -17120,6 +17173,9 @@ Source template: ${relative(dest, tplPath) || tplPath}
   consola.success(`Wrote ${relative(dest, target)}`);
   consola.info(`Pattern: ${args.pattern} / Stack: ${args.stack}`);
   consola.info(`App: ${appName} / BC: ${bcName}${args.stack.includes("tauri") ? ` / BC_RS: ${bcNameRs}` : ""}`);
+  if (scenarioRunner) {
+    consola.info(`Scenario Test Runner: ${scenarioRunner}${args.scenarioTestRunner ? " (user override)" : " (auto-inferred)"}`);
+  }
 }
 await main();
 /*! Bundled license information:

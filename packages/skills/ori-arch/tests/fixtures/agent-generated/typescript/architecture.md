@@ -46,6 +46,8 @@ cross_bc:
   same_event_bus: true
 page_map_marker: phase-11b
 phase_hooks: {}
+scenario_test_runner:
+  runner: playwright
 decisions:
   platforms: [web]
   os_integration: none
