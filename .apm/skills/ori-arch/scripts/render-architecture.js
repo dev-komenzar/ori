@@ -15729,6 +15729,11 @@ var CrossSliceSchema = external_exports.object({
   prohibited_direct: external_exports.boolean().default(true),
   via: external_exports.array(external_exports.string()).default([])
 }).passthrough();
+var ScenarioTestRunnerSchema = external_exports.object({
+  runner: external_exports.string(),
+  config_path: external_exports.string().optional(),
+  command: external_exports.string().optional()
+}).passthrough();
 var FrontmatterSchema = external_exports.object({
   version: external_exports.literal(1),
   default_root: external_exports.string().optional(),
@@ -15738,7 +15743,8 @@ var FrontmatterSchema = external_exports.object({
   layer_sets: external_exports.record(LayerSetSchema),
   slice_internal: external_exports.record(SliceInternalSchema).optional(),
   cross_slice: CrossSliceSchema,
-  page_map_marker: external_exports.string().optional()
+  page_map_marker: external_exports.string().optional(),
+  scenario_test_runner: ScenarioTestRunnerSchema.optional()
 }).passthrough().refine((v2) => v2.root != null || v2.roots != null && v2.roots.length > 0, {
   message: "either `root` (single-root shorthand) or non-empty `roots[]` must be present"
 });
@@ -15761,6 +15767,7 @@ function parseArchitectureSpec(raw) {
     slice_internal: fm.slice_internal ?? {},
     cross_slice: fm.cross_slice,
     page_map_marker: fm.page_map_marker,
+    scenario_test_runner: fm.scenario_test_runner,
     body: content
   };
 }
