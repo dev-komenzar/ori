@@ -30,12 +30,17 @@ description: ori プロジェクトの健康診断。.ori/ を歩き schema / st
 - `.ori/slices/*/status.yaml` の `upstream_hash` と現在の domain section ハッシュを比較
 - 不一致なら **dirty 残存** として報告
 
-### 3. status.yaml ⇔ beads の同期
+### 3. Dirty integrity (unauthorized clear detection)
+
+- `.ori/slices/*/status.yaml` で `dirty: []` なのに `review.md` が存在しない / verdict が PASS でない slice を検出
+- `clear-dirty.sh` をバイパスして `sed` 直打ち等で dirty が消された可能性を示唆
+
+### 4. status.yaml ⇔ beads の同期
 
 - 各 slice について `status.yaml.phase_status` と `bd show ori-<phase>-<id>` の `status` を突き合わせる
 - ズレを報告（例：beads では closed だが status.yaml では in_progress）
 
-### 4. Cross-reference の整合
+### 5. Cross-reference の整合
 
 - spec.md / workflows/<id>.md / screen-N.md の `upstream:` 列挙先がすべて実在するか
 - 存在しない section へのリンクを broken-link として報告
@@ -97,6 +102,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
    個別検査は以下で構成：
    - `check-domain-schema.sh` — ドメイン文書の frontmatter + anchor 検証
    - `check-slice-schema.sh` — slice の manifest/status ファイル存在確認
+   - `check-dirty-integrity.sh` — dirty=[] なのに review.md 不在/verdict≠PASS を検出（status.yaml の手動改竄チェック）
    - `check-hash-consistency.sh` — 派生ファイルの upstream 参照実在確認
    - `check-cross-ref.sh` — derives_from / upstream の cross-reference 検証
    - `check-proposals.sh` — pending proposal カウント
@@ -132,6 +138,10 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 ⚠ slices/capture-auto-save: 1 upstream out of sync
   upstream: domain/aggregates.md#note-aggregate
   fix: /ori-flow capture-auto-save (re-derive)
+
+═══ Dirty Integrity ═══
+✗ slices/delete-note: dirty=[] but review.md not found
+  fix: /ori-flow delete-note (run full workflow including review)
 
 ═══ Status Sync ═══
 ✓ all slices / pages in sync with beads
@@ -183,6 +193,7 @@ recommended action: fix broken cross-ref first (blocks /ori-flow on edit-past-no
 
 - **schema 違反パス**：`vim .ori/domain/<file>.md` で手動修正（自動修正しない）→ 再度 `/ori-doctor`
 - **hash 不一致パス**：`/ori-flow <id>` で該当 slice / page を再 derive
+- **dirty integrity 違反パス**：`/ori-flow <id>` で該当 slice の全 phase（特に review）を再実行。status.yaml を手動編集せず、`/ori-finalize` の `clear-dirty.sh` を経由すること
 - **broken cross-ref パス**：該当 slice / page の `manifest.yaml` を更新 or 旧 anchor を domain 側で復活
 - **proposal 残存パス**：`/ori-review-proposals` で人間判断
 - **orphan domain パス**：意図的なら無視、不要なら削除を検討
