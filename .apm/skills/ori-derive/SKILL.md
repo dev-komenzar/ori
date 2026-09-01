@@ -1,21 +1,23 @@
 ---
 name: ori-derive
-description: /ori-flow phase 1。manifest の derives_from とドメイン文書から slice spec.md を合成する
+description: /ori-flow phase 1。manifest の derives_from とドメイン文書から slice spec.md または scenario spec.md を合成する
 ---
 
-ユーザが `/ori-derive <slice-id>` を呼ぶ、または `/ori-flow` 内部から phase 1 として起動した際に、**該当 slice の `spec.md` をドメイン文書から派生**します。**派生のみ。実装は phase 4 の責務**。
+ユーザが `/ori-derive <id>` を呼ぶ、または `/ori-flow` 内部から phase 1 として起動した際に、**該当 slice / scenario の spec をドメイン文書から派生**します。**派生のみ。実装は phase 4 の責務**。
 
 ## 引数
 
-- `slice-id`：対象 slice の id（`.ori/slices/<id>/` が存在する事を前提）
+- `id`：対象 slice または scenario の id（`.ori/slices/<id>/` または `.ori/scenarios/<id>/` が存在する事を前提）
 
 ## 役割
 
-- **派生器**：`manifest.yaml` の `derives_from:` に列挙されたドメイン section を読み、slice 単位の spec に再構成
+- **派生器**：`manifest.yaml` の `derives_from:` に列挙されたドメイン section を読み、slice 単位の spec または scenario 単位の spec に再構成
 - **整合性チェッカー**：複数 upstream に矛盾があれば停止し、`/ori-propose` を促す
 - **記録係**：spec.md は **derived** ファイル。`coherence.source: derived` で書き、人間が直接編集すると `/ori-sync --force` が要求される
 
 ## 入力 / 出力
+
+### slice の場合
 
 - 入力：
   - `.ori/slices/<id>/manifest.yaml`（必須。`derives_from:` を持つ）
@@ -23,6 +25,16 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
 - 出力：`.ori/slices/<id>/spec.md`
   - frontmatter: `coherence.source: derived`、`upstream:` に派生元 section を列挙、`hash:` に派生元のスナップショットハッシュ
   - 必須 H2 セクション（**`.apm/instructions/feature-spec.instructions` 準拠** — instructions ファイル名は legacy のまま）
+
+### scenario の場合
+
+- 入力：
+  - `.ori/scenarios/<id>/manifest.yaml`（必須。`derives_from:` を持つ）
+  - `manifest.derives_from` に列挙されたドメイン section（例：`domain/workflows.md#order-workflow`）
+  - `.ori/domain/validation.md`（必須。Gherkin 形式の検証シナリオ）
+- 出力：`.ori/scenarios/<id>/spec.md`
+  - frontmatter: `coherence.source: derived`、`upstream:` に派生元 section を列挙、`hash:` に派生元のスナップショットハッシュ
+  - 必須セクション：概要 / シナリオステップ / テスト観点 / 実装ノート
 
 ## 必須セクション（`.apm/instructions/feature-spec.instructions.md` 準拠）
 
@@ -39,14 +51,24 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
 
 ## 手順
 
-1. **slice 存在確認**：
+1. **存在確認と type 判定**：
+   - `.ori/slices/<id>/manifest.yaml` または `.ori/scenarios/<id>/manifest.yaml` の存在を確認
+   - 存在しない場合は、類似候補を検索し、ユーザに確認
+   - manifest.yaml を読み、`type` フィールドを確認
+   - `type: scenario` の場合 → §「scenario workflow」へ進む
+   - `type: slice` または `type: page` の場合 → §「slice/page workflow」へ進む
+   - `type` フィールドが存在しない場合 → エラーで停止し、ユーザに確認を求める
+
+### slice/page workflow
+
+2. **slice 存在確認**：
    ```bash
    bash ./scripts/check-slice-exists.sh <slice-id>
    ```
    - exit 0: 存在 → 次のステップへ
    - exit 2: 類似候補あり → ユーザに「これですか？」と確認、Yes なら正しい id で再開
    - exit 1: 未発見 → 新規 slice 作成を**ユーザに確認**してから進める
-2. **manifest.yaml の読み込み**：`.ori/slices/<id>/manifest.yaml` を Read。`derives_from:` が空ならエラー停止し「先に DDD phase で domain を整備するか、manifest に upstream を追記してください」と案内
+3. **manifest.yaml の読み込み**：`.ori/slices/<id>/manifest.yaml` を Read。`derives_from:` が空ならエラー停止し「先に DDD phase で domain を整備するか、manifest に upstream を追記してください」と案内
 3. **upstream section の取得**：
    ```bash
    bash ./scripts/resolve-upstream.sh <slice-id>
@@ -80,13 +102,86 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
    bd update ori-derive-<slice-id> --status=closed --notes="spec.md generated from <N> upstream sections"
    ```
 
+### scenario workflow
+
+2. **scenario 存在確認**：
+   ```bash
+   bash ./scripts/check-scenario-exists.sh <scenario-id>
+   ```
+   - exit 0: 存在 → 次のステップへ
+   - exit 2: 類似候補あり → ユーザに「これですか？」と確認、Yes なら正しい id で再開
+   - exit 1: 未発見 → 新規 scenario 作成を**ユーザに確認**してから進める
+3. **manifest.yaml の読み込み**：`.ori/scenarios/<id>/manifest.yaml` を Read。`derives_from:` が空ならエラー停止し「先に DDD phase で domain を整備するか、manifest に upstream を追記してください」と案内
+4. **upstream section の取得**：
+   ```bash
+   bash ./scripts/resolve-upstream.sh <scenario-id>
+   ```
+   派生元 section のパスとハッシュを取得
+5. **矛盾検出**：複数 upstream が同じ概念について異なる規定を持つ場合、停止して `/ori-propose` を促す（自動マージしない）
+6. **validation.md の読み込み**：`.ori/domain/validation.md` を Read。Gherkin 形式の検証シナリオを理解
+7. **spec.md の synthesis**：
+   - 概要 / シナリオステップ / テスト観点 / 実装ノートの 4 セクションを必須として埋める
+   - 不明な事項は **推測で埋めず** `**TBD**` マーカーを残し、後段で人間に問う
+   - 上流 section の文言を引用する際は `> domain/workflows.md#order-workflow より:` の出典を残す
+   - validation.md の Gherkin シナリオを参照し、シナリオステップに反映
+8. **spec.md の自己検証**：
+   - 必須 H2 4 種が揃っているか（`## 概要`、`## シナリオステップ`、`## テスト観点`、`## 実装ノート`）
+   - シナリオステップが validation.md の Gherkin シナリオと整合しているか
+   - 全 H2/H3 に `{#id}` があるか（grep: `^###? [^{]+$`）
+   - frontmatter `coherence.source: derived` と `upstream:` の有無
+9. 検証失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
+10. **beads issue 更新**：
+    ```bash
+    bd update ori-derive-<scenario-id> --status=closed --notes="spec.md generated from <N> upstream sections"
+    ```
+
 ## 出力フォーマット
+
+### slice/page の場合
 
 spec.md の構造 (frontmatter / 必須 H2 / 記述例) の SSoT は `.apm/instructions/feature-spec.instructions.md`。**スキル内に template / sample を duplicate しない** (DoD 拡張時の sync 漏れを防ぐため、ori-fzr.6 以降の方針)。各 section の具体的な記述例は instructions 内の "記述例" / "boundary-contract section 必須化" 等を参照すること。
 
+### scenario の場合
+
+spec.md の構造：
+
+```markdown
+---
+coherence:
+  source: derived
+  upstream:
+    - path: domain/workflows.md#order-workflow
+      hash: abc123
+    - path: domain/validation.md
+      hash: def456
+---
+
+# <scenario-id> — Scenario Specification
+
+> This file is a derived document. Edit the source manifest + domain docs and re-run `/ori-flow <scenario-id> phase=derive`. Use `/ori-sync` if you need to edit here directly; ori will create a proposal for the upstream review.
+
+## 概要 {#overview}
+
+この scenario が解く問題、対応する workflow。
+
+## シナリオステップ {#scenario-steps}
+
+1. ステップ 1
+2. ステップ 2
+3. ステップ 3
+
+## テスト観点 {#test-points}
+
+- テストで検証すべきシナリオ列挙
+
+## 実装ノート {#impl-notes}
+
+- 実装時のヒント
+```
+
 ## 注意
 
-- **自動 scaffold は禁止**：slice が存在しなくても勝手に新規作成を呼ばない（ユーザ確認必須）
+- **自動 scaffold は禁止**：slice / scenario が存在しなくても勝手に新規作成を呼ばない（ユーザ確認必須）
 - **spec.md は派生ファイル**：直接編集には `/ori-sync --force` が必要
 - **推測で埋めない**：`TBD` を残し、人間判断に委ねる箇所を明示
 - このスキルは test や impl を書かない。**phase 1 = spec 派生のみ**
@@ -96,6 +191,7 @@ spec.md の構造 (frontmatter / 必須 H2 / 記述例) の SSoT は `.apm/instr
 
 phase 1 完了後、`/ori-flow` 内部なら自動的に phase 2 へ。単独呼び出しの場合：
 
-- **メインパス**：`/ori-plan <slice-id>` — phase 2。下流 phase（test-red / impl-green / refactor / review）の beads issue description を埋める
+- **slice/page のメインパス**：`/ori-plan <slice-id>` — phase 2。下流 phase（test-red / impl-green / refactor / review）の beads issue description を埋める
+- **scenario のメインパス**：`/ori-generate <scenario-id>` — phase 2。scenario test code を生成
 - **TBD を解消するパス**：`/ori-distill phase=<関連 phase>` でドメインに戻り合意形成 → 再度 `/ori-derive`
 - **矛盾発見パス**：`/ori-propose` で upstream 修正提案を作成 → 人間レビュー
