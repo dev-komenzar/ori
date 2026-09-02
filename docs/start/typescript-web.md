@@ -18,9 +18,9 @@ node --version       # v20.x or higher
 pnpm --version       # 9.x or higher
 ```
 
-## 2. プロジェクト初期化 (三段構え)
+## 2. プロジェクト初期化 (二段構え)
 
-design.md §17 の「decide → upstream init → ori artifact」三段構え。
+design.md §17 の「upstream init → ori artifact」二段構え。
 
 ```bash
 mkdir my-ts-app && cd my-ts-app
@@ -35,8 +35,8 @@ mkdir -p apps/my-ts-app && cd apps/my-ts-app
 pnpm create vite@latest . --template vanilla-ts
 cd ../..
 
-# ステップ 3: pattern / stack を決め、.ori/architecture.md を render
-/ori-arch                                            # pattern=ddd-vsa-hex / stack=typescript を選ぶ
+# ステップ 3: architecture.md を生成（/ori-architect に委譲）
+/ori-arch                                            # /ori-architect に委譲して要件対話から生成
 pnpm install
 ```
 
@@ -61,8 +61,8 @@ pnpm install
   # → exit 2: "ori-architect スキルが要件対話から生成します"
   ```
 
-`.ori/architecture.md` は default で既存ファイルを保護 (`--force` で上書き)。
-app 名 / BC 名 は要件対話の回答 (agent が `questions:`) に従って埋められる。
+既存 `.ori/architecture.md` がある場合は上書き可否を確認してから生成する。
+app 名 / BC 名 は要件対話の回答 (`questions:`) に従って埋められる。
 
 ## 3. 推奨される構造
 

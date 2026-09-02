@@ -25,7 +25,7 @@ ori ハーネスの全 skill と状態遷移を俯瞰します。
 |------|---------|---------|
 | 初期化 | `/ori-init` | `.ori/` skeleton 生成 |
 | DDD フェーズ 1-11 | `/ori-distill` | `.ori/domain/{discovery,aggregates,...}` 生成 |
-| Architecture 決定 | `/ori-arch` → `/ori-architect` | `.ori/architecture.md` 生成、pattern/stack 確定 |
+| Architecture 決定 | `/ori-arch` → `/ori-architect` | `.ori/architecture.md` を要件対話から生成 |
 | 初回実装 | `/ori-flow <id>` | slice を 7 phase で完走 |
 
 #### 2. 1 slice 実装（7 phase）
@@ -157,7 +157,7 @@ stateDiagram-v2
 
 ori は「AI に任意のコードを書かせるための薄いハーネス」ではありません。**「DDD ドキュメント → slice / page + DDD のコード骨格」というアーキテクチャまで指定する、opinionated（oriented）なハーネス**です。
 
-- `/ori-arch` で pattern (`ddd-vsa-hex`) と framework (`typescript` / `typescript-tauri`) を対話で決め、slice ごとに `domain / application / infrastructure / presentation / tests` を切り、`index.ts` を唯一の public API として slice 間の直接 import を禁ずる雛形を吐きます
+- `/ori-arch` → `/ori-architect` が要件対話で pattern (`ddd-vsa-hex`) と stack (`typescript` / `typescript-tauri`) を確定し、slice ごとに `domain / application / infrastructure / presentation / tests` を切り、`index.ts` を唯一の public API として slice 間の直接 import を禁ずる雛形を吐きます
 - `.ori/architecture.md` を SSoT として、arch-adapter が ESLint / Rust 等の言語ネイティブ linter にコンパイルされ、規約逸脱を CI で止めます
 - AI に与えるのは「任意のスタイルで書く自由」ではなく「決められたスロットを埋める自由」です
 
@@ -178,7 +178,7 @@ apm install dev-komenzar/ori
 $ claude/opencode/...                          # Launch your agent
 $ /ori-init                                    # .ori/ skeleton + config.yaml (silent)
 $ /ori-distill                                 # AI が distill-ddd phase 1-11 を対話実行
-$ /ori-arch                                    # pattern / framework を選択 → template scaffold
+$ /ori-arch                                    # /ori-architect に委譲し要件対話から architecture.md を生成
 $ /ori-flow app-startup                        # 1 slice を 7 phase で実装
 $ /ori-sync                                    # 変更伝播計算
 ```
