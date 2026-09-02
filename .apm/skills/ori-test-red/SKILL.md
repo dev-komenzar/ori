@@ -27,7 +27,7 @@ description: /ori-flow phase 3。spec.md のテスト観点から failing test �
   - `.ori/config.yaml`（`workspace.apps:` から `app:` 解決、fallback として `apps[].path`/src を `<source_root>` に使う）
   - `.ori/architecture.md`（あれば `root.path` / `roots[<id>].path` を canonical な `<source_root>` として優先採用。`stack:` field から typescript-tauri 判定）
   - `.apm/instructions/ddd-test.instructions.md`（test 共通メタルール; concretion の正典は下記 test.md）
-  - `.apm/instructions/ddd-rust.instructions.md`（Rust stub 規約: commands.rs / invoke_handler! 配線）
+  - `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/test.md`（Rust stub 規約: "#commands-rs-required"）
   - `.apm/instructions/ui-test.instructions.md`（UI selector / `setupProductionBuilder()` の glue）
   - テスト concretion 正典（stack-specific）:
     - `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/test.md`（vitest + fast-check + assertion 記法）
