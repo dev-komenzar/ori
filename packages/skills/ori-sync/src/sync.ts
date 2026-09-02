@@ -80,14 +80,14 @@ function pathMatches(derivesValue: string, changedFile: string): boolean {
 
 interface ManifestEntry {
   id: string;
-  kind: "slice" | "page";
+  kind: "slice" | "page" | "scenario";
   dir: string;
   manifest: any;
 }
 
 async function listManifests(): Promise<ManifestEntry[]> {
   const out: ManifestEntry[] = [];
-  for (const kind of ["slices", "pages"] as const) {
+  for (const kind of ["slices", "pages", "scenarios"] as const) {
     const baseDir = join(root, ".ori", kind);
     if (!(await exists(baseDir))) continue;
     const entries = await readdir(baseDir, { withFileTypes: true });
@@ -99,7 +99,8 @@ async function listManifests(): Promise<ManifestEntry[]> {
       try {
         const yaml = await readFile(manifestPath, "utf8");
         const manifest = parseYaml(yaml);
-        out.push({ id: e.name, kind: kind === "slices" ? "slice" : "page", dir, manifest });
+        const kindType = kind === "slices" ? "slice" : kind === "pages" ? "page" : "scenario";
+        out.push({ id: e.name, kind: kindType, dir, manifest });
       } catch (err) {
         consola.warn(`failed to parse ${relative(root, manifestPath)}: ${(err as Error).message}`);
       }

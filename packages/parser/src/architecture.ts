@@ -85,6 +85,14 @@ const CrossSliceSchema = z
   })
   .passthrough();
 
+const ScenarioTestRunnerSchema = z
+  .object({
+    runner: z.string(),
+    config_path: z.string().optional(),
+    command: z.string().optional(),
+  })
+  .passthrough();
+
 const FrontmatterSchema = z
   .object({
     version: z.literal(1),
@@ -96,6 +104,7 @@ const FrontmatterSchema = z
     slice_internal: z.record(SliceInternalSchema).optional(),
     cross_slice: CrossSliceSchema,
     page_map_marker: z.string().optional(),
+    scenario_test_runner: ScenarioTestRunnerSchema.optional(),
   })
   .passthrough()
   .refine((v) => v.root != null || (v.roots != null && v.roots.length > 0), {
@@ -108,6 +117,7 @@ export type ForbiddenImportRule = z.infer<typeof ForbiddenImportRuleSchema>;
 export type SliceInternal = z.infer<typeof SliceInternalSchema>;
 export type CrossSlice = z.infer<typeof CrossSliceSchema>;
 export type CrossRoot = z.infer<typeof CrossRootSchema>;
+export type ScenarioTestRunner = z.infer<typeof ScenarioTestRunnerSchema>;
 
 export interface ArchitectureSpec {
   version: 1;
@@ -118,6 +128,7 @@ export interface ArchitectureSpec {
   slice_internal: Record<string, SliceInternal>;
   cross_slice: CrossSlice;
   page_map_marker?: string;
+  scenario_test_runner?: ScenarioTestRunner;
   body: string;
 }
 
@@ -145,6 +156,7 @@ export function parseArchitectureSpec(raw: string): ArchitectureSpec {
     slice_internal: fm.slice_internal ?? {},
     cross_slice: fm.cross_slice,
     page_map_marker: fm.page_map_marker,
+    scenario_test_runner: fm.scenario_test_runner,
     body: content,
   };
 }

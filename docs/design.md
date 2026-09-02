@@ -14,14 +14,14 @@
 1. [ビジョンと設計原則](#1-ビジョンと設計原則)
 2. [関連プロジェクト](#2-関連プロジェクト)
 3. [MVP v0.1 スコープ](#3-mvp-v01-スコープ)
-4. [中核概念 — slice と page](#4-中核概念--slice-と-page)
+4. [中核概念 — slice, page, scenario](#4-中核概念--slice-page-scenario)
 5. [DDD pipeline(Phase 1-11)](#5-ddd-pipelinephase-1-11)
 6. [Architecture pattern](#6-architecture-pattern)
 7. [Stack — dynamic axes と tech catalog](#7-stack--dynamic-axes-と-tech-catalog)
 8. [Skill inventory](#8-skill-inventory)
-9. [/ori-flow — 7-phase slice/page 実装](#9-ori-flow--7-phase-slicepage-実装)
+9. [/ori-flow — 7-phase slice/page 実装 + 4-phase scenario 実装](#9-ori-flow--7-phase-slicepage-実装--4-phase-scenario-実装)
 10. [変更伝播 — hook と queue と /ori-sync](#10-変更伝播--hook-と-queue-と-ori-sync)
-11. [Manifest schema(slice + page)](#11-manifest-schemaslice--page)
+11. [Manifest schema(slice + page + scenario)](#11-manifest-schemaslice--page--scenario)
 12. [.ori/architecture.md schema(v1)](#12-oriarchitecturemd-schemav1)
 13. [Cross-cutting concerns](#13-cross-cutting-concerns)
 14. [失敗モードと resume](#14-失敗モードと-resume)
@@ -89,6 +89,7 @@ AI ハーネス(Claude Code, OpenCode, Codex, Gemini CLI, GitHub Copilot, Cursor
 #### 中核概念
 - **Slice**(1 use case = 1 handler、`.ori/slices/<id>/`)
 - **Page**(N slice の宿主、`.ori/pages/<id>/`、slice と同 manifest schema + `type` discriminator)
+- **Scenario**(サービス横断 E2E 検証単位、`.ori/scenarios/<id>/`、4-phase で処理)
 - Manifest enrich(`derives_from` + `inputs[].hash` + `outputs[].hash` + `flow_state.history`)
 - `spec.md` 廃止、phase 1 = verify(file 出力なし)
 - Aggregate **hybrid placement**(BC 共有 domain + slice 内 command DTO)
@@ -131,7 +132,7 @@ AI ハーネス(Claude Code, OpenCode, Codex, Gemini CLI, GitHub Copilot, Cursor
 
 ---
 
-## 4. 中核概念 — slice と page
+## 4. 中核概念 — slice, page, scenario
 
 ### Slice
 
@@ -161,12 +162,40 @@ AI ハーネス(Claude Code, OpenCode, Codex, Gemini CLI, GitHub Copilot, Cursor
 - `manifest.yaml`(slice manifest と同 schema、`type: page` discriminator)
 - `tests/`(主に E2E、Phase 7 scenario.scope=page 由来)
 
-### slice と page の関係
+### Scenario
 
+**定義**: 1 scenario = サービス横断 E2E 検証単位
+
+**生成元**: DDD の workflows + validation.md から派生
+
+**所在**: `.ori/scenarios/<scenario-id>/`
+- `manifest.yaml`(SSoT)
+- `scenario.md`(派生、自然言語 + 参照マッピング)
+- `tests/<id>.spec.ts`(生成テストコード)
+- `docker-compose.yml`(自動生成)
+- `status.yaml`(dirty 管理)
+
+**特徴**:
+- 複数 service を横断する E2E テストを検証対象とする
+- slice/page と異なり **4-phase** で処理(derive → generate → review → finalize)
+- 参加 slice の完了を beads dep で待つ
+- infrastructure.services から docker-compose.yml を自動生成
+
+### slice, page, scenario の関係
+
+| 概念 | 定義 | 所属 | derives_from | phase 数 |
+|---|---|---|---|---|
+| slice | 1 use case = 1 handler | 単一 service | workflow | 7 |
+| page | UI composition unit | 単一 service | ui-fields | 7 |
+| scenario | サービス横断 E2E 検証 | 複数 service | workflows + validation | 4 |
+
+**相互参照**:
 - slice manifest に `page: <page-id>` field(任意、UI 関連 slice のみ)
 - page manifest に `slices: [<slice-id>, ...]` field(双方向参照)
-- /ori-flow は **slice / page 両方を 7-phase で処理**(content templates が type で切替)
+- scenario manifest に `pages: [<page-id>, ...]` field(オプション、配列)
+- /ori-flow は **slice / page を 7-phase、scenario を 4-phase で処理**(content templates が type で切替)
 - Page の verify phase は「hosted slice が全部 generated」を要求 → beads dep で順序強制
+- Scenario の derive phase は「参加 slice が全部 generated」を要求 → beads dep で順序強制
 
 ### 命名規約
 
@@ -174,6 +203,7 @@ AI ハーネス(Claude Code, OpenCode, Codex, Gemini CLI, GitHub Copilot, Cursor
 |---|---|
 | slice ID | kebab-case 動詞-名詞(例: `register-user`, `change-email`)、workflow step ID と完全一致 |
 | page ID | kebab-case(例: `registration`, `user-settings`) |
+| scenario ID | kebab-case(例: `user-registration-e2e`, `order-flow-cross-service`) |
 | BC | kebab-case 概念名(例: `user-management`, `order`) |
 
 ---
@@ -431,6 +461,7 @@ MVP v0.1 = **32 skills**、3-tier 分類で組織(tier 詳細は実装時に確�
 
 **Tier 2 — Workflow components(`/ori-flow` から呼ばれる)**:
 - `ori-derive`(現名、verify に rename) `ori-plan`, `ori-test-red`, `ori-impl-green`, `ori-refactor`, `ori-review`, `ori-finalize`
+- `ori-generate`(scenario 用: テストコード + docker-compose 生成)
 
 **Tier 3 — Utility(随時実行)**:
 - `ori-feature-status`, `ori-doctor`, `ori-graph`, `ori-model`
@@ -441,9 +472,13 @@ MVP v0.1 = **32 skills**、3-tier 分類で組織(tier 詳細は実装時に確�
 
 ---
 
-## 9. /ori-flow — 7-phase slice/page 実装
+## 9. /ori-flow — 7-phase slice/page 実装 + 4-phase scenario 実装
 
-### Phase 一覧
+### 概要
+
+/ori-flow は manifest の `type` で分岐し、slice/page は **7-phase**、scenario は **4-phase** で処理する。
+
+### Slice/Page 7-phase 一覧
 
 | # | Phase | output | model role | failure 時 |
 |---|---|---|---|---|
@@ -454,6 +489,15 @@ MVP v0.1 = **32 skills**、3-tier 分類で組織(tier 詳細は実装時に確�
 | 5 | refactor | source diffs | fast | rollback、skip 扱い |
 | 6 | review | beads comments | **reasoning (fresh)** | critical → 停止、minor → continue |
 | 7 | finalize | manifest hash 更新 + dirty 解除 + proposals | fast | retry 3 回 |
+
+### Scenario 4-phase 一覧
+
+| # | Phase | output | model role | failure 時 |
+|---|---|---|---|---|
+| 1 | **derive** | `scenario.md`(自然言語 + 参照マッピング) | deep | derives_from 不完全 → 停止 |
+| 2 | generate | `tests/` + `docker-compose.yml` | deep | self-fix 1 回、fail なら停止 |
+| 3 | review | beads comments | **reasoning (fresh)** | critical → 停止、minor → continue |
+| 4 | finalize | manifest hash 更新 + dirty 解除 | fast | retry 3 回 |
 
 ### 共通ルール
 
@@ -466,23 +510,25 @@ MVP v0.1 = **32 skills**、3-tier 分類で組織(tier 詳細は実装時に確�
   4. user に明確な next action 提示
   5. flow-lock 保持(stale 検出可能)
 
-### Slice と page で content が異なる
+### Slice, page, scenario で content が異なる
 
-| Phase | Slice 文脈 | Page 文脈 |
-|---|---|---|
-| verify | derives_from(workflow step, aggregate, ui-field)の completeness | hosted slices が全部 generated + page-grouping doc 完全 + scenario doc 解決可能 |
-| plan | bd issue: handler 実装、unit test | bd issue: layout 実装、UI tests、E2E from scenarios |
-| test-red | handler の unit/integration test | UI tests + a11y + scenario 駆動 E2E |
-| impl-green | handler 実装 | layout + slice composition + routing wiring |
-| refactor | handler refactor | layout refactor、styles 整理 |
-| review | handler logic review | UX review、a11y 監査、scenario カバレッジ |
-| finalize | dirty 解除 | dirty 解除 + 上流提案(scenario 不完全時) |
+| Phase | Slice 文脈 | Page 文脈 | Scenario 文脈 |
+|---|---|---|---|
+| verify/derive | derives_from(workflow step, aggregate, ui-field)の completeness | hosted slices が全部 generated + page-grouping doc 完全 + scenario doc 解決可能 |参加 slice が全部 generated + workflows + validation.md 参照可能 |
+| plan | bd issue: handler 実装、unit test | bd issue: layout 実装、UI tests、E2E from scenarios | — |
+| test-red | handler の unit/integration test | UI tests + a11y + scenario 駆動 E2E | — |
+| impl-green | handler 実装 | layout + slice composition + routing wiring | — |
+| generate | — | — | テストコード + docker-compose.yml 生成 |
+| refactor | handler refactor | layout refactor、styles 整理 | — |
+| review | handler logic review | UX review、a11y 監査、scenario カバレッジ | adversarial check |
+| finalize | dirty 解除 | dirty 解除 + 上流提案(scenario 不完全時) | dirty 解除 |
 
 ### Test 生成の責務分担
 
 - **決定論的(template から)**: smoke, composition, a11y, visual baseline
 - **AI 駆動(scenario から)**: E2E, integration test
 - test-red phase で **両方生成**(template 起動 + AI による scenario→test 変換)
+- scenario の generate phase では **AI 生成のみ**(manifest + scenario.md + validation.md を入力)
 
 ### Tech phase_hooks
 
@@ -523,8 +569,8 @@ APM が各 harness の settings に **自動 merge**(`.claude/settings.json`, `.
 ```
 1. queue を drain(.ori/state/sync-queue.jsonl 読み込み + 処理 + truncate)
 2. 各 file の hash 比較 → 変化検知
-3. derives_from の reverse 参照を辿り、影響 slice/page を dirty マーク
-4. dirty slice/page の beads issue 起票
+3. derives_from の reverse 参照を辿り、影響 slice/page/scenario を dirty マーク
+4. dirty slice/page/scenario の beads issue 起票
 5. 全 manifest の hash 整合性 fail-safe check
 6. `--force` 編集された SSoT の `.ori/proposals/` 生成
 ```
@@ -540,15 +586,15 @@ APM が各 harness の settings に **自動 merge**(`.claude/settings.json`, `.
 
 ---
 
-## 11. Manifest schema(slice + page)
+## 11. Manifest schema(slice + page + scenario)
 
-### 共通 schema(type discriminator で slice/page を弁別)
+### 共通 schema(type discriminator で slice/page/scenario を弁別)
 
 ```yaml
-slice_id: register-user                       # または page_id
+slice_id: register-user                       # または page_id, scenario_id
 bc: user-management
 app: frontend                                 # 配置先 app(single-app では省略可、N-app では必須)
-type: command                                 # command | query | page
+type: command                                 # command | query | page | scenario
 status: generated                             # planned | generated | dirty | stale | manually_edited
 
 # slice 固有
@@ -568,6 +614,22 @@ route: /register                              # 任意
 slices: [register-user, check-username]       # 宿主する slice 群
 layout:
   type: form-with-validation
+
+# scenario 固有
+pages: [registration, user-settings]          # オプション、参照 page 群
+contracts:                                    # サービス間契約
+  http:
+    - "POST /api/users"
+    - "GET /api/users/:id"
+  events:
+    - "event:UserRegistered"
+  slices:
+    - "register-user"
+infrastructure:
+  services:                                   # docker-compose 生成用
+    - "web"
+    - "api"
+    - "postgres"
 
 # 共通(SSoT 派生)
 derives_from:
@@ -592,7 +654,7 @@ timestamps:
 implementation:
   bd_issues: [bd-a1b2, bd-c3d4]
 
-flow_state:                                   # 7-phase 進行状況
+flow_state:                                   # 7-phase 進行状況(slice/page) または 4-phase(scenario)
   current: refactor
   current_since: 2026-05-17T22:00:30Z
   history:
@@ -610,7 +672,8 @@ flow_state:                                   # 7-phase 進行状況
 
 | 種別 | State 名 |
 |---|---|
-| Phase 名 | `verify`, `plan`, `test-red`, `impl-green`, `refactor`, `review`, `finalize` |
+| Slice/Page Phase 名 | `verify`, `plan`, `test-red`, `impl-green`, `refactor`, `review`, `finalize` |
+| Scenario Phase 名 | `derive`, `generate`, `review`, `finalize` |
 | Initial | `null`(history 1 番目の from のみ) |
 | 終了 | `done` |
 | 異常 | `failed`, `aborted` |
@@ -886,11 +949,19 @@ validation.md 編集 → /ori-sync 検出 → 全 slice dirty → /ori-flow --re
 ### Smart skip(success criteria check)
 
 各 phase は success criteria 持つ。Resume 時に criteria 既に満たせば re-run せず skip:
+
+**Slice/Page 7-phase:**
 - verify: derives_from resolve 可 + DDD doc complete
 - plan: bd issue 存在
 - test-red: 期待された assertion で fail
 - impl-green: all green
 - refactor: type check + green 維持
+- review: critical issue なし
+- finalize: hash 整合 + dirty 解除済
+
+**Scenario 4-phase:**
+- derive: scenario.md 生成 + derives_from resolve 可
+- generate: テストコード + docker-compose.yml 生成
 - review: critical issue なし
 - finalize: hash 整合 + dirty 解除済
 
@@ -1039,7 +1110,7 @@ packages/                        # TS monorepo(開発時 SSoT)
 | Architecture schema | `.apm/skills/ori-arch/architecture-md-schema.md` | `.ori/architecture.md` の形式 (Phase K2 で `ori-arch` 配下に co-locate) |
 | Pattern | `.apm/skills/ori-arch/patterns/<name>/{pattern.md, ai-notes.md, stacks/<stack>/...}` | cross-skill(arch, types, flow, impl-green が参照)。stack-agnostic / stack-specific を階層分け |
 | Tech catalog | `.apm/skills/ori-arch/references/tech/<id>.md` | ori-arch 専属 |
-| Slice / Page manifest templates | `.apm/skills/ori-flow/templates/{slice,page}-manifest.yaml.tpl` | `/ori-flow new-slice` / `new-page` が bundle 隣接で参照 (Phase K3) |
+| Slice / Page / Scenario manifest templates | `.apm/skills/ori-flow/templates/{slice,page,scenario}-manifest.yaml.tpl` | `/ori-flow new-slice` / `new-page` / `new-scenario` が bundle 隣接で参照 (Phase K3) |
 | Hook scripts | `.apm/hooks/scripts/` | APM auto-deploy |
 | Skill scripts | `.apm/skills/<name>/scripts/` | per-skill esbuild bundle |
 | Adapter | `.apm/skills/ori-arch/adapters/<name>/` | adapter 統合 (Phase K1) |
@@ -1077,7 +1148,8 @@ Phase K (2026-06-10) で旧 `.apm/contexts/` (cross-skill 共有 SSoT) を全廃
 ├── scripts/                           # esbuild bundle
 └── templates/                         # (Phase K3) bundle 隣接の manifest テンプレ
     ├── slice-manifest.yaml.tpl
-    └── page-manifest.yaml.tpl
+    ├── page-manifest.yaml.tpl
+    └── scenario-manifest.yaml.tpl
 ```
 
 ---
@@ -1103,6 +1175,8 @@ Project root には ori / harness / contributor 向けメタ artifact(`.ori/`, `
 │   ├── slices/                             # /ori-flow 出力(全 app 共通)
 │   │   └── .gitkeep
 │   ├── pages/                              # /ori-flow + page-grouping 出力
+│   │   └── .gitkeep
+│   ├── scenarios/                          # /ori-flow scenario 出力(サービス横断 E2E)
 │   │   └── .gitkeep
 │   ├── proposals/                          # SSoT 違反時 auto-generated
 │   │   └── .gitkeep
@@ -1209,16 +1283,17 @@ monorepo では:
 |---|---|
 | **slice** | 1 use case = 1 handler = 1 vertical slice。`.ori/slices/<id>/` に manifest。 |
 | **page** | N slice の宿主(UI composition unit)。`.ori/pages/<id>/`。Phase 11b 由来。 |
+| **scenario** | サービス横断 E2E 検証単位。`.ori/scenarios/<id>/`。4-phase で処理。 |
 | **BC** | Bounded Context。DDD strategic 概念。code 上の top-level module。 |
 | **DDD-VSA-Hex** | DDD + Vertical Slice + Hexagonal pattern。MVP 唯一の curated pattern。 |
 | **node** | graph 上のノード(doc または code file)。`<type>:<name>` 形式の node_id。 |
 | **node_id** | グローバルユニーク識別子(例: `aggregate:User`, `scenario:registration-happy-path`)。 |
-| **manifest** | slice/page の generation メタデータ。`.ori/{slices,pages}/<id>/manifest.yaml`。 |
+| **manifest** | slice/page/scenario の generation メタデータ。`.ori/{slices,pages,scenarios}/<id>/manifest.yaml`。 |
 | **derives_from** | manifest の論理依存宣言(SSoT 保護対象)。 |
 | **inputs** | manifest の物理依存 + hash(change detection 用)。 |
-| **flow_state** | manifest 内の 7-phase 進行状況(history-based)。 |
+| **flow_state** | manifest 内の 7-phase(slice/page) または 4-phase(scenario) 進行状況(history-based)。 |
 | **Confidence bands** | edge 信頼度。Green (≥0.90) / Amber (≥0.50) / Gray (<0.50)。MVP は Green declared edge のみ。 |
-| **status** | slice/page status。`planned | generated | dirty | stale | manually_edited`。 |
+| **status** | slice/page/scenario status。`planned | generated | dirty | stale | manually_edited`。 |
 | **@ori-generated** | ori が生成した file の marker(手動編集検出用)。 |
 | **@ori-imported** | 人間先行 file を ori 管理下に取り込んだ marker。 |
 | **@ori-stub** | 操作 signature 宣言済、body 未実装の marker。 |
@@ -1337,6 +1412,7 @@ Phase N 完了時点で、`@ori-ori/*` の npm publishable package は **全て*
 - `/ori-rules`(machine-checkable invariants 生成)
 - Static analysis による code-to-code edge 自動検出
 - 分散 event bus / Concurrent /ori-flow(aggregate-level lock)
+- **Scenario 概念の拡張** — サービス横断 E2E テスト生成の自動化、docker-compose 生成の高度化、テストランナーの選択肢拡大
 
 ### 検討中
 
