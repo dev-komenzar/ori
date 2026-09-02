@@ -3,13 +3,18 @@ description: Rust DDD 実装規約（Tauri backend / 独立 Rust crate）
 applyTo: "src/**/*.rs"
 ---
 
-- **VO**: newtype pattern + `try_new` で Smart Constructor。`pub struct NoteId(String);` + `impl NoteId { pub fn try_new(raw: &str) -> Result<Self, NoteIdError> { ... } }`
+> **Rust 言語共通の規約（VO / Error / 副作用 / `unwrap()` 禁止 / `cargo test` + `proptest`）は
+> canonic source を `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/rust/test.md` に一本化済み。**
+> 本ファイルは Tauri (`typescript-tauri`) stack に固有の `#commands-rs-required` 規約を担い、
+> 言語共通規約の concretion を二重管理しない。
+
+- **VO**: newtype pattern + `try_new` で Smart Constructor（詳細は `stacks/rust/test.md`）
 - **`#[derive(Debug, Clone, PartialEq, Eq, Hash)]`** を VO に標準で付ける
 - **Error は `thiserror`**: `#[derive(Error, Debug)]`
 - **Tauri command**: 入力は raw types で受け取り、内部で `try_new_*` を呼ぶ
 - **Aggregate state は `&self -> (Self, Vec<Event>)` 形式の純粋関数**
 - **fs / clock など副作用は trait で抽象化**：mock 可能に
-- **テスト**: `cargo test` + `proptest` (property test)
+- **テスト**: `cargo test` + `proptest` (property test)（canonic: `stacks/rust/test.md`）
 - **`unwrap()` 禁止**: `?` または `expect("invariant: ...")` で理由を明示
 
 ## Slice 完了の必須成果物: `commands.rs` (Tauri stack) {#commands-rs-required}
