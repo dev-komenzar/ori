@@ -17,6 +17,5 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm build:skills
       - name: Fail if bundled scripts are stale
-        run: git diff --exit-code .apm/skills/*/scripts/
+        run: git diff --exit-code .apm/skills/*/scripts/ .apm/skills/*/adapters/
