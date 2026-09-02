@@ -85,8 +85,25 @@
 - **ハンドオフ**: スキル本体が doctor (`lint.js`) guardrails g-1..g-8 で機械検証 →
   ユーザ確定。往復は最大 2 回
 - **slice-runner には載せない**: slice-runner の 7 phase は per-slice の flow 用であり、
-  arch 決定は DDD ドキュメント作成期の pre-flow step。spawn はスキルレベルの Task agent
-  方式 (ori-review と同一)
+   arch 決定は DDD ドキュメント作成期の pre-flow step。spawn はスキルレベルの Task agent
+   方式 (ori-review と同一)
+
+### Q10. ori-arch / ori-architect の責務境界再定義 (2026-09-02)
+
+**確定**: ori-arch と ori-architect の両方が「decide」責務を持ち、二重 elicit と docs drift
+(cross_root_contracts 欠落 / BC default 食い違い / stack 語彙二層 / 大フロー順序不一致) が
+発生していたため、**decide を ori-architect に一元化**し、ori-arch は「前提確認 + upstream
+framework init 案内 + handoff」のみに縮小する。
+
+- **ori-arch** — upstream framework init 案内 + `/ori-architect` への委譲のみ。
+  pattern / stack / BC 名の決定 (decision_points) は行わない
+- **ori-architect** — elicit (pattern は ddd-vsa-hex 固定) → decide → compose → generate →
+  self-check → confirm の全責務。`questions.bc_names.default` は `task-management` に統一
+- **大フロー順序**: ori-init → ori-distill → ori-arch → ori-architect → ori-flow
+  (distill を arch の前に統一。旧 ori-arch SKILL.md / start docs の arch→distill 記述を修正)
+- **design.md §7**: dynamic axes + tech catalog の未実装ビジョンを現行の decision_points モデルに書き換え
+- コード・テストは無変更 (invariants / guardrails / questions / generation_procedure は
+  ori-architect に残し、doctor / golden test の機械 parse 契約を維持)
 
 ## 実装
 
