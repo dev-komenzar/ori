@@ -16922,8 +16922,10 @@ Options:
   --dest <dir>           Destination directory. Default: current working directory.
   --patterns-dir <dir>   Patterns root. Overrides the skill-bundled default.
   --scenario-test-runner <name>
-                         Scenario test runner (e.g. playwright, cypress, detox).
-                         Default: auto-inferred from stack (web\u2192playwright, etc.)
+                         Scenario test runner (e.g. playwright, wdio, vitest).
+                         Default: runtime.runner from the rendered template
+                         (local apps), else auto-inferred from stack
+                         (web\u2192playwright, tauri\u2192wdio).
   --force                Overwrite existing .ori/architecture.md.
   -h, --help             Show this help and exit.
 
@@ -17005,13 +17007,24 @@ function kebabToSnake(s2) {
 }
 function inferScenarioTestRunner(stack) {
   const s2 = stack.toLowerCase();
-  if (s2.includes("tauri")) return "playwright";
+  if (s2.includes("tauri")) return "wdio";
   if (s2.includes("next") || s2.includes("nuxt") || s2.includes("remix") || s2.includes("astro")) return "playwright";
   if (s2.includes("react") || s2.includes("vue") || s2.includes("angular") || s2.includes("svelte")) return "playwright";
   if (s2.includes("web") || s2 === "typescript" || s2 === "javascript") return "playwright";
   if (s2.includes("detox")) return "detox";
   if (s2.includes("appium")) return "appium";
   if (s2.includes("cypress")) return "cypress";
+  return void 0;
+}
+function extractRuntimeRunner(rendered) {
+  const { data } = parseFrontmatter(rendered);
+  const apps = data?.workspace?.apps;
+  for (const app of apps ?? []) {
+    const runtime = app?.runtime;
+    if (runtime?.mode === "local" && typeof runtime.runner === "string") {
+      return runtime.runner;
+    }
+  }
   return void 0;
 }
 async function exists(path) {
@@ -17188,7 +17201,7 @@ async function main() {
     BC_NAME: bcName,
     BC_NAME_RS: bcNameRs
   });
-  const scenarioRunner = args.scenarioTestRunner ?? inferScenarioTestRunner(args.stack);
+  const scenarioRunner = args.scenarioTestRunner ?? extractRuntimeRunner(rendered) ?? inferScenarioTestRunner(args.stack);
   if (scenarioRunner) {
     rendered = injectScenarioTestRunner(rendered, scenarioRunner);
   }

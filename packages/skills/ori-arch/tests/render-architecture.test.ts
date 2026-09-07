@@ -160,4 +160,30 @@ describe("render-architecture — end-to-end (ori-62h)", () => {
     expect(overwritten).toContain("renamed");
     expect(overwritten).not.toContain("first");
   });
+
+  it("injects scenario_test_runner from runtime.runner (data-driven, ori-bc9.3)", async () => {
+    const dir = await setupTmp("mytauri");
+    const r = await runScript(
+      ["--pattern", "demo", "--stack", "tauri", "--patterns-dir", PATTERNS_FIXTURE],
+      dir,
+    );
+    expect(r.code, r.stderr).toBe(0);
+    const out = await readFile(join(dir, ".ori/architecture.md"), "utf8");
+    expect(out).toContain("scenario_test_runner:");
+    expect(out).toContain("runner: wdio");
+    const spec = parseArchitectureSpec(out);
+    expect(spec.workspace?.apps[0]?.runtime?.mode).toBe("local");
+  });
+
+  it("falls back to stack inference when the template has no runtime block", async () => {
+    const dir = await setupTmp("myapp");
+    const r = await runScript(
+      ["--pattern", "demo", "--stack", "web", "--patterns-dir", PATTERNS_FIXTURE],
+      dir,
+    );
+    expect(r.code, r.stderr).toBe(0);
+    const out = await readFile(join(dir, ".ori/architecture.md"), "utf8");
+    expect(out).toContain("scenario_test_runner:");
+    expect(out).toContain("runner: playwright");
+  });
 });

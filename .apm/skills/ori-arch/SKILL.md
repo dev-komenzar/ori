@@ -89,7 +89,25 @@ slice を直接生成する。「他人の `task-management` example を消し�
    > 参照用に `architecture.md.tpl` を保持している bundle がある場合のみ
    > `--patterns-dir <dir>` 付きで render を実行できる。
 
-4. **example-slice/ への参照導線を AI に思い出させる**：
+4. **runner deps をプロジェクト root package.json に追加する** (ori-bc9 / D5):
+
+   生成された `architecture.md` の `scenario_test_runner.runner` に応じて、
+   scenario 実行に必要な test runner deps を **root** package.json に追加する
+   (ori-init の `install-tauri-scaffold.sh` が Cargo.toml へ `cargo add` するのと同型 precedent。
+   `.ori/scenarios/` 配下の test は root node_modules から解決するため置き場所は root 固定)：
+
+   | runner | 追加コマンド (project root で実行) |
+   |---|---|
+   | `playwright` | `pnpm add -D @playwright/test` |
+   | `wdio` | `pnpm add -D @wdio/cli @wdio/local-runner webdriverio @wdio/tauri-service` |
+   | `vitest` | `pnpm add -D vitest` (unit test で導入済みなら skip) |
+
+   - root package.json が無い場合は `pnpm init` で作ってから追加する
+   - network 等で失敗した場合はコマンドを提示して先へ進む (fail-safe。blocking しない)
+   - runner の実行要件がある場合は追加で案内する (wdio + tauri: WebKitGTK / tauri-driver
+     等の環境手順は nix devShell 化を推奨 — 詳細は ori-architect SKILL.md の runtime recipes)
+
+5. **example-slice/ への参照導線を AI に思い出させる**：
    - 初回 slice を作るとき `/ori-flow new-slice <id>` で必ず
      `.apm/skills/ori-arch/patterns/<pattern>/stacks/<stack>/example-slice/` を **読んでから**
      ユーザ固有 domain の slice を生成すること (target にコピーしない)

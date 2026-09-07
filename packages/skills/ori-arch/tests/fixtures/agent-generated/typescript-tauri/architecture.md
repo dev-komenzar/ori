@@ -91,7 +91,7 @@ cross_bc:
   via: [apps/myapp/src/shared/contracts, apps/myapp/src/shared/events]
   same_event_bus: true
 scenario_test_runner:
-  runner: playwright
+  runner: wdio
 phase_hooks:
   flow-impl-red-pre:
     - cmd: cargo run --bin export-types
