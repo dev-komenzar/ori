@@ -85,6 +85,7 @@ scenario の manifest.yaml は以下のフィールドを持つ:
 - **`runner`**: runner の明示 override（例: `playwright` / `wdio` / `vitest`）。未指定時は derive phase が優先チェーンで解決（後述）。無効な指定（tauri 参加なのに `playwright` 等）は derive でエラー停止する
 - **`infrastructure`**: インフラ構成の宣言
   - `services`: 参加者リスト（app 名 + infra 名）。起動方法は `workspace.apps[].runtime` または infra catalog から解決される
+  - `overrides`: infra catalog 既定値の上書き（`overrides.<name>.{image, ports, environment}`）。上書きしない infra は記述不要
 
 manifest は **参加者選択に専念**する。起動方法（image / command / port / healthcheck 等）は manifest に書かない。
 

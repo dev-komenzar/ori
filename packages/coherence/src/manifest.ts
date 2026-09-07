@@ -44,9 +44,18 @@ const ScenarioContractsSchema = z
   })
   .strict();
 
+const InfraOverrideSchema = z
+  .object({
+    image: z.string().optional(),
+    ports: z.array(z.string()).optional(),
+    environment: z.record(z.string()).optional(),
+  })
+  .strict();
+
 const ScenarioInfrastructureSchema = z
   .object({
     services: z.array(z.string()).default([]),
+    overrides: z.record(InfraOverrideSchema).default({}),
   })
   .strict();
 

@@ -12,6 +12,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
 ## 役割
 
 - **派生器**：`manifest.yaml` の `derives_from:` に列挙されたドメイン section を読み、slice 単位の spec または scenario 単位の spec に再構成
+- **runner 解決器**（scenario のみ、ori-bc9）：優先チェーン（manifest 明示 > 参加(local 系) app の `runtime.runner` > global `scenario_test_runner` > playwright default）で UI 駆動 runner を解決して spec.md に記録。「1 scenario = 1 UI runner」制約と無効 override をエラー停止で強制
 - **整合性チェッカー**：複数 upstream に矛盾があれば停止し、`/ori-propose` を促す
 - **記録係**：spec.md は **derived** ファイル。`coherence.source: derived` で書き、人間が直接編集すると `/ori-sync --force` が要求される
 
@@ -119,20 +120,39 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
    派生元 section のパスとハッシュを取得
 5. **矛盾検出**：複数 upstream が同じ概念について異なる規定を持つ場合、停止して `/ori-propose` を促す（自動マージしない）
 6. **validation.md の読み込み**：`.ori/domain/validation.md` を Read。Gherkin 形式の検証シナリオを理解
-7. **spec.md の synthesis**：
+7. **runner chain の解決**（ori-bc9 / D4）：
+
+   scenario の UI 駆動 runner を次の **優先チェーン**で解決する:
+
+   1. manifest.yaml の `runner:`（明示 override）
+   2. 参加 UI app からの導出 — `local` 系 app（tauri 等）参加時はその app の
+      `runtime.runner`（= wdio）
+   3. global `scenario_test_runner.runner`（`.ori/architecture.md`。UI app 非参加 = API-only 時の default = vitest）
+   4. ハードコード default（playwright）
+
+   - 入力: manifest の `infrastructure.services`（参加者リスト）+ `.ori/architecture.md` の
+     `workspace.apps[].runtime` blocks
+   - **「1 scenario = 1 UI runner」制約**を確認する: UI 駆動面が単一 runner で cover できない
+     構成なら停止してユーザに相談（RN + web 同時駆動等の高度ケースは WDIO multiremote が
+     文書上の escape）
+   - **無効 override はエラー停止**（推測で埋めない）: tauri（local 系）app 参加の scenario に
+     `runner: playwright` が指定されている、等の runner × 参加者不一致
+   - 解決結果（runner 名 + どのチェーン段階で決まったか）を spec.md の実装ノートに記録する
+8. **spec.md の synthesis**：
    - 概要 / シナリオステップ / テスト観点 / 実装ノートの 4 セクションを必須として埋める
    - 不明な事項は **推測で埋めず** `**TBD**` マーカーを残し、後段で人間に問う
    - 上流 section の文言を引用する際は `> domain/workflows.md#order-workflow より:` の出典を残す
    - validation.md の Gherkin シナリオを参照し、シナリオステップに反映
-8. **spec.md の自己検証**：
+   - 実装ノートに `runner: <name>`（チェーン段階）を記録（手順 7 の結果）
+9. **spec.md の自己検証**：
    - 必須 H2 4 種が揃っているか（`## 概要`、`## シナリオステップ`、`## テスト観点`、`## 実装ノート`）
    - シナリオステップが validation.md の Gherkin シナリオと整合しているか
    - 全 H2/H3 に `{#id}` があるか（grep: `^###? [^{]+$`）
    - frontmatter `coherence.source: derived` と `upstream:` の有無
-9. 検証失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
-10. **beads issue 更新**：
+10. 検証失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
+11. **beads issue 更新**：
     ```bash
-    bd update ori-derive-<scenario-id> --status=closed --notes="spec.md generated from <N> upstream sections"
+    bd update ori-derive-<scenario-id> --status=closed --notes="spec.md generated from <N> upstream sections (runner=<name>)"
     ```
 
 ## 出力フォーマット
@@ -176,6 +196,7 @@ coherence:
 
 ## 実装ノート {#impl-notes}
 
+- runner: `<playwright|wdio|vitest>`（優先チェーン N で解決 — manifest 明示 / 参加アプリ導出 / global / default）
 - 実装時のヒント
 ```
 

@@ -40,7 +40,9 @@ description: /ori-flow phase 6 (slice/page) または phase 3 (scenario)。slice
   - `.ori/scenarios/<id>/manifest.yaml`
   - `.ori/scenarios/<id>/validation.md`（Gherkin 形式の検証シナリオ）
   - `.ori/scenarios/<id>/tests/`（テストコード）
-  - `.ori/scenarios/<id>/docker-compose.yml`
+  - `.ori/scenarios/<id>/playwright.config.ts` / `wdio.conf.ts`（runner config。vitest は config なし）
+  - `.ori/scenarios/<id>/docker-compose.yml`（compose-service 系参加時のみ。参加者ゼロなら不在も正常）
+  - `.ori/architecture.md`（`workspace.apps[].runtime` / `scenario_test_runner` — 整合確認用）
 - 出力：
   - `.ori/scenarios/<id>/review.md` — reviewer agent の semantic 指摘
   - 必要なら beads issue の再 open（差し戻し先 phase）
@@ -143,23 +145,41 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
 
 2. **前提確認**：
    - phase 2（generate）完了が必須
-   - manifest.yaml / spec.md / validation.md / テストコード / docker-compose.yml の存在を確認
+   - manifest.yaml / spec.md / validation.md / テストコードの存在を確認
+   - runner config を確認: spec.md の `runner:` 記録に従い `playwright.config.ts` / `wdio.conf.ts` が存在すること（vitest は config なしが正常）
+   - docker-compose.yml: `infrastructure.services` に compose-service 系参加があるのに compose が不在、または逆（参加ゼロなのに存在）なら `/ori-generate` 差し戻し
 3. **テストコードの構文チェック**：
    ```bash
    # TypeScript の場合
-   npx tsc --noEmit .ori/scenarios/<id>/tests/*.test.ts
+   npx tsc --noEmit .ori/scenarios/<id>/tests/*.spec.ts .ori/scenarios/<id>/*.config.ts
    ```
    - 構文エラー → `/ori-generate` に差し戻し (verdict=NEEDS_FIX、reason="test code syntax error")。手順 7 へ
-4. **docker-compose.yml の構文チェック**：
+4. **docker-compose.yml の構文チェック**（compose-service 系参加時のみ。不在なら skip）：
    ```bash
-   docker-compose -f .ori/scenarios/<id>/docker-compose.yml config
+   docker compose -f .ori/scenarios/<id>/docker-compose.yml config -q
    ```
    - 構文エラー → `/ori-generate` に差し戻し (verdict=NEEDS_FIX、reason="docker-compose syntax error")。手順 7 へ
 5. **`ori-reviewer` agent を fresh context で spawn**：
    - `ori-reviewer` の agent 指示を Read し、その全指示を Task agent のプロンプトに含める
-   - reviewer に渡す入力: `.ori/scenarios/<id>/{spec.md,manifest.yaml,validation.md}`、`.ori/scenarios/<id>/tests/`、`.ori/scenarios/<id>/docker-compose.yml`
-   - reviewer に **明示**: **scenario spec ↔ テストコードの整合性 / validation.md の Gherkin シナリオ ↔ テストケースの対応 / docker-compose.yml の妥当性** を判定すること
+   - reviewer に渡す入力: `.ori/scenarios/<id>/{spec.md,manifest.yaml,validation.md}`、`.ori/scenarios/<id>/tests/`、runner config、`.ori/scenarios/<id>/docker-compose.yml`（あれば）、`.ori/architecture.md`
+   - reviewer に **明示**: **scenario spec ↔ テストコードの整合性 / validation.md の Gherkin シナリオ ↔ テストケースの対応** に加え、**mode 別 checklist（下記）** を判定すること
    - 総合判定（PASS / NEEDS_FIX / REJECT）を要求する
+
+   **mode 別 checklist（spec ↔ config ↔ compose 整合）**:
+   - **共通**:
+     - spec.md の `runner:` 記録 ↔ テストコードの import（playwright / wdio / vitest）が一致するか
+     - テストコード内に service の起動・停止・healthcheck 待機が**無い**こと（lifecycle は runner config が所有 — `scenario-test.instructions.md`）
+   - **compose-service 系 app 参加時**:
+     - manifest `infrastructure.services` ↔ docker-compose.yml の services が一致（過不足なし）か
+     - runtime block の `ports` ↔ compose の ports ↔ runner config の待機 port が一致するか
+     - app service に `environment` の接続 env が反映され、`TBD` マーカーが残っていないか（残っていれば人間判断待ち）
+   - **local 系 app（tauri 等）参加時**:
+     - local app が docker-compose.yml に**含まれていない**こと
+     - wdio.conf.ts の `tauri:options.application` が runtime block の `binary` と一致するか（build-then-test）
+     - `@wdio/tauri-service` が services に含まれるか
+   - **infra 参加時**:
+     - infra の healthcheck（TCP probe の image ファミリ別翻訳）が compose に存在するか
+     - `runtime.healthcheck: {http: /health}` 宣告のある app のみ HTTP 待機になっているか
 6. **reviewer の出力を受け取る**：
    - `.ori/scenarios/<id>/review.md` に書き込まれる
    - 形式 (簡素):
@@ -171,11 +191,12 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
 7. **指摘の処理 (verdict logic — 維持)**：
    - **指摘ゼロ** → verdict=PASS。`bd close ori-review-<scenario-id>` で完了
    - **指摘あり**：severity と内容から差し戻し先を決定（**最大 1 回**）：
-     | 指摘の性質 | 差し戻し先 | verdict |
-     |----------|-----------|---------|
-     | テストコードの不備 | `/ori-generate`（テストコード再生成） | NEEDS_FIX |
-     | docker-compose の不備 | `/ori-generate`（docker-compose 再生成） | NEEDS_FIX |
-     | spec 自体が誤り | `/ori-propose`（domain 修正提案） | REJECT |
+      | 指摘の性質 | 差し戻し先 | verdict |
+      |----------|-----------|---------|
+      | テストコードの不備 | `/ori-generate`（テストコード再生成） | NEEDS_FIX |
+      | runner config の不備 | `/ori-generate`（runner config 再生成） | NEEDS_FIX |
+      | docker-compose の不備 | `/ori-generate`（docker-compose 再生成） | NEEDS_FIX |
+      | spec 自体が誤り | `/ori-propose`（domain 修正提案） | REJECT |
    - REJECT は人間判断必須 → `bd human` flag を立てて停止
 8. **差し戻し後の再 review**：
    - patch 完了後、**1 回だけ** 手順 2 〜 6 を再実行

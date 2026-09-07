@@ -35,8 +35,28 @@ derives_from: []
     if (m.type !== "scenario") throw new Error("expected scenario manifest");
     expect(m.pages).toEqual([]);
     expect(m.contracts).toEqual({ http: [], events: [], slices: [] });
-    expect(m.infrastructure).toEqual({ services: [] });
+    expect(m.infrastructure).toEqual({ services: [], overrides: {} });
     expect(m.runner).toBeUndefined();
+  });
+
+  it("parses infrastructure.overrides (infra catalog 既定値の上書き)", () => {
+    const m = parseManifest(`scenario_id: order-flow-e2e
+type: scenario
+derives_from: []
+infrastructure:
+  services: [postgres]
+  overrides:
+    postgres:
+      image: postgres:17
+      ports: ["5433:5432"]
+      environment:
+        POSTGRES_DB: myapp
+`);
+    if (m.type !== "scenario") throw new Error("expected scenario manifest");
+    expect(m.infrastructure.services).toEqual(["postgres"]);
+    expect(m.infrastructure.overrides.postgres?.image).toBe("postgres:17");
+    expect(m.infrastructure.overrides.postgres?.ports).toEqual(["5433:5432"]);
+    expect(m.infrastructure.overrides.postgres?.environment).toEqual({ POSTGRES_DB: "myapp" });
   });
 
   it("fills sub-defaults for partially declared contracts", () => {
