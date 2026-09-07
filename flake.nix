@@ -30,6 +30,7 @@
             nodejs_22
             pnpm
             apm-cli
+            beads
           ];
         };
       });
