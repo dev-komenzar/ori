@@ -5,16 +5,21 @@ applyTo: ".ori/scenarios/**/tests/*.{spec,test}.{ts,tsx}"
 
 ## テストランナー {#test-runner}
 
-テストランナーは `.ori/architecture.md` の `scenario_test_runner` に従う。デフォルトは **Playwright**。
+scenario の UI 駆動 runner は **runner matrix 3 種**から選択される。derive phase が優先チェーン（`scenario.instructions.md` の runner chain 参照）で解決し、spec.md に記録する:
 
-- **Playwright**: ブラウザ操作 + API 呼び出し + DB 状態確認を組み合わせる E2E テスト
-- **Vitest**: API 呼び出し中心の統合テスト（ブラウザ操作不要な場合）
+| runner | 用途 | 主な駆動対象 |
+|---|---|---|
+| **Playwright** | compose-service 系 web app の E2E | ブラウザ操作 + API 呼び出し + DB 状態確認 |
+| **WDIO**（`@wdio/tauri-service`） | local 系 app（tauri 等）の E2E | ビルド済み binary（native window） |
+| **Vitest** | API-only scenario（UI app 非参加） | API 呼び出し中心の統合テスト |
 
-ランナーの選択は `manifest.yaml` の `implementation.language` と `architecture.md` の stack から決定。
+- **「1 scenario = 1 UI runner」制約**: scenario の UI 駆動面は単一 runner でカバーできること。detox は web を駆動不可、playwright は tauri binary を駆動不可、という runner 能力差に起因する制約
+- tauri app の runner 実体は `@wdio/tauri-service`（公式推奨、macOS サポートもこれ経由）
+- RN + web の同時 UI 駆動が必要な高度ケースは WDIO multiremote（Appium + chromedriver）を文書上の escape とする（通常は不要）
 
 ## テスト構造 {#test-structure}
 
-テストコードは以下の構造に従う:
+テストコードは以下の構造に従う（Playwright 例。WDIO は `describe` / `it`、Vitest は `describe` / `test` を使用）:
 
 ```typescript
 // @ori-generated scenario:<scenario-id>
@@ -35,8 +40,8 @@ test.describe('scenario:<scenario-id>', () => {
 
 ### 命名規則 {#naming-conventions}
 
-- **test.describe**: `scenario:<scenario-id>`（例: `scenario:order-flow-e2e`）
-- **test**: `step N — validation#<id>`（例: `step 1 — validation#order-create`）
+- **describe**: `scenario:<scenario-id>`（例: `scenario:order-flow-e2e`）
+- **test / it**: `step N — validation#<id>`（例: `step 1 — validation#order-create`）
   - `N`: シナリオステップ番号（1-based）
   - `validation#<id>`: validation.md の Gherkin シナリオ ID
 
@@ -52,38 +57,36 @@ test.describe('scenario:<scenario-id>', () => {
 
 ## 事前条件 {#preconditions}
 
-### docker-compose で全サービス起動 {#docker-compose-startup}
+### サービス起動は runner config が所有する {#lifecycle-ownership}
 
-テスト実行前に `docker-compose.yml` で全サービスを起動し、healthcheck 待機を行う:
+テストコードは **service の起動・停止・healthcheck 待機を行わない**。mode にかかわらず、lifecycle は同じ scenario ディレクトリに生成される runner config（`playwright.config.ts` / `wdio.conf.ts`）が所有する:
 
-```typescript
-test.beforeAll(async () => {
-  // docker-compose up -d
-  // healthcheck 待機（各サービスの /health エンドポイント or ポート疎通）
-});
-```
+- **compose-service 系 app + infra**: config が `docker-compose.yml` を起動・停止する（Playwright は `webServer`、WDIO は `onPrepare`）
+- **local 系 app**: **build-then-test** — ビルド済み binary を config が起動する（WDIO `onPrepare` + `tauri:options.application` で binary 指定。tauri 例: 事前に `tauri build --debug --no-bundle`）
+- **`local` 系 app は docker-compose に含めない**（compose は compose-service 系 app + infra のみ）
+
+旧「`test.beforeAll` で `docker-compose up` + healthcheck 待機」スケッチは **廃止**。テストコードに起動処理を書かないこと。
 
 ### healthcheck 待機 {#healthcheck-wait}
 
-各サービスの起動を確認する方法:
+起動待機の戦略も config / generate 側の責務。テストコード内に待機 loop を書かない:
 
-- **HTTP サービス**: `GET /health` が 200 を返すまで待機
-- **DB サービス**: ポート疎通 + 接続テスト
-- **メッセージブローカー**: トピック作成可能か確認
+- **default は TCP probe**（port 疎通。image ファミリ別に `/ori-generate` が翻訳）
+- `runtime.healthcheck: {http: /health}` 宣言時のみ HTTP 待機（`/health` endpoint の提供は app 側の任意 opt-in）
+- DB service: TCP probe + 接続テスト、メッセージブローカー: port 疎通で判定
 
 ## サービス横断検証 {#cross-service-verification}
 
 scenario テストは以下の組み合わせで検証する:
 
-### ブラウザ操作 {#browser-operations}
+### ブラウザ / app 操作 {#browser-operations}
 
-- Playwright の `page` オブジェクトを使用
-- フォーム入力、ボタンクリック、ページ遷移
-- UI の状態確認（テキスト、要素の存在）
+- **Playwright**: `page` オブジェクトを使用（フォーム入力、ボタンクリック、ページ遷移、UI の状態確認）
+- **WDIO**: `browser` オブジェクトを使用（tauri app の window を駆動）
 
 ### API 呼び出し {#api-calls}
 
-- Playwright の `request` オブジェクトを使用
+- Playwright の `request` オブジェクト、または runner から利用可能な HTTP client を使用
 - REST API の呼び出し（GET / POST / PUT / DELETE）
 - レスポンスの検証（ステータスコード、ボディ）
 
@@ -109,12 +112,12 @@ scenario テストは以下の組み合わせで検証する:
 test('step 1 — validation#order-create', async ({ request }) => {
   // テスト固有のデータを生成
   const orderId = `order-${Date.now()}`;
-  
+
   // テスト実行
   const response = await request.post('/api/orders', {
     data: { id: orderId, /* ... */ }
   });
-  
+
   // 検証
   expect(response.status()).toBe(201);
 });
@@ -135,6 +138,7 @@ test.afterEach(async () => {
 ## 注意 {#caveats}
 
 - **生成コードマーカー必須**: 全テストファイルに `// @ori-generated scenario:<scenario-id>` を配置
+- **サービス起動をテストコードに書かない**: compose / driver の起動・停止・待機は runner config の責務（`#lifecycle-ownership` 参照）
 - **テスト間独立**: 各テストは独立して実行可能であること（順序依存禁止）
 - **タイムアウト設定**: サービス間通信のタイムアウトを適切に設定
 - **リトライ戦略**: ネットワーク不安定を考慮したリトライ設定

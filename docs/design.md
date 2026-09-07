@@ -168,18 +168,36 @@ AI ハーネス(Claude Code, OpenCode, Codex, Gemini CLI, GitHub Copilot, Cursor
 
 **生成元**: DDD の workflows + validation.md から派生
 
-**所在**: `.ori/scenarios/<scenario-id>/`
-- `manifest.yaml`(SSoT)
-- `scenario.md`(派生、自然言語 + 参照マッピング)
-- `tests/<id>.spec.ts`(生成テストコード)
-- `docker-compose.yml`(自動生成)
+**所在**: `.ori/scenarios/<scenario-id>/`(scenario 単位で self-contained、実行モデル詳細は §9「Scenario 実行モデル」)
+- `manifest.yaml`(SSoT。参加者選択 + runner override)
+- `spec.md` / `validation.md`(派生。`/ori-derive` が生成)
+- `tests/<id>.spec.ts`(生成テストコード、`@ori-generated`)
+- `docker-compose.yml`(自動生成。**compose-service 系 app + infra のみ**、対象ゼロなら省略)
+- `playwright.config.ts` / `wdio.conf.ts`(自動生成、runner 別。vitest は config なし)
 - `status.yaml`(dirty 管理)
+- `review.md`(レビューログ)
 
 **特徴**:
 - 複数 service を横断する E2E テストを検証対象とする
 - slice/page と異なり **4-phase** で処理(derive → generate → review → finalize)
 - 参加 slice の完了を beads dep で待つ
-- infrastructure.services から docker-compose.yml を自動生成
+- **2 run mode の参加者を混在させられる**(下記 run-mode 抽象)
+- **build-then-test**: E2E はビルド済み artifact に対して実行(local app は事前ビルド、compose-service app は image 起動)
+
+#### Run mode 抽象(2026-09-07 改訂、`ori-bc9`)
+
+scenario の参加者(app)は 2 run mode のいずれかで起動される:
+
+| mode | 対象 | 起動手段 | 例 |
+|---|---|---|---|
+| `compose-service` | web / backend 等 server 型 app | docker-compose(`docker-compose.yml` 生成対象) | Next.js frontend、hono backend |
+| `local` | host process または simulator/emulator 上の app | ビルド済み binary を runner が直接起動 | Tauri desktop app、将来の RN/Expo app |
+
+- `local` は実行基盤を `target: host | ios-simulator | android-emulator` で区別する(RN 対応を見据えた一般化。host process 前提の旧命名 local-binary は廃止)
+- compose-service 系 app は **B′ descriptor**(`image` + `install`/`build`/`run` command、Dockerfile なし)で表現する。将来 `build:`(Dockerfile 参照)フィールドで prod-build image 方式に進化できる拡張点を残す
+- 混在 scenario(compose-service + local + infra)を schema 上表現でき、generate が正しく処理する
+- infra(postgres / redis 等)は app ではないため run mode を持たず、`/ori-generate` の **infra catalog**(§9)で解決する
+- 起動方法の知識(runtime recipe)の SSoT は `.ori/architecture.md` の `workspace.apps[].runtime`(§12)
 
 ### slice, page, scenario の関係
 
@@ -414,7 +432,7 @@ MVP v0.1 = **32 skills**、3-tier 分類で組織(tier 詳細は実装時に確�
 
 **Tier 2 — Workflow components(`/ori-flow` から呼ばれる)**:
 - `ori-derive`(現名、verify に rename) `ori-plan`, `ori-test-red`, `ori-impl-green`, `ori-refactor`, `ori-review`, `ori-finalize`
-- `ori-generate`(scenario 用: テストコード + docker-compose 生成)
+- `ori-generate`(scenario 用: テストコード + runner config + docker-compose 生成)
 
 **Tier 3 — Utility(随時実行)**:
 - `ori-feature-status`, `ori-doctor`, `ori-graph`, `ori-model`
@@ -447,8 +465,8 @@ MVP v0.1 = **32 skills**、3-tier 分類で組織(tier 詳細は実装時に確�
 
 | # | Phase | output | model role | failure 時 |
 |---|---|---|---|---|
-| 1 | **derive** | `scenario.md`(自然言語 + 参照マッピング) | deep | derives_from 不完全 → 停止 |
-| 2 | generate | `tests/` + `docker-compose.yml` | deep | self-fix 1 回、fail なら停止 |
+| 1 | **derive** | `spec.md` + `validation.md` + runner chain 解決結果の記録 | deep | derives_from 不完全 / 無効 runner override → 停止 |
+| 2 | generate | `tests/` + runner config + `docker-compose.yml`(compose-service 系のみ) | deep | self-fix 1 回、fail なら停止 |
 | 3 | review | beads comments | **reasoning (fresh)** | critical → 停止、minor → continue |
 | 4 | finalize | manifest hash 更新 + dirty 解除 | fast | retry 3 回 |
 
@@ -467,21 +485,85 @@ MVP v0.1 = **32 skills**、3-tier 分類で組織(tier 詳細は実装時に確�
 
 | Phase | Slice 文脈 | Page 文脈 | Scenario 文脈 |
 |---|---|---|---|
-| verify/derive | derives_from(workflow step, aggregate, ui-field)の completeness | hosted slices が全部 generated + page-grouping doc 完全 + scenario doc 解決可能 |参加 slice が全部 generated + workflows + validation.md 参照可能 |
+| verify/derive | derives_from(workflow step, aggregate, ui-field)の completeness | hosted slices が全部 generated + page-grouping doc 完全 + scenario doc 解決可能 |参加 slice が全部 generated + workflows + validation.md 参照可能 + runner chain 解決 |
 | plan | bd issue: handler 実装、unit test | bd issue: layout 実装、UI tests、E2E from scenarios | — |
 | test-red | handler の unit/integration test | UI tests + a11y + scenario 駆動 E2E | — |
 | impl-green | handler 実装 | layout + slice composition + routing wiring | — |
-| generate | — | — | テストコード + docker-compose.yml 生成 |
+| generate | — | — | テストコード + runner config + docker-compose.yml 生成(compose-service 系 app + infra のみ) |
 | refactor | handler refactor | layout refactor、styles 整理 | — |
 | review | handler logic review | UX review、a11y 監査、scenario カバレッジ | adversarial check |
 | finalize | dirty 解除 | dirty 解除 + 上流提案(scenario 不完全時) | dirty 解除 |
+
+### Scenario 実行モデル(run-mode・起動知識・runner・generate I/O)
+
+> 2026-09-07 改訂(`ori-bc9`)。PR #59 の「docker-compose で全サービス起動」前提から、2 run mode 抽象 + build-then-test へ一般化した。
+
+#### build-then-test
+
+E2E は **ビルド済み artifact に対して実行**する。テストコード側で service を build しない:
+
+- `local` app は事前ビルド(Tauri 例: `tauri build --debug --no-bundle` で binary を用意)
+- `compose-service` app は runtime block の `install` / `build` / `run` command で image 起動
+- compose / driver の lifecycle は **runner config が所有**する(Playwright `webServer`、WDIO `onPrepare` + tauri-service)。テストコードの `test.beforeAll` で `docker-compose up` する旧スケッチは廃止
+
+#### 起動知識の SSoT(runtime block)
+
+起動方法(app → image / command / port / healthcheck)の SSoT は `.ori/architecture.md` の `workspace.apps[].runtime`(§12)。
+
+```yaml
+runtime:
+  mode: compose-service   # or local
+  # compose-service: image / install / build / run / ports / healthcheck / cache_volumes
+  # local:          build / binary / target (host | ios-simulator | android-emulator) / runner
+```
+
+- 供給源は **`/ori-architect` の知識(SKILL.md の generation_procedure)+ golden fixtures**(`packages/skills/ori-arch/tests/fixtures/agent-generated/`)。言語ごとの起動知識は「runtime image + コマンド」という**データ**として表現し、Dockerfile レシピの保守を ori に持ち込まない(design 原則「これ以外 ori はファイルを足さない」)
+- parser が runtime block を検証する(**WorkspaceSchema + AppRuntimeSchema 新設**。旧: `workspace:` は未検証 passthrough)
+- scenario manifest は参加者選択に専念する(`infrastructure.services` は app 名 + infra 名のリスト)
+
+#### runner matrix
+
+scenario の UI 駆動 runner は **derive phase が次の優先チェーンで解決**し、spec.md に記録する:
+
+1. scenario manifest の `runner:`(明示指定)
+2. 参加 UI app からの導出 — `local` 系 app(tauri 等)参加時はその app の `runtime.runner`(= wdio)
+3. global `scenario_test_runner.runner`(UI app 非参加 = API-only 時の default = vitest)
+4. ハードコード default(playwright)
+
+- **「1 scenario = 1 UI runner」制約**: scenario の UI 駆動面は単一 runner でカバーできること(detox は web を駆動不可等、runner 能力差に起因する一般化ルール)。RN + web の同時 UI 駆動という高度ケースは WDIO multiremote(Appium + chromedriver)を文書上の escape として記録
+- 無効 override(tauri 参加なのに playwright 指定等)は derive で **エラー停止**(推測で埋めない)
+- tauri の runner 実体は `@wdio/tauri-service`(公式推奨、macOS サポートもこれ経由)
+- 実装済み runner matrix(3 種): **playwright**(compose-service web 駆動)/ **wdio**(local tauri 駆動)/ **vitest**(API-only)
+
+#### /ori-generate の I/O
+
+- **入力**: `manifest.yaml` + `spec.md`(runner 解決済み)+ `validation.md` + `.ori/architecture.md`(runtime blocks)
+- **出力**: テストコード + runner config(`playwright.config.ts` / `wdio.conf.ts`、vitest は config なし)+ `docker-compose.yml`(compose-service app + infra のみ。local 系 app は compose に含めない)
+- **サービス名解決ルール**: ① `workspace.apps` と一致 → app service(runtime block から生成)② infra catalog と一致 → catalog から生成 ③ 不一致 → 停止してユーザ確認(推測で埋めない)
+- **infra catalog**: skill bundle 内 `scripts/infra-catalog.yaml` に版管理(postgres / redis 等の既知定義)。manifest 側で image / ports / env を上書き可
+- **検証**: `docker compose config -q`、self-fix 1 回まで
+- **port**: runtime block の静的宣言を採用。同一 scenario 内 host port 衝突は generate エラー
+- **app↔infra 接続 env**: catalog 既定値は生成、app 固有値は導出不能なら TBD マーカー
+- **healthcheck 戦略**: TCP probe が default(image ファミリ別に generate が翻訳)。`runtime.healthcheck: {http: /health}` 宣言時のみ HTTP 待機。app コード変更なし(/health endpoint 提供は将来の architect 知識側データ変更で opt-in 可能)
+
+#### 資産配置と実行
+
+- scenario ディレクトリは self-contained(所在一覧は §4)。compose-service 系ゼロの scenario は `docker-compose.yml` を省略する
+- runner deps はプロジェクト **root package.json** に `/ori-arch` が追加(`pnpm add -D @playwright/test` 等 — Cargo.toml への `cargo add` と同型 precedent)
+- scenario 間は **直列実行**(host port 衝突回避)
+
+#### scope 境界
+
+- 実装は既存 2 stack のみ: `typescript`(compose-service + Playwright)/ `typescript-tauri`(local [target: host] + WDIO)
+- 新言語 stack(go / java / rust backend / RN 等)は将来 **runtime recipe を知識(architect SKILL.md)として追加するだけで参加**できる設計(cartesian template 増殖なし — architect 動的生成転換と整合)
+- tauri scenario の CI 自動化(WebKitGTK + xvfb + tauri-driver 入り Docker image)は scope 外(別 issue `ori-7c1`)
 
 ### Test 生成の責務分担
 
 - **決定論的(template から)**: smoke, composition, a11y, visual baseline
 - **AI 駆動(scenario から)**: E2E, integration test
 - test-red phase で **両方生成**(template 起動 + AI による scenario→test 変換)
-- scenario の generate phase では **AI 生成のみ**(manifest + scenario.md + validation.md を入力)
+- scenario の generate phase では **AI 生成のみ**(manifest + spec.md + validation.md を入力)
 
 ### Tech phase_hooks
 
@@ -578,8 +660,9 @@ contracts:                                    # サービス間契約
     - "event:UserRegistered"
   slices:
     - "register-user"
+runner: wdio                                  # オプション、runner override(§9 runner matrix の優先チェーン 1)
 infrastructure:
-  services:                                   # docker-compose 生成用
+  services:                                   # 参加者リスト(app 名 + infra 名。起動方法は runtime block / infra catalog から解決)
     - "web"
     - "api"
     - "postgres"
@@ -683,6 +766,10 @@ workspace:
   apps:                                        # /ori-init が repo folder 名から自動導出
     - name: <project-folder>                   # 例: promptnotes
       path: apps/<project-folder>              # apps_root/name
+      runtime:                                 # 任意。起動知識 SSoT(§9 Scenario 実行モデル)。scenario に参加する app が保持
+        mode: compose-service                  # compose-service | local
+        # compose-service: image / install / build / run / ports / healthcheck / cache_volumes
+        # local:          build / binary / target (host | ios-simulator | android-emulator) / runner
 default_root: ts                               # roots[].id を指定
 roots:
   - id: ts
@@ -913,8 +1000,8 @@ validation.md 編集 → /ori-sync 検出 → 全 slice dirty → /ori-flow --re
 - finalize: hash 整合 + dirty 解除済
 
 **Scenario 4-phase:**
-- derive: scenario.md 生成 + derives_from resolve 可
-- generate: テストコード + docker-compose.yml 生成
+- derive: spec.md + validation.md 生成 + derives_from resolve 可 + runner chain 解決済み
+- generate: テストコード + runner config + docker-compose.yml 生成
 - review: critical issue なし
 - finalize: hash 整合 + dirty 解除済
 
@@ -1233,6 +1320,9 @@ monorepo では:
 | **slice** | 1 use case = 1 handler = 1 vertical slice。`.ori/slices/<id>/` に manifest。 |
 | **page** | N slice の宿主(UI composition unit)。`.ori/pages/<id>/`。Phase 11b 由来。 |
 | **scenario** | サービス横断 E2E 検証単位。`.ori/scenarios/<id>/`。4-phase で処理。 |
+| **run-mode** | scenario 参加 app の起動様式。`compose-service`(docker-compose で image 起動)or `local`(host / simulator / emulator 上のビルド済み app)。 |
+| **runner** | scenario の UI 駆動を担う test runner(playwright / wdio / vitest)。manifest `runner:`・runtime block・global default の優先チェーンで解決。 |
+| **runtime block** | `.ori/architecture.md` の `workspace.apps[].runtime`。起動知識(image / command / port / healthcheck / binary / target / runner)の SSoT。 |
 | **BC** | Bounded Context。DDD strategic 概念。code 上の top-level module。 |
 | **DDD-VSA-Hex** | DDD + Vertical Slice + Hexagonal pattern。MVP 唯一の curated pattern。 |
 | **node** | graph 上のノード(doc または code file)。`<type>:<name>` 形式の node_id。 |
@@ -1361,7 +1451,7 @@ Phase N 完了時点で、`@ori-ori/*` の npm publishable package は **全て*
 - `/ori-rules`(machine-checkable invariants 生成)
 - Static analysis による code-to-code edge 自動検出
 - 分散 event bus / Concurrent /ori-flow(aggregate-level lock)
-- **Scenario 概念の拡張** — サービス横断 E2E テスト生成の自動化、docker-compose 生成の高度化、テストランナーの選択肢拡大
+- **Scenario 実行モデルの一般化**(`ori-bc9`、2026-09-07 着手)— run-mode 抽象(`compose-service` / `local` + target)、build-then-test、起動知識 SSoT(`workspace.apps[].runtime`)、runner matrix(playwright / wdio / vitest)、generate I/O + infra catalog、healthcheck 戦略を §4 / §9 / §11 / §12 に正典化。残余: tauri scenario の CI 自動化(`ori-7c1`)、go / java / rust backend / RN 等の新 stack recipe 追加(runtime recipe を知識として追加するだけで参加)
 
 ### 検討中
 
