@@ -120,5 +120,7 @@ trade-off:
 | `ori-3ik-greenfield-2026-06-03.md` | (retry へ continued) | scaffold 動線整備 | PR #12 |
 | `ori-3ik-greenfield-2026-06-03-retry-pre.md` | prep 完了 | F-1 (pnpm dlx 構文) | PR #14 |
 | `ori-3ik-greenfield-2026-06-03-retry.md` | PASS (7 phase 完走) | F-1〜F-7 | PR #14 + 本 batch (#15-#18) |
+| `ori-bc9-scenario-ts-2026-09-07.md` | PASS (scenario 4-phase + compose + playwright GREEN、CI smoke 導入) | F-1〜F-6 (4 件場で修正 / F-2 F-4 carry-over) | `ori-bc9.5` |
+| `ori-bc9-scenario-tauri-2026-09-07-pre.md` | prep 完了 (run session pending) | tauri-driver は nixpkgs 外 → cargo install | `ori-bc9.5` |
 
 新規 retry を行ったら本表を 1 行追加し、SSoT を 1 ファイルに集約する。

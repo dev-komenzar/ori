@@ -25,7 +25,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
   - `.ori/architecture.md`（必須。`workspace.apps[].runtime` blocks + `scenario_test_runner`）
 - 出力：
   - `.ori/scenarios/<id>/tests/<scenario-id>.spec.ts`（テストコード、`@ori-generated`）
-  - `.ori/scenarios/<id>/playwright.config.ts` または `wdio.conf.ts`（runner 別。vitest は config なし）
+  - `.ori/scenarios/<id>/playwright.config.ts` + `teardown.mjs` + `tsconfig.json`、または `wdio.conf.ts`（runner 別。vitest は config なし）
   - `.ori/scenarios/<id>/docker-compose.yml`（compose-service 系 app + infra のみ。**参加者ゼロなら省略**）
 
 ## 手順
@@ -66,7 +66,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
    - テストファイルは `.ori/scenarios/<id>/tests/<scenario-id>.spec.ts` に出力、先頭に `// @ori-generated scenario:<scenario-id>` マーカー
 
 8. **runner config の生成**（runner 別、`.ori/scenarios/<id>/` 直下）:
-   - **playwright**（compose-service web 駆動）: `playwright.config.ts`。`webServer` で compose を起動（`command: docker compose -f <scenario-dir>/docker-compose.yml up --wait` 相当）、`url` / `port` で TCP 起動待機
+   - **playwright**（compose-service web 駆動）: `playwright.config.ts`。`webServer` で compose を起動（`docker compose up -d --wait` — healthy 後に CLI が終了するため停止は `teardown.mjs` の globalTeardown で明示 `down`）、`url` / `port` で TCP 起動待機。あわせて `tsconfig.json` も出力
    - **wdio**（local tauri 駆動）: `wdio.conf.ts`。`onPrepare` で `docker compose up`（compose-service 系参加時）+ `tauri:options.application` でビルド済み binary を指定（binary path は runtime block の `binary`）。tauri-service（`@wdio/tauri-service`）を使用
    - **vitest**（API-only）: config なし。compose-service 系参加時は起動を globalSetup で行うか、scenario 単独実行を前提とする（`local` 系 app は不参加のはず）
    - 起動待機は **TCP probe が default**（`runtime.healthcheck: {http: /health}` 宣言時のみ HTTP 待機）
@@ -99,12 +99,41 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   webServer: {
-    command: 'docker compose -f ../docker-compose.yml up --wait --detach',
-    url: 'http://localhost:5173',   // runtime.ports の TCP 待機 (healthcheck 宣告時のみ HTTP)
+    command: 'docker compose -f docker-compose.yml up -d --wait',
+    url: 'http://localhost:5173',   // runtime.ports の TCP 待機 (healthcheck 宣言時のみ HTTP)
     reuseExistingServer: false,
-    teardown: 'docker compose -f ../docker-compose.yml down',
+    timeout: 120_000,
   },
+  globalTeardown: './teardown.mjs',
 });
+```
+
+```javascript
+// .ori/scenarios/<id>/teardown.mjs — @ori-generated
+// docker compose up --wait は healthy 後に CLI が終了するため、webServer の
+// process kill では compose が停止しない。teardown で明示 down する (ori-bc9.5 F-5)。
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+export default async function globalTeardown() {
+  execSync('docker compose -f docker-compose.yml down -v --remove-orphans', {
+    cwd: fileURLToPath(new URL('.', import.meta.url)),
+    stdio: 'inherit',
+  });
+}
+```
+
+あわせて scenario 直下に `tsconfig.json` を出力する（`/ori-review` の `tsc --noEmit` が
+node types / esnext target なしで失敗するため — ori-bc9.5 F-6）:
+
+```json
+{
+  "compilerOptions": {
+    "target": "esnext", "module": "esnext", "moduleResolution": "bundler",
+    "types": ["node"], "noEmit": true, "strict": true
+  },
+  "include": ["tests/**/*.ts", "playwright.config.ts"]
+}
 ```
 
 **wdio**（local tauri 駆動の例）:
@@ -119,7 +148,7 @@ export const config = {
     },
   }],
   services: ['tauri'],   // @wdio/tauri-service
-  // compose-service 系参加時のみ onPrepare で docker compose up
+  // compose-service 系参加時のみ onPrepare で docker compose up -d --wait + onComplete で down
 };
 ```
 

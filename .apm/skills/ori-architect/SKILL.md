@@ -218,7 +218,7 @@ runtime_recipes:
       runtime:
         mode: compose-service        # B′ descriptor (image + command、Dockerfile なし)
         image: node:22-slim
-        install: pnpm install --frozen-lockfile
+        install: corepack enable && pnpm install --frozen-lockfile   # node:22-slim は pnpm 同梱外のため corepack で有効化
         run: pnpm dev --host 0.0.0.0
         ports: [5173]               # dev server port (静的宣言、衝突は generate エラー)
         cache_volumes: [.pnpm-store]

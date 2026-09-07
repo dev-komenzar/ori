@@ -8,7 +8,7 @@ workspace:
       runtime:
         mode: compose-service
         image: node:22-slim
-        install: pnpm install --frozen-lockfile
+        install: corepack enable && pnpm install --frozen-lockfile
         run: pnpm dev --host 0.0.0.0
         ports: [5173]
 root:

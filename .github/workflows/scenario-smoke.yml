@@ -1,0 +1,52 @@
+name: scenario-smoke
+
+# CI smoke for the scenario execution model (ori-bc9 / D7): the golden
+# typescript fixture's runtime block (compose-service descriptor) + infra
+# catalog must actually BOOT — compose up + headless playwright GREEN.
+# Unit tests only verify the *shape* of generated artifacts; this smoke
+# guards that the descriptor is real on every PR.
+#
+# Scope and rationale: see ci/scenario-smoke/run-smoke.sh header.
+
+on:
+  pull_request:
+    paths:
+      - '.apm/skills/ori-generate/**'
+      - 'ci/scenario-smoke/**'
+      - 'packages/skills/ori-arch/tests/fixtures/agent-generated/**'
+      - 'packages/coherence/**'
+      - '.github/workflows/scenario-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.apm/skills/ori-generate/**'
+      - 'ci/scenario-smoke/**'
+      - 'packages/skills/ori-arch/tests/fixtures/agent-generated/**'
+      - 'packages/coherence/**'
+      - '.github/workflows/scenario-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  scenario-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm via corepack
+        run: corepack enable pnpm
+
+      - name: Run scenario smoke (compose up + headless playwright)
+        run: bash ci/scenario-smoke/run-smoke.sh
+
+      - name: Cleanup on failure
+        if: failure()
+        run: |
+          if [ -f /tmp/ori-scenario-smoke/.ori/scenarios/scenario-smoke-e2e/docker-compose.yml ]; then
+            docker compose -f /tmp/ori-scenario-smoke/.ori/scenarios/scenario-smoke-e2e/docker-compose.yml logs || true
+            docker compose -f /tmp/ori-scenario-smoke/.ori/scenarios/scenario-smoke-e2e/docker-compose.yml down -v --remove-orphans || true
+          fi
