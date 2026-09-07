@@ -36,12 +36,32 @@ export const PageManifestSchema = z
   })
   .strict();
 
+const ScenarioContractsSchema = z
+  .object({
+    http: z.array(z.string()).default([]),
+    events: z.array(z.string()).default([]),
+    slices: z.array(z.string()).default([]),
+  })
+  .strict();
+
+const ScenarioInfrastructureSchema = z
+  .object({
+    services: z.array(z.string()).default([]),
+  })
+  .strict();
+
+export const ScenarioRunnerSchema = z.enum(["playwright", "wdio", "vitest"]);
+
 export const ScenarioManifestSchema = z
   .object({
     scenario_id: z.string().regex(KEBAB, "scenario_id must be kebab-case"),
     type: z.literal("scenario"),
     derives_from: z.array(z.string()).default([]),
     relations: z.array(RelationSchema).default([]),
+    pages: z.array(z.string()).default([]),
+    contracts: ScenarioContractsSchema.default({ http: [], events: [], slices: [] }),
+    infrastructure: ScenarioInfrastructureSchema.default({ services: [] }),
+    runner: ScenarioRunnerSchema.optional(),
     implementation: ImplementationSchema.optional(),
   })
   .strict();

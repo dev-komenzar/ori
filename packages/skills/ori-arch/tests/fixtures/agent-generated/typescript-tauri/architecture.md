@@ -6,6 +6,12 @@ workspace:
   apps:
     - name: myapp
       path: apps/myapp
+      runtime:
+        mode: local
+        build: pnpm tauri build --debug --no-bundle
+        binary: apps/myapp/src-tauri/target/debug/myapp
+        target: host
+        runner: wdio
 roots:
   - id: ts
     app: myapp
