@@ -2,11 +2,11 @@
 
 ori 自体は言語非依存です。プロジェクトの実装スタックに応じて **pattern**
 (`.apm/skills/ori-arch/patterns/<pattern>/`) と **アーキテクチャ adapter** を組み合わせ、
-次の三段構えで slice ベース DDD scaffold を立ち上げます (design.md §17)。
+次のステップで slice ベース DDD scaffold を立ち上げます (design.md §17)。
 
 > **ori の大フロー**:
-> 1. **DDD ドキュメント作成** — ori-init → **arch/stack 決定 (`/ori-arch`)** → distill-ddd
->    (discovery 〜 ui-grouping)
+> 1. **DDD ドキュメント作成** — ori-init → distill-ddd (discovery 〜 ui-grouping)
+>    → **architecture 決定 (`/ori-arch` → `/ori-architect`)**
 > 2. **slice / page ごとに ori-flow**（derive → plan → test-red → impl-green →
 >    refactor → review → finalize）
 
@@ -54,7 +54,7 @@ ori 自体は言語非依存です。プロジェクトの実装スタックに�
 
 ## 共通ステップ
 
-スタックを問わず、ori プロジェクトの立ち上げは以下のステップです (design.md §17 三段構え)。
+スタックを問わず、ori プロジェクトの立ち上げは以下のステップです (design.md §17)。
 
 ```bash
 # 1. インストール
@@ -64,22 +64,24 @@ apm install dev-komenzar/ori
 mkdir my-app && cd my-app
 /ori-init                                            # .ori/ skeleton + config.yaml (silent)
 
-# 3. upstream framework init (例: pure TypeScript)
+# 3. DDD ドキュメント作成 (phase 1-11)
+/ori-distill                                         # phase 1-11 を対話実行 → .ori/domain/ が埋まる
+
+# 4. upstream framework init (例: pure TypeScript)
 mkdir -p apps/my-app && cd apps/my-app
 pnpm create vite@latest . --template vanilla-ts      # package.json / tsconfig.json 等が揃う
 cd ../..
 
-# 4. architecture.md を生成 (arch/stack 決定)
+# 5. architecture.md を生成
 /ori-arch                                            # /ori-architect に委譲して要件対話から生成 (ori-8gz)
 pnpm install
 
-# 5. 最初の slice を AI と対話で派生
-/ori-distill                                         # phase 1-11 を対話実行 → .ori/domain/ が埋まる
+# 6. 最初の slice を派生して実装
 node .apm/skills/ori-flow/scripts/new-slice.js <slice-id>   # workflow から slice を切り出す
 /ori-flow <slice-id>                                 # 7-phase TDD を回す
 ```
 
-スタックごとに違うのはステップ 3 (upstream init コマンド) とステップ 4 (`/ori-arch` → `/ori-architect` で要件対話させる) だけで、その後のワークフローは共通です。スタック固有の
+スタックごとに違うのはステップ 4 (upstream init コマンド) とステップ 5 (`/ori-arch` → `/ori-architect` で要件対話させる) だけで、その後のワークフローは共通です。スタック固有の
 差分 (依存・lint 設定・ビルド手順) は各ガイドに集約しています。
 
 ## スタック追加の提案

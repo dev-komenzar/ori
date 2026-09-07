@@ -25,9 +25,9 @@ pnpm --version
 rustc --version
 ```
 
-## 2. プロジェクト初期化 (三段構え)
+## 2. プロジェクト初期化 (二段構え)
 
-design.md §17 の「decide → upstream init → ori artifact」三段構え。
+design.md §17 の「upstream init → ori artifact」二段構え。
 
 ```bash
 mkdir my-tauri-app && cd my-tauri-app
@@ -44,8 +44,8 @@ pnpm add -D @tauri-apps/cli
 pnpm tauri init
 cd ../..
 
-# ステップ 3: pattern / stack を決め、.ori/architecture.md (multi-root) を render
-/ori-arch                                            # pattern=ddd-vsa-hex / stack=typescript-tauri を選ぶ
+# ステップ 3: architecture.md (multi-root) を生成（/ori-architect に委譲）
+/ori-arch                                            # /ori-architect に委譲して要件対話から生成
 pnpm install
 ```
 

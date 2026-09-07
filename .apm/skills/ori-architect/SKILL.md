@@ -1,6 +1,6 @@
 ---
 name: ori-architect
-description: /ori-arch から委譲され、要件対話 (platforms / os_integration / ui_native 等) から `.ori/architecture.md` を動的生成する。DDD + vsa-hex の核 (invariants) は不変、ビルド/配信/OS 統合の差は decision_points としてメイン session で対話確定する。/ori-init → /ori-arch の次に呼ばれる。
+description: /ori-arch の「ori artifact 追加」step として委譲され、要件対話 (platforms / os_integration / ui_native 等) から `.ori/architecture.md` を動的生成する。DDD + vsa-hex の核 (invariants) は不変、ビルド/配信/OS 統合の差は decision_points としてメイン session で対話確定する。
 ---
 
 `/ori-arch` の「ori artifact 追加」step として動作する。**このスキルはメイン session で
@@ -20,7 +20,7 @@ ori-c79 で agent として定義したが ori-8gz でスキルへ書き直し�
 
 ## 手順
 
-1. **elicit** — `questions:` を順に提示し、ユーザの回答を得る（推奨 + 上書き可。ハイブリッド UI 対応）
+1. **elicit** — `questions:` を順に提示し、ユーザの回答を得る（推奨 + 上書き可。ハイブリッド UI 対応）。pattern は `ddd-vsa-hex`（唯一の curated pattern）で固定のため質問対象外。
 2. **decide** — decision_points を確定し、roots（id / language / adapter / slice_root /
    public_entry）と layer_sets を決める
 3. **compose** — `invariants:` から layer graph / slice_internal / boundaries を選択・結合して
@@ -193,7 +193,7 @@ questions:
     affects: roots[].language / adapter、slice_internal の選択 (ts / rs)
   bc_names:
     prompt: "最初の BC 名を決めてください (識別子規則: TS=kebab-case / Rust=snake_case)"
-    default: (ユーザ入力)
+    default: task-management
     affects: roots[].slice_root と public_entry パス
   cross_root_contracts:
     prompt: root 間で共有する生成物 (type bridge 等) があれば宣言してください

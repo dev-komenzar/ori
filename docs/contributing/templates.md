@@ -1,6 +1,6 @@
 # init テンプレートを募集しています
 
-現状の `/ori-arch` は MVP として `ddd-vsa-hex-typescript` / `ddd-vsa-hex-typescript-tauri`（slice ベース + DDD + Vertical Slice + Hexagonal）を中心にサポートしています。将来的には**コミュニティから template を集めたい**と考えています：
+現状の `/ori-arch`（→ `/ori-architect` が要件対話から生成）は MVP として `pattern:ddd-vsa-hex` × `stack:typescript` / `typescript-tauri`（slice ベース + DDD + Vertical Slice + Hexagonal）を中心にサポートしています。将来的には**コミュニティから template を集めたい**と考えています：
 
 - **言語別**: Python / Go / Rust / Kotlin / Scala / Swift...
 - **フレームワーク別**: Next.js / Nuxt / Remix / Django / FastAPI / Spring / Axum / Tauri...

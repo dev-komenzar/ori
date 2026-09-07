@@ -284,19 +284,21 @@ MVP は **`ddd-vsa-hex` 1 個** のみ curated。複数 pattern は v0.2+。
 .apm/skills/ori-arch/patterns/ddd-vsa-hex/
 ├── pattern.md                       # stack-agnostic 概念定義(Summary, When, Tradeoffs, Layer, Dependency, Naming, Cross-cutting placement)
 ├── ai-notes.md                      # AI 行動指示(AI considerations, Test strategy, Migration)
-└── stacks/                          # pattern × stack の実現形(MVP は pre-bake、将来 axes dynamic 化時に生成へ移行)
+└── stacks/                          # pattern × stack の実現形
     ├── typescript/
-    │   ├── architecture.md.tpl      # → target の .ori/architecture.md ソース
-    │   └── example-slice/           # AI が新 slice 生成時に on-demand 参照する worked code(study material)
-    └── typescript-tauri/
-        ├── architecture.md.tpl
-        └── example-slice/           # TS + Rust mirror
+    │   ├── example-slice/           # AI が新 slice 生成時に on-demand 参照する worked code(study material)
+    │   └── test.md                  # テスト規約の正典 (PR #60)
+    ├── typescript-tauri/
+    │   ├── example-slice/           # TS + Rust mirror
+    │   └── test.md
+    └── rust/
+        └── test.md                  # Rust 単体のテスト規約 (example-slice は未整備)
 ```
 
 - **stack-agnostic な pattern.md / ai-notes.md** と **stack-specific な stacks/<stack>/** を物理パスで階層分け
 - **example-slice/ は study material**(target にコピーしない): AI が `/ori-flow new-slice` 等で参照、`package.json` 等 bootstrap ファイルは含めない(upstream の framework init が担当)
 - **target に書き出すのは `.ori/architecture.md` のみ**: 空 skeleton や worked slice の物理コピーは行わない(ori 責務は「upstream 出力に設定を加える」)
-- **architecture.md.tpl の placeholder**: app 名等は `/ori-arch` 実行時に config から解決して埋め込む
+- **`architecture.md.tpl` は撤廃 (ori-c79.6)**: 固定テンプレートの cartesian product 方式は廃止され、旧 tpl の期待 IR は golden test の GOLDEN 定数 (`packages/skills/ori-arch/tests/fixtures/golden-constants.ts`) に引き継がれた。`.ori/architecture.md` の生成は `/ori-architect` スキルが要件対話から行う (§7)
 
 ### Pattern.md の必須 sections
 
@@ -349,100 +351,51 @@ Cross-slice rules:
 
 ---
 
-## 7. Stack — dynamic axes と tech catalog
+## 7. Stack — decision_points と invariants
 
-### Axes は固定でなく動的
+### 固定 template から要件対話ベースの動的生成へ (ori-c79)
 
-/ori-arch が DDD docs を読んで project 性質を推論し、必要な axes 群を **proposal-confirmation** で確定。
+旧設計 (dynamic axes + tech catalog による proposal-confirmation) は実装されず、
+ori-c79 で **固定テンプレートの cartesian product 方式を廃止**し、`/ori-architect`
+スキルが **要件対話から `.ori/architecture.md` を 1 ファイル動的生成** する方式に転換した。
 
-### Curated vocabulary
+- **invariants (不変)**: DDD + vsa-hex の核 (layer graph / slice_internal / boundaries)。どの stack でも維持。
+- **decision_points (可変)**: ビルド / 配信 / OS 統合の差。要件対話で確定する。
 
-axes 名 / tech catalog は `.apm/skills/ori-arch/references/tech/` 配下に集約 (controlled vocabulary)。
+### decision_points (questions)
 
-**Core axes(頻出)**:
-- `host` — デプロイ・実行先
-- `frontend` — UI render lib
-- `framework` — meta-framework
-- `backend` — API layer
-- `datastore` — 永続化
-
-**Optional axes(必要時のみ提案)**:
-- `runtime`(node / bun / deno)
-- `type-bridge`(tauri-specta / trpc / openapi-codegen)
-- `auth`(auth0 / clerk / supabase-auth / lucia / custom)
-- `api-protocol`(rest / trpc / graphql / rpc)
-
-### Tech catalog(初期 12)
-
-```
-.apm/skills/ori-arch/references/tech/
-├── tauri.md            (variants: version v1|v2)
-├── nextjs.md           (variants: rendering, router, runtime)
-├── sveltekit.md        (variants: adapter)
-├── nuxt.md             (variants: rendering)
-├── vite-react.md
-├── hono.md             (variants: runtime)
-├── axum.md
-├── supabase.md         (features: auth, realtime, storage, vector)
-├── cloudflare-pages.md
-├── sqlite.md           (driver variants)
-├── postgresql.md       (version + extensions)
-├── prisma.md           (engine variants)
-└── drizzle.md
-```
-
-### tech/<tech>.md schema
+要件対話で埋める質問は `.apm/skills/ori-architect/SKILL.md` の `questions:` に機械 parse 可能な形で定義される (doctor が parse):
 
 ```yaml
----
-ori:
-  tech_id: <id>
-  axes:                          # この tech がカバーする axis 群
-    <axis>: <value>
-  variants:                      # variant 定義
-    <name>:
-      type: enum
-      values: [...]
-      default: <value>
-      affects: [...]
-      description: "..."
-      incompatibilities:
-        <variant-value>:
-          - <other-axis>: <value>  # 組合せ不可
-  variant_inference_hints:       # /ori-arch AI 推論用
-    <variant-name>:
-      - "<hint>"
-  phase_hooks:                   # phase 後処理 hook
-    - phase: <phase-name>
-      timing: pre | post
-      description: "..."
-      command: "<bash>"
-      verify:
-        type: file-exists | exit-code | grep | regex
-        ...
-      on_failure: stop | continue-with-warning
-      applicable_when:
-        variants:
-          <name>: [<value>, ...]
----
+questions:
+  platforms:            # 配信/実行ターゲット (server / web / ios / android / desktop / cli)
+  os_integration:       # OS 統合 (none / tauri / electron / capacitor / react-native)
+  ui_native:            # UI 実装形態 (web / native / hybrid)
+  language:             # 実装言語 (typescript / rust / swift / kotlin / ...)
+  bc_names:             # BC 名 (TS=kebab-case / Rust=snake_case)
+  cross_root_contracts: # root 間の生成物 (type bridge 等)
 ```
 
-### 実行 flow(/ori-arch)
+### 生成手順 (generation_procedure)
+
+`/ori-architect` は次の 6 手順で `.ori/architecture.md` を生成する:
 
 ```
-1. DDD docs を読む(discovery, workflows, ui-fields)
-2. AI が project 性質を推論
-3. tech/ から関連 tech をピック、proposal 構築
-   "framework: tauri, frontend: tauri-react を推奨します"
-4. ユーザーに proposal 提示 + 質問
-5. Variant proposal(tech が variants 持つ場合)
-   "tauri の version は v2(default)で良いですか?"
-6. ユーザー確定後、各 tech の手順を実行
-   tech/<id>.md の reference に従って bash 実行
-7. stack.md 書き出し(動的 N フィールド + variants)
-8. pattern.md 書き出し(decision record)
-9. .ori/architecture.md update(layer 構造 = pattern + tech から導出)
+elicit → decide → compose → generate → self-check → confirm
 ```
+
+- **elicit** — `questions:` を提示し回答を得る (推奨 + 上書き可)
+- **decide** — decision_points を確定し roots (id / language / adapter / slice_root / public_entry) と layer_sets を決める
+- **compose** — invariants から layer graph / slice_internal / boundaries を選択・結合して frontmatter を組み立てる
+- **generate** — `.ori/architecture.md` を書く (既存があれば上書き可否を確認)
+- **self-check** — guardrails g-1..g-8 を doctor (`lint.js`) で検証、fail なら修正して再生成
+- **confirm** — ユーザに提示し確定を得る
+
+invariants / guardrails は `.apm/skills/ori-architect/SKILL.md` の YAML で定義され、doctor が機械 parse して生成結果を検証する (詳細は §12 と `architecture-md-schema.md`)。
+
+### 実績 stack
+
+生成可能な既存実績は `typescript` (web / Node) と `typescript-tauri` (Tauri 2) の 2 つ。未検証の組み合わせは「実験的」と明記して生成する。
 
 ---
 
@@ -1190,13 +1143,12 @@ Project root には ori / harness / contributor 向けメタ artifact(`.ori/`, `
 
 `/ori-init` は **silent** で .ori/ skeleton のみ作成。`apps/` directory も生成 **しない**(/ori-arch の framework init が apps/<app>/ を populate)。`.ori/config.yaml` には repo folder 名から導出した default app entry を書き込む。
 
-### `/ori-arch` の責務分担(2026-06-07 確定)
+### `/ori-arch` の責務分担(2026-09-02 改訂 — decide を `/ori-architect` に一元化)
 
-`/ori-arch` は次の 3 ステップで動く。**worked example の物理コピーは行わない**:
+`/ori-arch` は次の 2 ステップで動く。**worked example の物理コピーは行わない**。要件の決定 (pattern / stack / BC 名 = decision_points) は `/ori-architect` に一元化している (§7):
 
-1. **decide**: pattern (DDD-VSA-Hex 等) と stack (typescript / typescript-tauri 等) をユーザと対話で確定
-2. **upstream framework init**: `pnpm create vite@latest`, `pnpm create tauri-app`, `cargo new` 等を実行(各 tech catalog の bash 手順)。bootstrap 系ファイル(`package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, `.gitignore`, `README.md` 等)はここで生まれる
-3. **ori artifact 追加**: `.apm/skills/ori-arch/patterns/<pattern>/stacks/<stack>/architecture.md.tpl` を読み、app 名等の placeholder を解決して target の `.ori/architecture.md` を書き出す。これ以外 ori はファイルを足さない
+1. **upstream framework init**: `pnpm create vite@latest`, `pnpm tauri init` 等を**ユーザに案内** (skill は自動実行しない)。bootstrap 系ファイル(`package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, `.gitignore`, `README.md` 等)はここで生まれる
+2. **ori artifact 追加**: `/ori-architect` スキルに委譲して、要件対話 (elicit → decide) から `.ori/architecture.md` を 1 ファイルだけ生成させる (compose → generate → self-check → confirm)。生成結果は doctor の guardrails (g-1..g-8) で機械検証する
 
 `example-slice/` (`.apm/skills/ori-arch/patterns/<pattern>/stacks/<stack>/example-slice/`) は AI 専用の study material で、target にコピーされない。AI は `/ori-flow new-slice <id>` 等で初回 slice を生成する際に on-demand で参照し、ユーザーの実ドメインに沿った slice を直接生成する。これにより「他人の `task-management` example を消して自分のものを書く」工数が消え、ユーザー固有の domain を最初から扱える。
 
@@ -1204,10 +1156,7 @@ Project root には ori / harness / contributor 向けメタ artifact(`.ori/`, `
 
 ```
 <project>/
-├── .ori/                                    # SSoT(上記)
-├── docs/architecture/
-│   ├── pattern.md                          # /ori-arch 決定記録
-│   └── stack.md                            # /ori-arch interview 結果
+├── .ori/                                    # SSoT(architecture.md はここに生成)
 └── apps/
     └── <app>/                              # /ori-init が repo folder 名から導出
         ├── src-tauri/src/                  # Rust(framework init 出力 + ori overlay)
