@@ -6,8 +6,11 @@ export {
   type Manifest,
   type SliceManifest,
   type PageManifest,
+  type ScenarioManifest,
   ManifestSchema,
   SliceManifestSchema,
   PageManifestSchema,
+  ScenarioManifestSchema,
+  ScenarioRunnerSchema,
   parseManifest,
 } from "./manifest.js";

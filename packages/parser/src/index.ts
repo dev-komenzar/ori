@@ -20,6 +20,10 @@ export {
   type AdapterExportResult,
   type AdapterCheckResult,
   type AdapterOpts,
+  AppRuntimeSchema,
+  WorkspaceSchema,
+  type AppRuntime,
+  type Workspace,
 } from "./architecture.js";
 export {
   buildMatchers,

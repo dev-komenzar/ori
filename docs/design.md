@@ -666,6 +666,9 @@ infrastructure:
     - "web"
     - "api"
     - "postgres"
+  overrides:                                  # 任意。infra catalog 既定値の上書き(image / ports / environment)
+    postgres:
+      image: postgres:17
 
 # 共通(SSoT 派生)
 derives_from:

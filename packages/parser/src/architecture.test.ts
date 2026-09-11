@@ -293,6 +293,120 @@ cross_slice: { prohibited_direct: true, via: [shared/contracts, shared/events] }
     });
   });
 
+  describe("workspace + runtime block (ori-bc9.2)", () => {
+    const specWithRuntime = (runtime: string): string =>
+      `---
+version: 1
+workspace:
+  apps_root: apps
+  apps:
+    - name: myapp
+      path: apps/myapp
+${runtime}
+root:
+  path: src
+  language: typescript
+  layer_set: feature-sliced-ts
+  adapter: eslint
+  slice_root: lib
+  public_entry: index.ts
+layer_sets:
+  feature-sliced-ts:
+    layers: [{ id: shared, kind: shared }]
+    rules: { cross_layer: [], same_layer: prohibited, public_entry_required: true }
+cross_slice: { prohibited_direct: true, via: [] }
+---
+`;
+
+    it("is undefined when the workspace block is absent", () => {
+      expect(parseArchitectureSpec(SINGLE_ROOT_SPEC).workspace).toBeUndefined();
+    });
+
+    it("parses workspace without runtime (runtime は scenario 参加 app のみ)", () => {
+      const spec = parseArchitectureSpec(
+        specWithRuntime("      # no runtime"),
+      );
+      expect(spec.workspace?.apps[0]?.name).toBe("myapp");
+      expect(spec.workspace?.apps[0]?.runtime).toBeUndefined();
+    });
+
+    it("parses compose-service runtime (B′ descriptor)", () => {
+      const spec = parseArchitectureSpec(
+        specWithRuntime(`      runtime:
+        mode: compose-service
+        image: node:22-slim
+        install: pnpm install --frozen-lockfile
+        run: pnpm dev --host 0.0.0.0
+        ports: [5173, 3000]`),
+      );
+      const runtime = spec.workspace?.apps[0]?.runtime;
+      expect(runtime?.mode).toBe("compose-service");
+      if (runtime?.mode !== "compose-service") return;
+      expect(runtime.image).toBe("node:22-slim");
+      expect(runtime.run).toBe("pnpm dev --host 0.0.0.0");
+      expect(runtime.ports).toEqual([5173, 3000]);
+      expect(runtime.cache_volumes).toEqual([]);
+      expect(runtime.healthcheck).toBeUndefined();
+    });
+
+    it("parses local runtime (build-then-test)", () => {
+      const spec = parseArchitectureSpec(
+        specWithRuntime(`      runtime:
+        mode: local
+        build: pnpm tauri build --debug --no-bundle
+        binary: apps/myapp/src-tauri/target/debug/myapp
+        target: host
+        runner: wdio`),
+      );
+      const runtime = spec.workspace?.apps[0]?.runtime;
+      expect(runtime?.mode).toBe("local");
+      if (runtime?.mode !== "local") return;
+      expect(runtime.binary).toContain("target/debug/myapp");
+      expect(runtime.target).toBe("host");
+      expect(runtime.runner).toBe("wdio");
+    });
+
+    it("rejects legacy mode value local-binary (一般化後の命名は local + target)", () => {
+      expect(() =>
+        parseArchitectureSpec(
+          specWithRuntime("      runtime:\n        mode: local-binary"),
+        ),
+      ).toThrow();
+    });
+
+    it("rejects compose-service runtime without image", () => {
+      expect(() =>
+        parseArchitectureSpec(
+          specWithRuntime("      runtime:\n        mode: compose-service\n        run: pnpm dev"),
+        ),
+      ).toThrow();
+    });
+
+    it("rejects local runtime without binary", () => {
+      expect(() =>
+        parseArchitectureSpec(
+          specWithRuntime("      runtime:\n        mode: local\n        target: host\n        runner: wdio"),
+        ),
+      ).toThrow();
+    });
+
+    it("rejects local runtime with invalid target", () => {
+      expect(() =>
+        parseArchitectureSpec(
+          specWithRuntime(
+            "      runtime:\n        mode: local\n        binary: app\n        target: browser\n        runner: wdio",
+          ),
+        ),
+      ).toThrow();
+    });
+
+    it("rejects empty workspace.apps", () => {
+      expect(() =>
+        parseArchitectureSpec(specWithRuntime("      # x").replace("apps:\n    - name: myapp\n      path: apps/myapp", "apps: []")),
+      ).toThrow();
+    });
+  });
+
   it("rejects default_root that does not match any root id", () => {
     const raw = `---
 version: 1

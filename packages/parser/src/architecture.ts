@@ -93,10 +93,67 @@ const ScenarioTestRunnerSchema = z
   })
   .passthrough();
 
+/**
+ * App runtime block (design.md §9 / §12) — 起動知識の SSoT。
+ * compose-service = B′ descriptor (image + command、Dockerfile なし)、
+ * local = build-then-test (ビルド済み binary を runner が起動)。
+ */
+const RunTargetSchema = z.enum(["host", "ios-simulator", "android-emulator"]);
+
+const ComposeServiceRuntimeSchema = z
+  .object({
+    mode: z.literal("compose-service"),
+    image: z.string().describe("docker image (B′ descriptor、Dockerfile なし)"),
+    install: z.string().optional().describe("install command (e.g. pnpm install)"),
+    build: z.string().optional().describe("build command"),
+    run: z.string().describe("service 起動 command"),
+    ports: z
+      .array(z.number().int().positive())
+      .default([])
+      .describe("host ports (静的宣言。同一 scenario 内衝突は generate エラー)"),
+    healthcheck: z
+      .object({ http: z.string().describe("HTTP 待機 path (例: /health)。default は TCP probe") })
+      .passthrough()
+      .optional(),
+    cache_volumes: z.array(z.string()).default([]),
+  })
+  .passthrough();
+
+const LocalRuntimeSchema = z
+  .object({
+    mode: z.literal("local"),
+    build: z.string().optional().describe("binary build command (例: pnpm tauri build --debug --no-bundle)"),
+    binary: z.string().describe("ビルド済み binary path (build-then-test)"),
+    target: RunTargetSchema.describe("実行基盤"),
+    runner: z.string().describe("UI 駆動 runner (例: wdio)。derive の runner chain 優先チェーン 2 で使用"),
+  })
+  .passthrough();
+
+export const AppRuntimeSchema = z.discriminatedUnion("mode", [
+  ComposeServiceRuntimeSchema,
+  LocalRuntimeSchema,
+]);
+
+export const AppSchema = z
+  .object({
+    name: z.string(),
+    path: z.string(),
+    runtime: AppRuntimeSchema.optional(),
+  })
+  .passthrough();
+
+export const WorkspaceSchema = z
+  .object({
+    apps_root: z.string().default("apps"),
+    apps: z.array(AppSchema).min(1),
+  })
+  .passthrough();
+
 const FrontmatterSchema = z
   .object({
     version: z.literal(1),
     default_root: z.string().optional(),
+    workspace: WorkspaceSchema.optional(),
     root: RootSchema.optional(),
     roots: z.array(RootSchema).optional(),
     cross_root: z.array(CrossRootSchema).optional(),
@@ -118,10 +175,13 @@ export type SliceInternal = z.infer<typeof SliceInternalSchema>;
 export type CrossSlice = z.infer<typeof CrossSliceSchema>;
 export type CrossRoot = z.infer<typeof CrossRootSchema>;
 export type ScenarioTestRunner = z.infer<typeof ScenarioTestRunnerSchema>;
+export type AppRuntime = z.infer<typeof AppRuntimeSchema>;
+export type Workspace = z.infer<typeof WorkspaceSchema>;
 
 export interface ArchitectureSpec {
   version: 1;
   default_root: string;
+  workspace?: Workspace;
   roots: RootConfig[];
   cross_root: CrossRoot[];
   layer_sets: Record<string, LayerSet>;
@@ -150,6 +210,7 @@ export function parseArchitectureSpec(raw: string): ArchitectureSpec {
   return {
     version: 1,
     default_root: defaultRoot,
+    workspace: fm.workspace,
     roots,
     cross_root: fm.cross_root ?? [],
     layer_sets: fm.layer_sets,

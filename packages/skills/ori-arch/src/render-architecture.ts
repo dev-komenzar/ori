@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir, stat, readdir } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as yamlParse } from "yaml";
-import { parseArchitectureSpec } from "@ori-ori/parser";
+import { parseArchitectureSpec, parseFrontmatter } from "@ori-ori/parser";
 import { consola } from "consola";
 
 const DEFAULT_BC = "task-management";
@@ -37,8 +37,10 @@ Options:
   --dest <dir>           Destination directory. Default: current working directory.
   --patterns-dir <dir>   Patterns root. Overrides the skill-bundled default.
   --scenario-test-runner <name>
-                         Scenario test runner (e.g. playwright, cypress, detox).
-                         Default: auto-inferred from stack (web→playwright, etc.)
+                         Scenario test runner (e.g. playwright, wdio, vitest).
+                         Default: runtime.runner from the rendered template
+                         (local apps), else auto-inferred from stack
+                         (web→playwright, tauri→wdio).
   --force                Overwrite existing .ori/architecture.md.
   -h, --help             Show this help and exit.
 
@@ -98,21 +100,49 @@ function kebabToSnake(s: string): string {
 }
 
 /**
- * Infer scenario test runner from stack name.
+ * Infer scenario test runner from stack name (fallback when the template
+ * carries no runtime block).
  * - web / typescript → playwright
- * - typescript-tauri → playwright (web UI) + tauri-driver (native)
+ * - typescript-tauri → wdio (tauri-driver で native window を駆動 — ori-bc9 で
+ *   旧 tauri→playwright前提 を修正)
  * - mobile stacks → detox / appium
  * Returns undefined if no inference is possible.
  */
 function inferScenarioTestRunner(stack: string): string | undefined {
   const s = stack.toLowerCase();
-  if (s.includes("tauri")) return "playwright";
+  if (s.includes("tauri")) return "wdio";
   if (s.includes("next") || s.includes("nuxt") || s.includes("remix") || s.includes("astro")) return "playwright";
   if (s.includes("react") || s.includes("vue") || s.includes("angular") || s.includes("svelte")) return "playwright";
   if (s.includes("web") || s === "typescript" || s === "javascript") return "playwright";
   if (s.includes("detox")) return "detox";
   if (s.includes("appium")) return "appium";
   if (s.includes("cypress")) return "cypress";
+  return undefined;
+}
+
+/**
+ * Extract the runtime runner from a rendered architecture.md's
+ * `workspace.apps[].runtime` (local mode only — compose-service apps don't
+ * declare a runner). Data-driven source for the scenario_test_runner
+ * injection (ori-bc9: runtime.runner データ駆動).
+ */
+function extractRuntimeRunner(rendered: string): string | undefined {
+  const { data } = parseFrontmatter(rendered);
+  const apps = (
+    data as {
+      workspace?: {
+        apps?: Array<{
+          runtime?: { mode?: unknown; runner?: unknown };
+        }>;
+      };
+    }
+  )?.workspace?.apps;
+  for (const app of apps ?? []) {
+    const runtime = app?.runtime;
+    if (runtime?.mode === "local" && typeof runtime.runner === "string") {
+      return runtime.runner;
+    }
+  }
   return undefined;
 }
 
@@ -311,7 +341,10 @@ async function main(): Promise<void> {
     BC_NAME_RS: bcNameRs,
   });
 
-  const scenarioRunner = args.scenarioTestRunner ?? inferScenarioTestRunner(args.stack);
+  const scenarioRunner =
+    args.scenarioTestRunner ??
+    extractRuntimeRunner(rendered) ??
+    inferScenarioTestRunner(args.stack);
   if (scenarioRunner) {
     rendered = injectScenarioTestRunner(rendered, scenarioRunner);
   }
