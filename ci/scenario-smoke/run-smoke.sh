@@ -128,6 +128,8 @@ done
 log "run headless playwright"
 ( cd "$ORI_ROOT/ci/scenario-smoke/playwright" \
   && pnpm install --ignore-workspace --frozen-lockfile \
+  && { pnpm exec playwright install --with-deps chromium \
+       || pnpm exec playwright install chromium; } \
   && pnpm exec playwright test ) \
   || { docker compose -f "$COMPOSE_FILE" logs myapp || true; fail "playwright smoke spec not GREEN"; }
 ok "playwright smoke spec GREEN"
