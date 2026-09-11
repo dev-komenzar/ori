@@ -130,7 +130,7 @@ infrastructure:
 ## 作成タイミング {#creation-timing}
 
 1. **DDD pipeline 完了**: `/ori-distill` で workflows + validation が整備される
-2. **manifest 自動生成**: `/ori-sync` が scenario manifest の雛形を生成（人間が確認・修正）
+2. **manifest scaffold**: `new-scenario.js <id>`（ori-flow skill bundle の `scripts/`）。id は validation.md の section anchor から選択する（`--list-validation` で anchor 一覧と coverage を確認。§id-convention）。`/ori-arch` 完了時の次アクション・`/ori-feature-status` の coverage 表示が導線になる
 3. **beads dep 設定**: 参加 slice の beads issue に `bd depends` が自動設定
 4. **全 slice 完了で unblock**: 参加 slice が全て完了したら、scenario の `/ori-flow` が unblock
 
