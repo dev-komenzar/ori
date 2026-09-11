@@ -4,6 +4,63 @@ ori (織) — DDD-driven slice/page scaffolding with CoDD coherence.
 
 ローカル変更ログ。npm scope は `@ori-ori/*`、monorepo 配下の全 publishable パッケージは同期 version で release する。
 
+## v0.5.0 — 2026-09-11
+
+**Scenario 概念導入 + architect 動的生成化 + Review バイパス不能化** を軸とした release。service 横断 E2E テスト生成のための scenario 概念を新設し、validation.md anchor と 1:1 機械ガードまで含めて整備した。`/ori-architect` は固定テンプレートを廃し、要件対話ベースの動的生成へ転換。L1/L2/L3 防御線を強化し review バイパスを不能化。テスト規約を pattern/stacks 階層に一本化し正典化。配布動線は引き続き APM single package (`apm install dev-komenzar/ori`) のみ。
+
+### Scenario 概念の導入
+
+サービス横断 E2E テスト生成を目的とする `scenario` 概念を新設。validation.md の anchor と scenario ID を 1:1 に固定する機械ガードまで含む。
+
+- **scenario 概念の導入** ([`ori-bc9.1`](https://github.com/dev-komenzar/ori/pull/59)) — サービス横断 E2E テスト生成
+- **実行モデルの一般化** ([`ori-bc9`](https://github.com/dev-komenzar/ori/pull/63)) — run-mode 抽象・起動知識 SSoT・runner matrix による実行モデルの一般化
+- **scenario ID ↔ validation.md anchor 1:1 固定** ([`ori-1vx`](https://github.com/dev-komenzar/ori/pull/64)) — scaffold 導線と機械 guard
+
+### architect-expert agent 動的生成化（#55）
+
+`/ori-architect` が固定スタックテンプレートから **要件対話ベースの動的生成** に転換。利用者の要件に応じて architecture.md を対話的に生成する。
+
+- **architect-expert agent 動的生成化** ([`ori-c79`](https://github.com/dev-komenzar/ori/pull/55)) — 固定 stack テンプレートから要件対話ベースの動的生成へ転換
+
+### Review バイパス不能化とハーネス状態遷移ドキュメント化（#58）
+
+L1/L2/L3 防御線を強化し、review ゲートのバイパスを不能化。README に全 skill の状態遷移図（Mermaid）と防御線の説明を追加。
+
+- **review バイパス不能化** ([#58](https://github.com/dev-komenzar/ori/pull/58)) — L1/L2/L3 防御線強化、全 skill 状態遷移図（Mermaid）追加
+
+### テスト規約の正典化（#60）
+
+それまで分散していたテスト規約を pattern および stack 定義に集約し、単一の正典として参照可能にした。
+
+- **テスト規約の正典化** ([#60](https://github.com/dev-komenzar/ori/pull/60)) — pattern/stacks 階層へ一本化
+
+### ori-arch/architect の責務境界再定義（#61）
+
+`decide` ロジックを一元化し、`/ori-arch` と `/ori-architect` の責務を明確に分離。
+
+- **ori-arch/architect の責務境界再定義** ([#61](https://github.com/dev-komenzar/ori/pull/61)) — decide 一元化と docs 整合
+
+### 開発環境整備
+
+- **Nix flake devShell 強化** ([#62](https://github.com/dev-komenzar/ori/pull/62)) — `beads`、`apm-cli` を devShell に追加
+- **Serena プロジェクト設定** — LSP ベースのコードナビゲーション設定を追加
+
+### AGENTS.md 統合
+
+CLAUDE.md を AGENTS.md に統合し、CLAUDE.md はリダイレクトのみに。ori-bug skill の description 更新と bug routing instruction 追加。
+
+### Fix
+
+- **tauri-specta の cargo add exact pin 化** ([`ori-87k`](https://github.com/dev-komenzar/ori/pull/57)) — soup2 依存を除去
+
+### 破壊的変更
+
+なし。APM 単独配布モデル（`apm install dev-komenzar/ori`）は v0.4.0 から継続。
+
+### ロードマップ
+
+v0.5 で予定していたブラウンフィールド対応（`/ori-migrate-domain`）は今回未対応。v0.6+ に持ち越し。
+
 ## v0.4.0 — 2026-06-26
 
 **Slice DoD enforcement** を skill chain 全体に通した release。`pattern.md` の Slice Definition of Done (4 rule) を SSoT として、`/ori-arch` → `/ori-derive` → `/ori-plan` → `/ori-impl-red` → `/ori-impl-green` → `/ori-doctor` → `/ori-review` が一気通貫で DoD を生成・enforcement する形に揃った。typescript-tauri stack では stub commands.rs / specta bindings rebuild / `setupProductionBuilder.ts` / boundary 経由 test を skill chain が機械的に emit する。並行して v0.3 で導入した skill-only execution model への積み残し追従 (`/ori-sync` / `/ori-propose`) と DDD doc frontmatter の `ori:` block 統一を完了した。配布動線は v0.3 から引き続き APM single package (`apm install dev-komenzar/ori`) のみで、新規 npm publish 対象 package は無い。
