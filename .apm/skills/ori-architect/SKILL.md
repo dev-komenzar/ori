@@ -232,7 +232,11 @@ runtime_recipes:
         target: host
         runner: wdio                # derive の runner chain 優先チェーン 2 で使用
       scenario_test_runner: wdio    # @wdio/tauri-service 経由で native window を駆動
-      runner_deps: ["@wdio/cli", "@wdio/local-runner", "webdriverio", "@wdio/tauri-service"]
+      # framework / globals / types まで含める (ori-bc9.5 tauri F-1: v1.4.0 は mocha framework +
+      # @wdio/globals 型 + skipLibCheck を要し、runner_deps 不足だと generate 後の tsc/実行が失敗する)
+      runner_deps: ["@wdio/cli", "@wdio/local-runner", "webdriverio", "@wdio/tauri-service",
+                    "@wdio/mocha-framework", "@wdio/spec-reporter", "@wdio/globals",
+                    "@types/mocha", "@types/node"]
   notes:
     - "healthcheck は default TCP probe。runtime.healthcheck: {http: /health} 宣言時のみ HTTP 待機"
     - runner_deps は /ori-arch がプロジェクト root package.json に pnpm add -D で追加

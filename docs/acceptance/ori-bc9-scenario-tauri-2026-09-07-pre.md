@@ -4,6 +4,14 @@
 session acceptance の **prep log**。run session は本 log の手順に従って別 session で
 実施する (実行環境の構築コストが大きいため分離。慣行の 2-session pattern)。
 
+> **run session 完了 (2026-09-11, PASS)**: 結果は
+> `ori-bc9-scenario-tauri-2026-09-11.md` を参照。本 prep log の環境手順には
+> 2 点の修正 (F-3) が入る — ① `javascriptcoregtk_4_1` は nixpkgs に存在しない
+> （JSC は `webkitgtk_4_1` に同梱） ② tauri-driver は WebDriver server そのものではなく
+> intermediary で、Linux の `external` provider は「WDIO → tauri-driver → WebKitWebDriver
+> （native）→ app」の 3 段構成（`WebKitWebDriver` が PATH に必要）。下記 shell.nix は
+> 修正反映済み。
+
 ## 環境評価 (2026-09-07 実施)
 
 | 項目 | 結果 |
@@ -37,7 +45,7 @@ pkgs.mkShell {
     rustc cargo rustfmt clippy
     pkg-config
     webkitgtk_4_1
-    glib gtk3 libsoup_3 javascriptcoregtk_4_1
+    glib gtk3 libsoup_3
   ] ++ browserLibs;
 
   # playwright chromium (download 済み binary) が NixOS で shared libs を解決できるように
@@ -58,7 +66,10 @@ pkgs.mkShell {
 - tauri app の cargo build は `nix-shell` 内で実施 (webkitgtk_4_1 の pkg-config 解決のため)
 - `tauri build --debug --no-bundle` の binary は runtime も webkitgtk 系 libs を要求する —
   devShell の `LD_LIBRARY_PATH` が cover する想定。不足が出たら `makeLibraryPath` の対象を追加
-- tauri-driver は WebDriver server として port 4444 で起動し、WDIO が接続する
+- tauri-driver は **intermediary** として port 4444 で起動し、WDIO が接続する。Linux の
+  `external` provider は「WDIO → tauri-driver（intermediary）→ WebKitWebDriver（native、
+  `webkitgtk_4_1` の `bin/`）→ app」の 3 段構成（`@wdio/tauri-service` が `driverProvider:
+  'external'` で管理。WebKitWebDriver が PATH に必要）
 
 ## run session で実施する E-steps (計画)
 

@@ -124,31 +124,50 @@ export default async function globalTeardown() {
 ```
 
 あわせて scenario 直下に `tsconfig.json` を出力する（`/ori-review` の `tsc --noEmit` が
-node types / esnext target なしで失敗するため — ori-bc9.5 F-6）:
+node types / esnext target なしで失敗するため — ori-bc9.5 F-6）。`types` は runner 別に指定する
+（playwright は `["node"]` のみ / wdio は `@wdio/globals/types` + `mocha` + `skipLibCheck` —
+WDIO v9 の型が TS 7 の lib.dom `URLPattern` と衝突するため。ori-bc9.5 tauri F-2）:
 
 ```json
 {
   "compilerOptions": {
     "target": "esnext", "module": "esnext", "moduleResolution": "bundler",
-    "types": ["node"], "noEmit": true, "strict": true
+    "types": ["node", "@wdio/globals/types", "mocha"],
+    "noEmit": true, "strict": true, "skipLibCheck": true
   },
-  "include": ["tests/**/*.ts", "playwright.config.ts"]
+  "include": ["tests/**/*.ts", "wdio.conf.ts"]
 }
 ```
 
-**wdio**（local tauri 駆動の例）:
+**wdio**（local tauri 駆動の例。`@wdio/tauri-service` v1.4.0 の実 API — ori-bc9.5 tauri F-1）:
 
 ```typescript
 // .ori/scenarios/<id>/wdio.conf.ts — @ori-generated
+import { execSync } from 'node:child_process';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+// runtime.binary (build-then-test) を絶対パスで解決
+const BINARY = resolve(__dirname, '../../../apps/<app>/src-tauri/target/debug/<app>');
+
 export const config = {
+  runner: 'local',
   specs: ['./tests/**/*.spec.ts'],
+  maxInstances: 1,
+  // external = tauri-driver (intermediary) + WebKitWebDriver (native)。v1.4.0 の default は
+  // 'embedded' で、これは tauri-plugin-wdio-webdriver を app に必要とするため external を明示。
+  services: [['@wdio/tauri-service', { driverProvider: 'external' }]],
   capabilities: [{
-    'tauri:options': {
-      application: '../../../apps/<app>/src-tauri/target/debug/<app>',  // runtime.binary
-    },
+    browserName: 'tauri',   // 'wry' も可（同一扱い）
+    'tauri:options': { application: BINARY },
   }],
-  services: ['tauri'],   // @wdio/tauri-service
+  framework: 'mocha',
+  mochaOpts: { ui: 'bdd', timeout: 60000 },
+  reporters: ['spec'],
   // compose-service 系参加時のみ onPrepare で docker compose up -d --wait + onComplete で down
+  onPrepare: async () => { execSync('docker compose -f docker-compose.yml up -d --wait', { cwd: __dirname, stdio: 'inherit' }); },
+  onComplete: async () => { execSync('docker compose -f docker-compose.yml down -v --remove-orphans', { cwd: __dirname, stdio: 'inherit' }); },
 };
 ```
 
