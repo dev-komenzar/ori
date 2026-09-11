@@ -7433,7 +7433,7 @@ async function runListValidation(cwd2) {
   console.log("   To merge sections: edit validation.md first, then scaffold the merged section.\n");
   console.log(`validation.md scenario sections (${sections.length}):`);
   for (const s of sections) {
-    const mark = scaffolded.has(s.id) ? "scaffolded" : `candidate (not scaffolded \u2014 each needs its own scenario)`;
+    const mark = scaffolded.has(s.id) ? "scaffolded" : "candidate (not scaffolded \u2014 each needs its own scenario)";
     console.log(`  ${s.id.padEnd(44)} ${mark}  \u2014 ${s.title}`);
   }
   const anchorIds = new Set(sections.map((s) => s.id));
