@@ -72,6 +72,10 @@ scenario の manifest.yaml は以下のフィールドを持つ:
 ### 必須フィールド {#required-fields}
 
 - **`scenario_id`**: kebab-case。**`.ori/domain/validation.md` の H2 section anchor と 1:1**（§id-convention 参照）。ファイルパス・beads issue ID と連動するため **rename 禁止**
+
+  > ⚠️ **1 scenario = 1 validation section。複数の validation section を 1 scenario にまとめないこと。**
+  > まとめたい場合は先に validation.md 側で section を統合する。`new-scenario.js --list-validation` は
+  > 各 section がそれぞれ 1 つの scenario に対応する前提で表示する。
 - **`type`**: `scenario` 固定
 - **`derives_from`**: ドメイン文書の `path` または `path#section-id` のリスト。**`domain/validation.md#<scenario-id>` を必ず含める**（1:1 anchor）。任意で workflow section 等を追加できる
 

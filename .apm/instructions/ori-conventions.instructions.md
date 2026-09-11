@@ -12,4 +12,4 @@ applyTo: ".ori/**/*.md"
 - **`.ori/` 第一級概念**: `.ori/` ディレクトリには slice / page / scenario の 3 つの第一級概念が存在する
   - `.ori/slices/<id>/`: 1 use case = 1 handler（単一サービス内）
   - `.ori/pages/<id>/`: UI composition unit（単一サービス内）
-  - `.ori/scenarios/<id>/`: サービス横断 E2E 検証単位（複数サービス横断）
+  - `.ori/scenarios/<id>/`: サービス横断 E2E 検証単位（複数サービス横断）。**scenario id は validation.md の section anchor と 1:1。複数 section を 1 つの scenario にまとめないこと**（section 統合は validation.md 側で先に行う）

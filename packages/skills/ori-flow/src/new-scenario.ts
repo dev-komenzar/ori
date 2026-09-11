@@ -85,9 +85,13 @@ async function runListValidation(cwd: string): Promise<void> {
   }
 
   const scaffolded = new Set(await listScaffoldedScenarios(cwd));
+
+  // docs/reports/20260911-scenario-grouping.md — agent proposed grouping multiple sections into one scenario
+  console.log("⚠️  EACH validation section = 1 scenario. DO NOT group multiple sections into one scenario.");
+  console.log("   To merge sections: edit validation.md first, then scaffold the merged section.\n");
   console.log(`validation.md scenario sections (${sections.length}):`);
   for (const s of sections) {
-    const mark = scaffolded.has(s.id) ? "scaffolded" : "candidate (not scaffolded)";
+    const mark = scaffolded.has(s.id) ? "scaffolded" : "candidate (not scaffolded — each needs its own scenario)";
     console.log(`  ${s.id.padEnd(44)} ${mark}  — ${s.title}`);
   }
 
