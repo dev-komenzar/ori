@@ -1,6 +1,6 @@
 ---
 name: ori-review
-description: /ori-flow phase 6 (slice/page) または phase 3 (scenario)。slice/page の場合は 3 つの structural gate を機械実行し、すべて pass した時のみ fresh-context reviewer agent を spawn して spec 乖離のみ意味的に check する薄いゲート。scenario の場合は scenario spec とテストコードの整合性を review する
+description: /ori-flow phase 6 (slice/page) または phase 3 (scenario)。slice/page の場合は 3 つの structural gate を機械実行し、すべて pass した時のみ fresh-context reviewer agent を spawn して spec 乖離のみ意味的に check する薄いゲート。scenario の場合は scenario spec とテストコードの整合性を review する。scenario では全 Then 句 ↔ assertion をカバレッジ gate し、未検証 Then は HIGH / NEEDS_FIX とする
 ---
 
 ユーザが `/ori-review <id>` を呼ぶ、または `/ori-flow` 内部から phase 6 (slice/page) または phase 3 (scenario) として起動した際に、**slice/page の場合は 3 つの structural gate を Bash で実行 → すべて pass なら fresh-context で `ori-reviewer` agent を spawn → verdict と差し戻しを捌く薄いラッパー**として動作します。**scenario の場合は scenario spec とテストコードの整合性を review** します。**スキル本体はメイン session で動き、Bash で gate を回し、reviewer は Task agent で起動**します。
@@ -12,7 +12,7 @@ description: /ori-flow phase 6 (slice/page) または phase 3 (scenario)。slice
 ## 役割
 
 - **3 gate ランナー**（slice/page のみ）：boundary test / arch lint / public_entry の 3 check を Bash で実行
-- **scenario reviewer**（scenario のみ）：scenario spec とテストコードの整合性を review
+- **scenario reviewer**（scenario のみ）：scenario spec とテストコードの整合性を review し、全 `Then` 句 ↔ assertion のカバレッジを gate する
 - **semantic reviewer ディスパッチャー**：3 gate pass 後に reviewer agent を fresh context で spawn (spec ↔ impl 乖離のみ意味的判定)
 - **single-pass 強制装置**：往復は **最大 1 回**。無限ループに陥らないためのガード
 - **patch ディスパッチャー**：指摘内容に応じて適切な phase（test-red / impl-green / refactor / propose / generate）に差し戻す
@@ -38,7 +38,7 @@ description: /ori-flow phase 6 (slice/page) または phase 3 (scenario)。slice
 - 入力：
   - `.ori/scenarios/<id>/spec.md`
   - `.ori/scenarios/<id>/manifest.yaml`
-  - `.ori/scenarios/<id>/validation.md`（Gherkin 形式の検証シナリオ）
+  - `.ori/scenarios/<id>/validation.md`（Gherkin 形式の検証シナリオ。存在しない場合は `spec.md#scenario-steps` を `Then` の出所とする）
   - `.ori/scenarios/<id>/tests/`（テストコード）
   - `.ori/scenarios/<id>/playwright.config.ts` / `wdio.conf.ts`（runner config。vitest は config なし）
   - `.ori/scenarios/<id>/docker-compose.yml`（compose-service 系参加時のみ。参加者ゼロなら不在も正常）
@@ -145,7 +145,7 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
 
 2. **前提確認**：
    - phase 2（generate）完了が必須
-   - manifest.yaml / spec.md / validation.md / テストコードの存在を確認
+   - manifest.yaml / spec.md / テストコードの存在を確認（validation.md は Gherkin を内包する場合のみ。無ければ `spec.md#scenario-steps` を `Then` の出所にする）
    - runner config を確認: spec.md の `runner:` 記録に従い `playwright.config.ts` / `wdio.conf.ts` が存在すること（vitest は config なしが正常）
    - docker-compose.yml: `infrastructure.services` に compose-service 系参加があるのに compose が不在、または逆（参加ゼロなのに存在）なら `/ori-generate` 差し戻し
 3. **テストコードの構文チェック**：
@@ -159,16 +159,24 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
    docker compose -f .ori/scenarios/<id>/docker-compose.yml config -q
    ```
    - 構文エラー → `/ori-generate` に差し戻し (verdict=NEEDS_FIX、reason="docker-compose syntax error")。手順 7 へ
-5. **`ori-reviewer` agent を fresh context で spawn**：
+5. **`Then` 句の決定的列挙 → `ori-reviewer` agent を fresh context で spawn**：
+   - **全 `Then` 句（Gherkin）を列挙**し、件数と一覧を reviewer に渡す（reviewer の網羅漏れ防止）。`validation.md` が無い scenario は `spec.md#scenario-steps` の各ステップを列挙する:
+     ```bash
+     rg -n "^\s*Then " .ori/scenarios/<id>/validation.md .ori/scenarios/<id>/spec.md
+     ```
    - `ori-reviewer` の agent 指示を Read し、その全指示を Task agent のプロンプトに含める
-   - reviewer に渡す入力: `.ori/scenarios/<id>/{spec.md,manifest.yaml,validation.md}`、`.ori/scenarios/<id>/tests/`、runner config、`.ori/scenarios/<id>/docker-compose.yml`（あれば）、`.ori/architecture.md`
-   - reviewer に **明示**: **scenario spec ↔ テストコードの整合性 / validation.md の Gherkin シナリオ ↔ テストケースの対応** に加え、**mode 別 checklist（下記）** を判定すること
+   - reviewer に渡す入力: `.ori/scenarios/<id>/{spec.md,manifest.yaml,validation.md}`、`.ori/scenarios/<id>/tests/`、runner config、`.ori/scenarios/<id>/docker-compose.yml`（あれば）、`.ori/architecture.md`、**上で列挙した `Then` 句の全件**
+   - reviewer に **明示**: **各 `Then` をテストの assertion に対応付け、カバレッジ表（`Then` / 期待 assertion / テスト file:line / 状態）を出力**すること。加えて **scenario spec ↔ テストコードの整合性 / validation.md の Gherkin シナリオ ↔ テストケースの対応**、**mode 別 checklist（下記）** を判定すること
+   - reviewer に **明示**: **`Then` が 1 つでも UNVERIFIED（assertion 不在 / 最終状態しか見ない / 副作用・タイミング・フォーカス未検証）なら severity=HIGH + verdict=NEEDS_FIX。未検証 `Then` を LOW に disposition してはならない**。E2E で原理的に不能な項目は代替担保（unit test の file:line）を併記して `N/A(代替担保)` とし、代替が無ければ UNVERIFIED
    - 総合判定（PASS / NEEDS_FIX / REJECT）を要求する
 
    **mode 別 checklist（spec ↔ config ↔ compose 整合）**:
    - **共通**:
      - spec.md の `runner:` 記録 ↔ テストコードの import（playwright / wdio / vitest）が一致するか
      - テストコード内に service の起動・停止・healthcheck 待機が**無い**こと（lifecycle は runner config が所有 — `scenario-test.instructions.md`）
+     - **`Then` ↔ assertion カバレッジ**: 列挙した全 `Then` がカバレッジ表で `VERIFIED` / `N/A(代替担保)` になっているか。`UNVERIFIED` が 1 つでもあれば HIGH / NEEDS_FIX（LOW 不可）
+     - **副作用・タイミング・フォーカス・イベント**: 最終状態だけでなく、規定された副作用（focus 遷移 / debounce 時間 / event 発行）が assert されているか
+     - **ドメイン規定数値**: domain 文書の数値・定数（debounce 等）がテストで assert され、実装定数と一致するか
    - **compose-service 系 app 参加時**:
      - manifest `infrastructure.services` ↔ docker-compose.yml の services が一致（過不足なし）か
      - runtime block の `ports` ↔ compose の ports ↔ runner config の待機 port が一致するか
@@ -189,12 +197,27 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
    - `.ori/scenarios/<id>/review.md` に書き込まれる
    - 形式 (簡素):
      ```markdown
+     ## Then ↔ assertion coverage
+     | Then (source#anchor) | 期待 assertion | テスト (file:line) | 状態 |
+     |---|---|---|---|
+     | validation.md#... Then 接続が成功する | connection 確立 | tests/x.spec.ts:42 | VERIFIED |
+     | validation.md#... Then フォーカスが移る | activeElement ∈ draft | — | **UNVERIFIED** |
+
      ## Findings
-     - **HIGH** spec.md#scenario-steps: ステップ 3 がテストコードで未検証
+     - **HIGH** spec.md#scenario-steps: Then「フォーカスが移る」がテストで未検証
      - **LOW** docker-compose.yml: Redis の healthcheck が未設定
      ```
+   - **カバレッジ表の実在を機械確認**（reviewer の出力漏れ防止・裁量排除）:
+     ```bash
+     test -n "$(grep -m1 'Then ↔ assertion coverage' .ori/scenarios/<id>/review.md)" \
+       || echo "MISSING coverage table"
+     # 状態セル（最終列）が UNVERIFIED の行数。凡例行を誤検知しないよう列末で一致させる
+     grep -Ec '\|\s*(\*\*)?UNVERIFIED(\*\*)?\s*\|\s*$' .ori/scenarios/<id>/review.md   # 1 以上なら NEEDS_FIX
+     ```
+     - 表が無い / 列挙した `Then` 件数と表の行数が一致しない → review 不合格として reviewer に再出力を要求（この再出力は single-pass の往復カウントに含めない）
+     - `UNVERIFIED` が 1 件以上 → **reviewer の裁量に依らず** verdict=NEEDS_FIX
 7. **指摘の処理 (verdict logic — 維持)**：
-   - **指摘ゼロ** → verdict=PASS。`bd close ori-review-<scenario-id>` で完了
+   - **指摘ゼロ（カバレッジ表に UNVERIFIED ゼロ）** → verdict=PASS。`bd close ori-review-<scenario-id>` で完了
    - **指摘あり**：severity と内容から差し戻し先を決定（**最大 1 回**）：
       | 指摘の性質 | 差し戻し先 | verdict |
       |----------|-----------|---------|
@@ -202,7 +225,9 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
       | runner config の不備 | `/ori-generate`（runner config 再生成） | NEEDS_FIX |
      | docker-compose の不備 | `/ori-generate`（docker-compose 再生成） | NEEDS_FIX |
      | 前提条件（plugin / build / env）の欠落 | `/ori-generate`（app 前提 patch 再実行） | NEEDS_FIX |
+     | `Then` 未検証（assertion 不在） | `/ori-generate`（assertion 追加） | NEEDS_FIX |
      | spec 自体が誤り | `/ori-propose`（domain 修正提案） | REJECT |
+   - **`Then` 未検証は severity 下限 HIGH**（LOW への disposition 不可）。カバレッジ表に UNVERIFIED が 1 つでもあれば verdict は NEEDS_FIX
    - REJECT は人間判断必須 → `bd human` flag を立てて停止
 8. **差し戻し後の再 review**：
    - patch 完了後、**1 回だけ** 手順 2 〜 6 を再実行
@@ -265,11 +290,19 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
 - test code: PASS (`npx tsc --noEmit .ori/scenarios/test-scenario/tests/*.test.ts`)
 - docker-compose: PASS (`docker-compose -f .ori/scenarios/test-scenario/docker-compose.yml config`)
 
+### Then ↔ assertion coverage (reviewer: fresh context)
+
+| Then (source#anchor) | 期待 assertion | テスト (file:line) | 状態 |
+|---|---|---|---|
+| validation.md#... Then 接続が成功する | connection 確立 | tests/test-scenario.test.ts:42 | VERIFIED |
+| validation.md#... Then キーが設定される | store に key が存在 | tests/test-scenario.test.ts:88 | VERIFIED |
+| spec.md#scenario-steps Then フォーカスが移る | activeElement ∈ draft | — | **UNVERIFIED** |
+
 ### Semantic findings (reviewer: claude-opus-4-7, capability=reasoning, fresh context)
 
 - **HIGH** spec.md#scenario-steps:
-  - ステップ 7「Redisに接続する」がテストコードで未検証
-  - 推奨: テストコードに Redis 接続テストを追加
+  - Then「フォーカスが移る」がテストで assert されていない（カバレッジ表 UNVERIFIED）
+  - 推奨: テストコードに focus 遷移の assertion を追加
 - **LOW** docker-compose.yml:
   - Redis の healthcheck が未設定
   - 推奨: healthcheck を追加してサービス起動を待つ
@@ -290,6 +323,8 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
 - **3 gate fail 時は reviewer を spawn しない** (slice/page): gate fail = 機械的な violation なので意味的 review にコストをかけない (gate を直して再実行)
 - **reviewer の責務は spec ↔ impl 乖離のみ** (slice/page): 層配置 / arch lint / DoD enforcement は spawn 前に既に終わっている
 - **reviewer の責務は spec ↔ テストコード整合性のみ** (scenario): docker-compose の構文チェックは spawn 前に既に終わっている
+- **`Then` 未検証は PASS を妨げる** (scenario): カバレッジ表に `UNVERIFIED` が 1 つでもあれば verdict は NEEDS_FIX、severity は HIGH 以上。LOW への disposition は不可
+- **E2E 不能項目は代替担保で担保** (scenario): `N/A(代替担保)` は unit test の file:line を併記した場合のみ有効。代替が無ければ `UNVERIFIED`
 - **スキル本体はメイン session**：reviewer は Task agent で spawn する
 - **single-pass 厳守**：3 周目に入ったら必ず human に上げる（無限ループ防止）
 - **review.md は派生ファイルではない**：人間が読むための監査ログ。design.md §5 の `ori:` frontmatter は不要
