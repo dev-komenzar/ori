@@ -93,6 +93,10 @@ scenario テストは以下の組み合わせで検証する:
 - **Playwright**: `page` オブジェクトを使用（フォーム入力、ボタンクリック、ページ遷移、UI の状態確認）
 - **WDIO**: `browser` オブジェクトを使用（tauri app の window を駆動）
 
+### セレクタ / testid {#selectors}
+
+E2E は `data-testid` を第一推奨とする（SSoT: `ddd-vsa-hex/pattern.md` §UI selector / testid 規約）。ui-field 由来の入力要素は `domain/ui-fields/screen-<N>.md` の field id をそのまま testid にせず、pattern 規約で `page.<page-id>.<elem>`（または slice-local は `<slice-id>.<elem>`）へ写像する。`<elem>` は field purpose（field id の `screen-<N>-` prefix を除いた部分）、`<page-id>` は page 構成（`page-groups.md` / architecture Page Map）から解決する。解決不能なら推測せず `TBD`。**実装側 testid も同規約に準拠させる**（乖離は要素解決失敗の原因）。
+
 ### API 呼び出し {#api-calls}
 
 - Playwright の `request` オブジェクト、または runner から利用可能な HTTP client を使用

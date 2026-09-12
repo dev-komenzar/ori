@@ -64,6 +64,8 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
    - `validation.md` の Gherkin シナリオからテストコードを生成
    - runner は spec.md の `runner:` 記録に従う（playwright / wdio / vitest）
    - テストコード内に **service の起動・停止・healthcheck 待機を書かない**（lifecycle は runner config が所有 — `scenario-test.instructions.md` 参照）
+   - **selector は pattern.md 規約で導出（G5）**: `domain/ui-fields/*.md`（field id の正典）+ page 構成（`page-groups.md` / architecture Page Map）を読み、field → testid を写像する。ui-field は `page.<page-id>.<elem>`（`<elem>` は field purpose。field id の `screen-<N>-` prefix を除いた部分）。E2E は `data-testid` を第一推奨（`ddd-vsa-hex/pattern.md` §UI selector / testid 規約）。`<page-id>` が解決できない場合は testid を推測せず `TBD`
+   - 実装側 testid が pattern.md 準拠かを確認し、乖離があれば **impl-notes に記録**する（実装の testid に合わせてテストを捏造しない）
    - テストファイルは `.ori/scenarios/<id>/tests/<scenario-id>.spec.ts` に出力、先頭に `// @ori-generated scenario:<scenario-id>` マーカー
 
 8. **runner config の生成**（runner 別、`.ori/scenarios/<id>/` 直下）:
