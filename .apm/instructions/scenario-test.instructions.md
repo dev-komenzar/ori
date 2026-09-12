@@ -67,6 +67,15 @@ test.describe('scenario:<scenario-id>', () => {
 
 旧「`test.beforeAll` で `docker-compose up` + healthcheck 待機」スケッチは **廃止**。テストコードに起動処理を書かないこと。
 
+### app 側の前提条件 {#test-readiness}
+
+runner config が所有する起動に加え、`runner=wdio`(local Tauri)では app 側の次の前提が必要(SSoT: `scenario.instructions.md#test-readiness`)。テストコードはこれらを書かない:
+
+- **build-then-test**: `runtime.build` が `runtime.binary` を生成する。Tauri の `cargo build` 単体(devUrl 参照の dev binary)は不可
+- **plugin**: `tauri-plugin-wdio` が app に配線されていること(未導入時は focus 系コマンドごとに 5 秒待機)
+- **storage 隔離**: runner config の `onPrepare` が `TAURI_TEST_STORAGE_DIR` を temp dir に設定し、app がそれを最優先する。設定/対応が無いと実ユーザデータを読む
+- **fixture seed**: 既存データ前提の scenario は `onPrepare` で seed する
+
 ### healthcheck 待機 {#healthcheck-wait}
 
 起動待機の戦略も config / generate 側の責務。テストコード内に待機 loop を書かない:

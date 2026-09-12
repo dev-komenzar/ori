@@ -366,6 +366,23 @@ cross_slice: { prohibited_direct: true, via: [] }
       expect(runtime.runner).toBe("wdio");
     });
 
+    it("parses local runtime test_env (scenario test-only env — ori-oan.2)", () => {
+      const spec = parseArchitectureSpec(
+        specWithRuntime(`      runtime:
+        mode: local
+        build: bun run build:test
+        binary: apps/myapp/src-tauri/target/debug/app
+        target: host
+        runner: wdio
+        test_env:
+          TAURI_TEST_STORAGE_DIR: /tmp/ori-test`),
+      );
+      const runtime = spec.workspace?.apps[0]?.runtime;
+      expect(runtime?.mode).toBe("local");
+      if (runtime?.mode !== "local") return;
+      expect(runtime.test_env).toEqual({ TAURI_TEST_STORAGE_DIR: "/tmp/ori-test" });
+    });
+
     it("rejects legacy mode value local-binary (一般化後の命名は local + target)", () => {
       expect(() =>
         parseArchitectureSpec(

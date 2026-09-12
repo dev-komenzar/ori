@@ -48,6 +48,18 @@ scenario の参加者（app）は 2 つの run-mode のいずれかで起動さ�
 - infra（postgres / redis 等）は app ではないため run-mode を持たない。`/ori-generate` の **infra catalog**（skill bundle 内 `scripts/infra-catalog.yaml`）で解決する
 - **「1 scenario = 1 UI runner」制約**: scenario の UI 駆動面は単一 runner（playwright / wdio / vitest）でカバーできること
 
+## 前提条件(test readiness) {#test-readiness}
+
+scenario の generate は、生成物だけで E2E が走るよう app 側の前提を満たす必要がある。`runner=wdio`(local Tauri)時の確定事項:
+
+- **build-then-test の binary 契約**: `runtime.build` は `runtime.binary` を生成する command でなければならない。Tauri の `cargo build` 単体は devUrl 参照の dev binary になるため不可。`tauri build --debug --no-bundle`(例: `bun run build:test`)を使う
+- **plugin 前提**: `@wdio/tauri-service` は `driverProvider` に関係なく `tauri-plugin-wdio` を必須とする。未導入時は focus 系コマンド(`$` / `$$` / `findElement(s)` / `elementClick` / `getTitle`)ごとに 5 秒待機する。配線は Cargo dep + capabilities `wdio:default` + `lib.rs` の `#[cfg(debug_assertions)]` 登録 + frontend 動的 import(`VITE_WDIO_TEST` gate)。production 非混入
+- **storage 隔離**: ori 標準 env **`TAURI_TEST_STORAGE_DIR`** を runner config の `onPrepare` が temp dir に設定し、app は settings 解決時にこの env を最優先する。app 側 override が無いと実ユーザデータを読む
+- **node_modules 解決**: `.ori/scenarios/node_modules` → `apps/<app>/node_modules` の symlink
+- **fixture seed**: 既存データ前提の scenario は `onPrepare` で seed する。frontmatter 形式の SSoT は domain / app 側
+
+`/ori-derive` が spec.md の実装ノートにこれらを記録し、`/ori-generate` が生成物に反映する。frontend への plugin import だけは framework 固有のためコード生成せず、実装ノートの要求として残す。
+
 ## ディレクトリ構造 {#directory-structure}
 
 ```

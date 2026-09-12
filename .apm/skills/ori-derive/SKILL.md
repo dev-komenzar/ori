@@ -145,9 +145,16 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
    - 上流 section の文言を引用する際は `> domain/workflows.md#order-workflow より:` の出典を残す
    - validation.md の Gherkin シナリオを参照し、シナリオステップに反映
    - 実装ノートに `runner: <name>`（チェーン段階）を記録（手順 7 の結果）
+   - 実装ノートに **前提条件（test readiness）** を記録する（runner が wdio の場合は必須。SSoT は `.apm/instructions/scenario.instructions.md` / `scenario-test.instructions.md`）:
+     - **build 契約**: `runtime.build` が `runtime.binary` を生成すること。Tauri の `cargo build` 単体は devUrl 参照の dev binary になるため不可（G2）
+     - **plugin 前提**: `tauri-plugin-wdio` の app 側配線が必要（Cargo dep / capabilities `wdio:default` / `lib.rs` の `#[cfg(debug_assertions)]` 登録 / frontend 動的 import。frontend は impl-notes 要求として記録。G1）
+     - **storage 隔離**: 標準 env `TAURI_TEST_STORAGE_DIR` を app が settings 解決時に優先すること（G4）
+     - **node_modules 解決**: `.ori/scenarios/node_modules` symlink（G3）
+     - **fixture seed**: 既存データ前提 scenario の seed 要否と frontmatter 形式（G6）
 9. **spec.md の自己検証**：
    - 必須 H2 4 種が揃っているか（`## 概要`、`## シナリオステップ`、`## テスト観点`、`## 実装ノート`）
    - シナリオステップが validation.md の Gherkin シナリオと整合しているか
+   - runner=wdio の場合、実装ノートに前提条件（build 契約 / plugin / storage env / symlink / fixture seed）が記録されているか
    - 全 H2/H3 に `{#id}` があるか（grep: `^###? [^{]+$`）
    - frontmatter `coherence.source: derived` と `upstream:` の有無
 10. 検証失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
