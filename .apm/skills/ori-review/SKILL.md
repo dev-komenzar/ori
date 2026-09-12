@@ -238,6 +238,7 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
 9. **完了**：
    - `.ori/scenarios/<id>/review.md` を commit
    - `bd close ori-review-<scenario-id> --reason="reviewer PASS; <N> findings addressed in <N> patches"`
+   - **phase 台帳の更新（R1）**: `node .apm/skills/ori-flow/scripts/scenario-status.js set <scenario-id> review done`（決定的 writer。冪等）
 
 ## single-pass 強制
 

@@ -93,6 +93,11 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
     ```bash
     bd update ori-generate-<scenario-id> --status=closed --notes="test code + runner config + docker-compose.yml generated (runner=<name>)"
     ```
+11. **phase 台帳の更新（scenario）** — 決定的 writer で記録する（R1）:
+    ```bash
+    node .apm/skills/ori-flow/scripts/scenario-status.js set <scenario-id> generate done
+    ```
+    - `phases.generate` と `beads.completion` が更新される（冪等）。実行失敗時は停止しユーザに委ねる
 
 ## 出力フォーマット
 

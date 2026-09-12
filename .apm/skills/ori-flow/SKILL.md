@@ -88,9 +88,11 @@ manifest テンプレートは skill bundle 内の `./templates/slice-manifest.y
 3. **phase 1: derive** — `/ori-derive <id>` を起動（scenario spec を domain docs から合成）
 4. **phase 2: generate** — `/ori-generate <id>` を起動（scenario test code を生成）
 5. **phase 3: review** — `/ori-review <id>` を起動（scenario の adversarial review）
-6. **phase 4: finalize** — `/ori-finalize <id>` を起動（dirty 解除、spec hash 更新）
+6. **phase 4: finalize** — `/ori-finalize <id>` を起動（台帳確定、beads close）
 
 各ステップ後、対応する `bd show ori-<phase>-<id>` を見て status が closed なら次の phase へ。closed でなければ §「停止条件」へ。
+
+**phase 台帳（status.yaml）**: 各 scenario phase skill は完了時に `scenario-status.js set <id> <phase> done` を呼び、台帳を決定的に更新する（R1）。orchestrator は台帳を直接書かない（責務は phase skill 側）。`node .apm/skills/ori-flow/scripts/scenario-status.js show <id>` で確認できる。
 
 ## 停止条件
 

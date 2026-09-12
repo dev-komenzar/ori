@@ -71,7 +71,7 @@ scenario の generate は、生成物だけで E2E が走るよう app 側の前
     <scenario-id>.spec.ts  # 生成テストコード（/ori-generate が生成）
   docker-compose.yml     # 自動生成（/ori-generate が生成。compose-service 系 app + infra のみ、対象ゼロなら省略）
   playwright.config.ts | wdio.conf.ts  # 自動生成（runner 別。vitest は config なし）
-  status.yaml            # dirty 管理（/ori-sync が更新）
+  status.yaml            # phase 台帳 + dirty 管理（phase skill が scenario-status.js で更新、/ori-sync が dirty を伝播）
   review.md              # レビューログ（/ori-review が生成）
 ```
 
@@ -201,6 +201,16 @@ scenario は 4 phase で実装する。詳細は各 SKILL.md に委譲。
 - **phase issue**: derive / generate / review / finalize
 - **依存**: 参加 slice の beads issue に `bd depends` 自動設定
 - **dirty 伝播**: `/ori-sync` が `.ori/scenarios/` も走査、finalize で解除
+
+### phase 台帳 (status.yaml) と bd の役割 {#phase-ledger}
+
+- **bd issue** (`ori-scenario-<id>` / `ori-<phase>-<scenario-id>`) が **phase 進行の SSoT**（closed かどうかで次 phase へ進む）
+- **`.ori/scenarios/<id>/status.yaml`** は **機械可読な成果物台帳**（bd と相補的）。各 phase skill が完了時に決定的 writer で必ず更新する:
+  ```bash
+  node .apm/skills/ori-flow/scripts/scenario-status.js set <scenario-id> <phase> done
+  node .apm/skills/ori-flow/scripts/scenario-status.js show <scenario-id>
+  ```
+- **手で編集しない**: writer が legacy schema を正規化する（`phases` の文字列値、`beads`/`dirty` 欠落を修復）。`phases` / `beads.completion` が phase 完走の記録
 
 ## 注意 {#caveats}
 

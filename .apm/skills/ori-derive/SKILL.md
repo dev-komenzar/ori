@@ -162,6 +162,11 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
     ```bash
     bd update ori-derive-<scenario-id> --status=closed --notes="spec.md generated from <N> upstream sections (runner=<name>)"
     ```
+12. **phase 台帳の更新（scenario）** — status.yaml は AI の ad-hoc 更新に委ねず、決定的 writer で記録する（R1）:
+    ```bash
+    node .apm/skills/ori-flow/scripts/scenario-status.js set <scenario-id> derive done
+    ```
+    - `phases.derive` と `beads.completion` が更新される（冪等）。実行失敗時は停止しユーザに委ねる
 
 ## 出力フォーマット
 

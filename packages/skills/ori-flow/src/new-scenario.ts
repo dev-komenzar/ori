@@ -2,7 +2,7 @@ import { mkdir, writeFile, access, readFile, readdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stringify as yamlStringify } from "yaml";
-import { formatEpicId, SCENARIO_PHASES, type ScenarioPhase } from "@ori-ori/slice-runner";
+import { formatEpicId, SCENARIO_PHASES, type ScenarioPhase, type ScenarioStatus } from "@ori-ori/slice-runner";
 
 async function exists(path: string): Promise<boolean> {
   try { await access(path); return true; } catch { return false; }
@@ -189,7 +189,7 @@ TODO
   await writeFile(join(dir, "spec.md"), specStub, "utf8");
   await writeFile(join(dir, "notes.md"), `# ${id} — Scenario implementation notes\n\n`, "utf8");
 
-  const status = {
+  const status: ScenarioStatus = {
     scenario_id: id,
     derived_at: new Date().toISOString(),
     beads: { epic: formatEpicId("scenario", id), current_phase: null, completion: [] as ScenarioPhase[] },
