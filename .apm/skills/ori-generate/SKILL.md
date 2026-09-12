@@ -68,7 +68,16 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
 
 8. **runner config の生成**（runner 別、`.ori/scenarios/<id>/` 直下）:
    - **playwright**（compose-service web 駆動）: `playwright.config.ts`。`webServer` で compose を起動（`docker compose up -d --wait` — healthy 後に CLI が終了するため停止は `teardown.mjs` の globalTeardown で明示 `down`）、`url` / `port` で TCP 起動待機。あわせて `tsconfig.json` も出力
-   - **wdio**（local tauri 駆動）: `wdio.conf.ts`。`onPrepare` で `docker compose up`（compose-service 系参加時）+ `tauri:options.application` でビルド済み binary を指定（binary path は runtime block の `binary`）。tauri-service（`@wdio/tauri-service`）を使用
+   - **wdio**（local tauri 駆動）: `wdio.conf.ts`。`services: [['@wdio/tauri-service', { driverProvider: 'external' }]]`、`tauri:options.application` に `runtime.binary`（絶対パス解決）を指定。`onPrepare` / `onComplete` が以下を所有する:
+     - `.ori/scenarios/node_modules` → `apps/<app>/node_modules` の symlink を冪等に作成（G3。無いと spec の `@wdio/globals` 等が ESM 解決できない）
+     - `runtime.test_env` の各 env を `process.env` に設定。ori 標準の storage 隔離 env **`TAURI_TEST_STORAGE_DIR`** は `mkdtempSync` で temp dir を採番して設定（G4。app 側 override が無いと実ユーザデータを読む）
+     - 既存データ前提の scenario は fixture を seed（G6。`.md` frontmatter 形式は app / domain の SSoT に従う）
+     - compose-service 系参加時は `docker compose up -d --wait`、`onComplete` で `down -v`
+     - `onComplete` で temp dir を削除
+   - **wdio の app 前提（G1/G2）**: 実行前に以下を満たす（SSoT: `.apm/instructions/scenario.instructions.md#test-readiness`）。Rust 配線は §「wdio の app 前提 patch」で **検出して冪等に patch** する:
+     - `runtime.build` が `runtime.binary` を生成する（Tauri の `cargo build` 単体は devUrl 参照の dev binary なので不可）
+     - `tauri-plugin-wdio` の Rust 配線（Cargo dep / capabilities `wdio:default` / lib.rs の `#[cfg(debug_assertions)]` 登録）
+     - frontend の動的 import と test build script は framework / 言語固有のため **生成せず impl-notes の要求として記録** する
    - **vitest**（API-only）: config なし。compose-service 系参加時は起動を globalSetup で行うか、scenario 単独実行を前提とする（`local` 系 app は不参加のはず）
    - 起動待機は **TCP probe が default**（`runtime.healthcheck: {http: /health}` 宣言時のみ HTTP 待機）
 
@@ -144,13 +153,18 @@ WDIO v9 の型が TS 7 の lib.dom `URLPattern` と衝突するため。ori-bc9.
 
 ```typescript
 // .ori/scenarios/<id>/wdio.conf.ts — @ori-generated
-import { execSync } from 'node:child_process';
+import { execSync } from 'node:child_process'; // compose-service 参加時のみ使用
+import { existsSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const APP_DIR = resolve(__dirname, '../../../apps/<app>');
 // runtime.binary (build-then-test) を絶対パスで解決
-const BINARY = resolve(__dirname, '../../../apps/<app>/src-tauri/target/debug/<app>');
+const BINARY = resolve(APP_DIR, 'src-tauri/target/debug/<app>');
+
+let tmpDir = '';
 
 export const config = {
   runner: 'local',
@@ -166,11 +180,41 @@ export const config = {
   framework: 'mocha',
   mochaOpts: { ui: 'bdd', timeout: 60000 },
   reporters: ['spec'],
-  // compose-service 系参加時のみ onPrepare で docker compose up -d --wait + onComplete で down
-  onPrepare: async () => { execSync('docker compose -f docker-compose.yml up -d --wait', { cwd: __dirname, stdio: 'inherit' }); },
-  onComplete: async () => { execSync('docker compose -f docker-compose.yml down -v --remove-orphans', { cwd: __dirname, stdio: 'inherit' }); },
+
+  onPrepare: async () => {
+    // G3: scenario から app の node_modules を ESM 解決できるようにする
+    // symlink は .ori/scenarios/ 直下（全 scenario 共有）に置く
+    const link = resolve(__dirname, '..', 'node_modules');
+    if (!existsSync(link)) symlinkSync(resolve(APP_DIR, 'node_modules'), link, 'dir');
+    // G4: 標準 storage 隔離 env を temp dir で設定（app 側 override が前提）
+    tmpDir = mkdtempSync(tmpdir() + '/ori-scenario-<id>-');
+    process.env.TAURI_TEST_STORAGE_DIR = tmpDir;
+    // runtime.test_env がある場合はここで追加設定（例: process.env.FOO = 'bar'）
+    // G6: 既存データ前提ならここで fixture seed（frontmatter 形式は app/domain SSoT に従う）
+    // compose-service 系参加時のみ:
+    // execSync('docker compose -f docker-compose.yml up -d --wait', { cwd: __dirname, stdio: 'inherit' });
+  },
+  onComplete: async () => {
+    // execSync('docker compose -f docker-compose.yml down -v --remove-orphans', { cwd: __dirname, stdio: 'inherit' });
+    if (tmpDir) rmSync(tmpDir, { recursive: true, force: true });
+  },
 };
 ```
+
+### wdio の app 前提 patch（G1/G2、ori-oan.3）
+
+`runner=wdio` の生成時、参加 local Tauri app に対して以下を **存在チェックして冪等に patch** する（施済みなら skip）。これらは **オリジナル app ファイルへの patch** であり、`.ori/` の派生ファイルではない点に注意:
+
+1. **node_modules symlink（G3）**: `.ori/scenarios/node_modules` → `../../apps/<app>/node_modules` を作成。`.ori/.gitignore` に `scenarios/node_modules` を追記（未記載時のみ）
+2. **Cargo deps（G1）**: `apps/<app>/src-tauri/Cargo.toml` の `[dependencies]` に `tauri-plugin-wdio = "1"` が無ければ追加（ACL 解決のため無条件）
+3. **capabilities（G1）**: `apps/<app>/src-tauri/capabilities/*.json` の `permissions` に `"wdio:default"` が無ければ追加
+4. **lib.rs 登録（G1）**: `builder.plugin(tauri_plugin_wdio::init())` を `#[cfg(debug_assertions)]` 下で登録する。既存 chain を `let builder = ...` に括り出して追記し、log plugin の登録を chain 先頭へ寄せる（wdio plugin の logger との二重 set panic 回避）。既に `tauri_plugin_wdio::init()` があれば skip
+5. **impl-notes に記録（生成しない。framework / 言語固有のため）**:
+   - **frontend**: `@wdio/tauri-plugin` を `VITE_WDIO_TEST` 時のみ動的 import する（SvelteKit 例: `src/lib/wdio-test-setup.ts` に `if (browser && import.meta.env.VITE_WDIO_TEST) void import('@wdio/tauri-plugin')` を置き、entry (`+layout.svelte` 等) から import）
+   - **test build script**: `runtime.build` が参照する command は `VITE_WDIO_TEST=1` を伴う debug build（例: package.json に `"build:test": "VITE_WDIO_TEST=1 bun run tauri build --debug --no-bundle"`）であること
+   - **production 非混入**: Rust は `debug_assertions`、frontend は `VITE_WDIO_TEST` gate。release build に plugin 参照 0 を検証する
+
+**冪等性**: 各 patch は該当文字列/キーの存在チェックで skip する。再実行で重複追加しない。**検証**: `npx tsc --noEmit` に加え、可能なら `build:test` 後に app log の `Failed to get window states` / `Tauri plugin not available` が 0 であることを確認する。
 
 ### docker-compose.yml
 
@@ -180,6 +224,8 @@ export const config = {
 
 - **自動 scaffold は禁止**：scenario が存在しなくても勝手に新規作成を呼ばない（ユーザ確認必須）
 - **生成物は派生ファイル**：直接編集には `/ori-sync --force` が必要（テストコード / runner config / docker-compose.yml すべて）
+- **app 前提 patch は派生ファイルではない**：§「wdio の app 前提 patch」の Rust 配線（Cargo.toml / capabilities / lib.rs）と node_modules symlink は **app オリジナルへの冪等 patch**（`/ori-sync --force` 対象外）。frontend import / test build script は生成せず impl-notes の要求として残す
+- **前提条件を満たす**：`runner=wdio` では `.apm/instructions/scenario.instructions.md#test-readiness` の前提（G1〜G6）を満たす。満たせない場合は `TBD` を残して人間判断に委ねる
 - **推測で埋めない**：`TBD` を残し、人間判断に委ねる箇所を明示（app↔infra 接続 env の app 固有値等）
 - **lifecycle は config 所有**：テストコード内に compose up / healthcheck 待機を書かない
 - このスキルは spec を書かない。**phase 2 = 生成のみ**
