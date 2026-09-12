@@ -177,6 +177,11 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
      - local app が docker-compose.yml に**含まれていない**こと
      - wdio.conf.ts の `tauri:options.application` が runtime block の `binary` と一致するか（build-then-test）
      - `@wdio/tauri-service` が services に含まれるか
+     - **前提条件（G1〜G6）の検証**: `spec.md` の実装ノートに前提条件（build 契約 / plugin / storage env / symlink / fixture seed）が記録されているか
+     - `runtime.build` が `runtime.binary` を生成する契約か（Tauri の `cargo build` 単体は devUrl 参照の dev binary なので不可 — G2）
+     - `wdio.conf.ts` の `onPrepare` が次のいずれも所有しているか: node_modules symlink（G3）/ `runtime.test_env` と `TAURI_TEST_STORAGE_DIR` の設定（G4）/ fixture seed（G6）
+     - app 側に `tauri-plugin-wdio` の Rust 配線（Cargo dep / capabilities `wdio:default` / lib.rs `#[cfg(debug_assertions)]`）が施されているか（G1。未配線は `/ori-generate` へ差し戻し）
+     - frontend の `@wdio/tauri-plugin` 動的 import と test build script が impl-notes の要求として記録されているか（G1）
    - **infra 参加時**:
      - infra の healthcheck（TCP probe の image ファミリ別翻訳）が compose に存在するか
      - `runtime.healthcheck: {http: /health}` 宣告のある app のみ HTTP 待機になっているか
@@ -195,8 +200,9 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
       |----------|-----------|---------|
       | テストコードの不備 | `/ori-generate`（テストコード再生成） | NEEDS_FIX |
       | runner config の不備 | `/ori-generate`（runner config 再生成） | NEEDS_FIX |
-      | docker-compose の不備 | `/ori-generate`（docker-compose 再生成） | NEEDS_FIX |
-      | spec 自体が誤り | `/ori-propose`（domain 修正提案） | REJECT |
+     | docker-compose の不備 | `/ori-generate`（docker-compose 再生成） | NEEDS_FIX |
+     | 前提条件（plugin / build / env）の欠落 | `/ori-generate`（app 前提 patch 再実行） | NEEDS_FIX |
+     | spec 自体が誤り | `/ori-propose`（domain 修正提案） | REJECT |
    - REJECT は人間判断必須 → `bd human` flag を立てて停止
 8. **差し戻し後の再 review**：
    - patch 完了後、**1 回だけ** 手順 2 〜 6 を再実行

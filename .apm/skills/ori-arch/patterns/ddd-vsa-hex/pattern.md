@@ -281,6 +281,16 @@ UI framework を採用するプロジェクトに適用する selector 優先順
   動的要素は固定 testid + `data-key={id}` で絞る。
 - prod ビルドでの testid strip はデフォルト残す (stack-specific / downstream で
   bundler plugin 導入は任意)。
+- **ui-fields 由来の入力要素 (ori-oan.4)**: `domain/ui-fields/screen-<N>.md` の
+  field id (`screen-1-note-body` 等) は **ドメイン側の識別子**であり testid では
+  ない。E2E testid は本節の規約で導出する: その field を配置する page/slice から
+  `<page-id>` / `<slice-id>` を取り、`<elem>` は field purpose
+  (`screen-<N>-` prefix を除いた部分)を使う。
+  例: ui-field `screen-1-note-body` を page `capture` に配置 →
+  `data-testid="page.capture.note-body"`。`<page-id>` は page 構成
+  (`page-groups.md` / `.ori/pages/` / architecture Page Map)から解決し、解決不能なら
+  testid を推測せず `TBD` とする。**E2E セレクタはこの規約から生成されるため、
+  実装側 testid も本規約に準拠させる**(乖離は E2E が実 DOM を見つけられない原因になる)。
 
 ### 責務分離 (正典と stack-specific)
 

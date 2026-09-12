@@ -122,10 +122,21 @@ const ComposeServiceRuntimeSchema = z
 const LocalRuntimeSchema = z
   .object({
     mode: z.literal("local"),
-    build: z.string().optional().describe("binary build command (例: pnpm tauri build --debug --no-bundle)"),
+    build: z
+      .string()
+      .optional()
+      .describe(
+        "binary build command。この command の出力が runtime.binary と一致すること (G2: dev binary は不可)",
+      ),
     binary: z.string().describe("ビルド済み binary path (build-then-test)"),
     target: RunTargetSchema.describe("実行基盤"),
     runner: z.string().describe("UI 駆動 runner (例: wdio)。derive の runner chain 優先チェーン 2 で使用"),
+    test_env: z
+      .record(z.string())
+      .optional()
+      .describe(
+        "scenario 実行時に runner config が inject する test-only env。ori 標準の storage 隔離 env (例 TAURI_TEST_STORAGE_DIR) は generate が常時注入する",
+      ),
   })
   .passthrough();
 

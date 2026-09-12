@@ -514,12 +514,23 @@ E2E は **ビルド済み artifact に対して実行**する。テストコー�
 runtime:
   mode: compose-service   # or local
   # compose-service: image / install / build / run / ports / healthcheck / cache_volumes
-  # local:          build / binary / target (host | ios-simulator | android-emulator) / runner
+  # local:          build / binary / target (host | ios-simulator | android-emulator) / runner / test_env
 ```
 
 - 供給源は **`/ori-architect` の知識(SKILL.md の generation_procedure)+ golden fixtures**(`packages/skills/ori-arch/tests/fixtures/agent-generated/`)。言語ごとの起動知識は「runtime image + コマンド」という**データ**として表現し、Dockerfile レシピの保守を ori に持ち込まない(design 原則「これ以外 ori はファイルを足さない」)
 - parser が runtime block を検証する(**WorkspaceSchema + AppRuntimeSchema 新設**。旧: `workspace:` は未検証 passthrough)
 - scenario manifest は参加者選択に専念する(`infrastructure.services` は app 名 + infra 名のリスト)
+
+#### scenario 前提条件(test readiness)
+
+scenario の generate は「生成物だけで E2E が走る」よう app 側の前提を満たす必要がある。実プロジェクト検証(`docs/reports/20260912-scenario-e2e-verification.md` の G1〜G6)で確定した事項:
+
+- **build-then-test の binary 契約 (G2)**: `runtime.build` は `runtime.binary` を生成する command でなければならない。Tauri の `cargo build` 単体は devUrl (`http://localhost:5173`) を参照する dev binary を生成するため不可。`tauri build --debug --no-bundle`(promptnotes は `bun run build:test`)を使う。dev binary を `tauri:options.application` に渡すと `Connection refused` になる
+- **wdio plugin 前提 (G1)**: `@wdio/tauri-service` は driverProvider に関係なく `tauri-plugin-wdio` を要求する。未導入時は focus 系コマンド(`$` / `$$` / `findElement(s)` / `elementClick` / `getTitle`)ごとに 5 秒待機する。app 側配線は Cargo dep + capabilities `wdio:default` + `lib.rs` の `#[cfg(debug_assertions)]` 登録 + frontend の動的 import(`VITE_WDIO_TEST` gate)。production 非混入
+- **storage 隔離 (G4)**: ori 標準 env **`TAURI_TEST_STORAGE_DIR`** を runner config の `onPrepare` が temp dir に設定し、app は settings 解決時にこの env を最優先する。app 側 override が無いと実ユーザデータを読む
+- **node_modules 解決 (G3)**: `.ori/scenarios/node_modules` → `apps/<app>/node_modules` の symlink(`.ori/.gitignore` で ignore)
+- **fixture seed (G6)**: 既存データ前提の scenario は `onPrepare` で seed する。frontmatter 形式(例 `createdAt: YYYYMMDDhhmmss`)の SSoT は domain / app 側
+- **frontend import の扱い**: SvelteKit 等の entry への plugin import は framework 固有のため ori はコード生成せず、impl-notes の要求として記録する(`ori-oan.2` 決定)
 
 #### runner matrix
 
@@ -772,7 +783,7 @@ workspace:
       runtime:                                 # 任意。起動知識 SSoT(§9 Scenario 実行モデル)。scenario に参加する app が保持
         mode: compose-service                  # compose-service | local
         # compose-service: image / install / build / run / ports / healthcheck / cache_volumes
-        # local:          build / binary / target (host | ios-simulator | android-emulator) / runner
+        # local:          build / binary / target (host | ios-simulator | android-emulator) / runner / test_env
 default_root: ts                               # roots[].id を指定
 roots:
   - id: ts
