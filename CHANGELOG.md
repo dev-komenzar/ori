@@ -10,15 +10,15 @@ ori (織) — DDD-driven slice/page scaffolding with CoDD coherence.
 
 ### `/ori-bootstrap` 新設（F2）
 
-- **`/ori-bootstrap`** ([`ori-63f.1`](https://github.com/dev-komenzar/ori/issues)) — `.ori/architecture.md` から stack を確定して upstream framework init を案内 (自動実行しない)、runner deps 追加と tauri specta scaffold の apply、`bootstrap.js verify` による readiness 検証 (静的 + build) を担う codebase 準備 step
+- **`/ori-bootstrap`** ([`ori-63f.1`](https://github.com/dev-komenzar/ori/pull/106)) — `.ori/architecture.md` から stack を確定して upstream framework init を案内 (自動実行しない)、runner deps 追加と tauri specta scaffold の apply、`bootstrap.js verify` による readiness 検証 (静的 + build) を担う codebase 準備 step
 
 ### `/ori-arch` を `/ori-architect` に統合・廃止（F1）
 
-- **`/ori-arch` 廃止** ([`ori-63f.2`](https://github.com/dev-komenzar/ori/issues)) — 責務を `/ori-architect` (architecture 生成。`apps/` 未初期化でも可) と `/ori-bootstrap` (upstream init 案内・runner deps・tauri scaffold) に分割。`patterns/` / `adapters/` / `scripts/` は `.apm/skills/ori-architect/` に移設し、`packages/skills/ori-arch` は `packages/skills/ori-architect` (`@ori-ori/skill-ori-architect`) に rename。tpl 廃止後 guidance のみだった `render-architecture.js` は削除
+- **`/ori-arch` 廃止** ([`ori-63f.2`](https://github.com/dev-komenzar/ori/pull/106)) — 責務を `/ori-architect` (architecture 生成。`apps/` 未初期化でも可) と `/ori-bootstrap` (upstream init 案内・runner deps・tauri scaffold) に分割。`patterns/` / `adapters/` / `scripts/` は `.apm/skills/ori-architect/` に移設し、`packages/skills/ori-arch` は `packages/skills/ori-architect` (`@ori-ori/skill-ori-architect`) に rename。tpl 廃止後 guidance のみだった `render-architecture.js` は削除
 
 ### 大フロー順序反転の docs 一括更新（F3）
 
-- **docs / smoke の新順序化** ([`ori-63f.3`](https://github.com/dev-komenzar/ori/issues)) — `docs/design.md` §17、`docs/start/*`、`docs/acceptance/README.md`、`README.md` (状態遷移表 / Mermaid)、`ci/smoke/run-smoke.sh` のコメントを `architect → bootstrap` 順に更新。過去の acceptance / smoke 実施記録は歴史記録として据え置き、冒頭に旧フロー注記を追記
+- **docs / smoke の新順序化** ([`ori-63f.3`](https://github.com/dev-komenzar/ori/pull/106)) — `docs/design.md` §17、`docs/start/*`、`docs/acceptance/README.md`、`README.md` (状態遷移表 / Mermaid)、`ci/smoke/run-smoke.sh` のコメントを `architect → bootstrap` 順に更新。過去の acceptance / smoke 実施記録は歴史記録として据え置き、冒頭に旧フロー注記を追記
 
 ## v0.5.0 — 2026-09-11
 
