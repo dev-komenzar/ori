@@ -34,6 +34,7 @@ coverage/
 .dolt/
 *.db
 .beads-credential-key
+.beads*.lock
 .claude/settings.local.json
 
 # Oh My OpenAgents
