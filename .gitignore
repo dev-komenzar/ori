@@ -41,3 +41,7 @@ coverage/
 
 # Playwright MCP
 .playwright-mcp/
+
+# oh-my-claudecode (runtime state; project skills are committable)
+**/.omc/*
+!**/.omc/skills/
