@@ -118,6 +118,7 @@ manifest テンプレートは skill bundle 内の `./templates/slice-manifest.y
 - domain 文書を変更したくなった場合は `/ori-sync --force <path>` または `/ori-propose` で proposal 生成
 - **slice / page / scenario 不在時に勝手に新規作成しない**：必ずユーザ確認
 - orchestrator が runner / bundle / 独自 state file を導入したくなったら、それは「各 phase skill が self-contained でない」サイン — 該当 phase skill を強化するのが正しい修正方向（orchestrator に責務を集約しない）
+- **scenario が RED でも scenario workflow で実装しない**：scenario = 検証軸（4 phase、impl phase なし）。RED の対処は実装軸の別ワークフロー（対象 slice に対する `/ori-flow <slice-id>`、または `/ori-bug` case 4）で行う。scenario と slice は 1:1 対応不要で、`contracts.slices` は任意の情報リンク（blocking しない）
 - **scenario type の検出**：`manifest.yaml` の `type: scenario` で判定。`type` フィールドが存在しない場合はエラーで停止
 
 ## 次のアクション

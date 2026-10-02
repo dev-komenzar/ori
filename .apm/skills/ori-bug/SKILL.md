@@ -114,6 +114,7 @@ spec で局所決定したい時のみ --force を使う。
 
 - **fix を実行しない**：このスキルはルーティングのみ。実際の修正は対象スキルに渡す
 - **ケース 1 ↔ ケース 3 は紙一重**：迷ったら domain を直す方向を優先（ケース 1 へ昇格）
+- **scenario の RED は検証軸の出力**：scenario（検証軸）が RED を示した場合、scenario 側に実装を足さず、原因を本 triage で分類して実装軸の動線へ渡す（実装不足の slice は `/ori-flow <slice-id>`、cross-slice は case 4）。scenario と slice は 1:1 対応不要
 - **アンチパターン回避**：「impl だけパッチ」「spec を `--force` なし編集」「review skip」は禁止（README 参照）
 
 ## 次のアクション
