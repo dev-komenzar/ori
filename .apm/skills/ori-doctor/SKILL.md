@@ -103,6 +103,17 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 - **ERROR にしない**：skip（意図的に scenario 化しない）を記録する機構が無く、false positive が恒久化するため。**skip 記録は保留**：WARN が常時出て無視される状態になったら skip 記録の導入を再検討する
 - `/ori-distill` Phase 7 では scaffold 判断をしない（arch 前では早すぎる）。検出は doctor で行う
 
+### 11. scenario 台帳整合 (status.yaml ⟷ 成果物) {#scenario-schema}
+
+`.ori/scenarios/<id>/status.yaml` の `phases` / `beads.completion` と成果物の実在を突合し、台帳 drift を **WARN** で surface する（`check-scenario-schema.sh`）。
+
+- 検出: `status.yaml` 不在 / `tests/` あり・`review.md` ありなのに該当 phase が done でない（`phases: {}` + 成果物 = s1/s4 型）/ phase=done なのに成果物なし / `completion` と `phases` の不整合 / legacy scalar 形式の phase / review=done なのに `finalize` 未記録（s2 型）
+- 判定根拠に `spec.md` は使わない：`new-scenario.js` が scaffold 時点で作るため derive 済みの証拠にならない
+- `finalize` は固有の成果物が無いので「review=done なのに finalize 未記録」（review=done は ori-review が PASS 時にのみ記録するので、`review.md` の verdict 書式には依存しない）で代替検出する。進行中の scenario でも当たるため WARN 文言に「進行中なら無視可」を明記する
+- **ERROR にしない**：進行中 scenario で doctor を fail させないため
+- fix は `node <ori-flow>/scripts/scenario-status.js set <id> <phase> <state>` を案内する
+- status.yaml は `yaml.stringify` の block style 前提（flow style 手編集は未対応）
+
 ## 手順
 
 1. **`.ori/` 存在確認**：なければ「`/ori-init` で初期化してください」と返す
@@ -113,6 +124,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
    個別検査は以下で構成：
    - `check-domain-schema.sh` — ドメイン文書の frontmatter + anchor 検証
    - `check-slice-schema.sh` — slice の manifest/status ファイル存在確認（status.yaml 不在 slice を WARN + 2 段の fix（status.yaml 復元 → `/ori-flow <id>`）付きで報告）
+   - `check-scenario-schema.sh` — scenario の status.yaml 台帳 ⟷ 成果物実在の突合（phases 空/未記録なのに tests/・review.md が存在、phase=done なのに成果物なし、completion と phases の不整合を WARN。fix は `scenario-status.js set` を案内）
    - `check-dirty-integrity.sh` — dirty=[] なのに review.md 不在/verdict≠PASS を検出（status.yaml の手動改竄チェック）
    - `check-hash-consistency.sh` — 派生ファイルの upstream 参照実在確認
    - `check-cross-ref.sh` — derives_from / upstream の cross-reference 検証
@@ -178,6 +190,10 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 ⚠ validation.md#s22-storage-dir-change-watcher-restart — scenario 未 scaffold
   fix: node .apm/skills/ori-flow/scripts/new-scenario.js s22-storage-dir-change-watcher-restart → /ori-flow s22-storage-dir-change-watcher-restart
   scenario coverage: 21/22 scaffolded, 1 candidate(s)
+
+═══ Scenario Schema ═══
+⚠ scenarios/s1: tests/ が存在するが phases.generate=(未記録) (台帳 drift)
+  fix: node <ori-flow>/scripts/scenario-status.js set s1 generate done
 
 ═══ Beads ═══
 ✓ bd doctor: all green
