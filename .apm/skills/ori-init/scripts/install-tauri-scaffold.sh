@@ -141,7 +141,13 @@ copy_file \
 #   The 2.0.0-rc line is the tauri 2-compatible release (webkit2gtk-4.1 /
 #   libsoup-3.0). Pin exactly so a future rc bump can't silently shift
 #   the dep graph under the smoke gate.
-TAURI_PIN="=2.11.5"
+#
+# tauri's internal crates (tauri-runtime / tauri-runtime-wry) are NOT pinned by
+# us and resolve via caret to the latest release on a fresh project (no
+# Cargo.lock). Keep TAURI_PIN on the same minor as the newest tauri-runtime-wry
+# or the tauri crate stops compiling (ori-wu6: tauri =2.11.5 + runtime-wry
+# 2.12.1 → E0599/E0277). When bumping, match `cargo info tauri-runtime-wry`.
+TAURI_PIN="=2.12.1"
 SPECTA_PIN="=2.0.0-rc.25"
 TAURI_SPECTA_PIN="=2.0.0-rc.25"
 SPECTA_TYPESCRIPT_PIN="=0.0.12"
