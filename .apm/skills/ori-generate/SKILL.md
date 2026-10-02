@@ -86,7 +86,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
    - 起動待機は **TCP probe が default**（`runtime.healthcheck: {http: /health}` 宣言時のみ HTTP 待機）
 
 9. **生成物の検証**:
-   - テストコード: `npx tsc --noEmit` で構文検証
+   - テストコード: `npx tsc --noEmit` で構文検証（wdio の `tauri:options` は template の型付き capability 定数で型通過済みのため、既知エラー許容なしで exit 0 が期待値）
    - runner config: `npx tsc --noEmit` で構文検証
    - docker-compose.yml: script が `docker compose config -q` 済み（失敗時のみここで確認）
    - 検証失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
@@ -175,17 +175,23 @@ const BINARY = resolve(APP_DIR, 'src-tauri/target/debug/<app>');
 
 let tmpDir = '';
 
-export const config = {
+// 'tauri:options' は WebdriverIO.Capabilities の型に無い。`config: WebdriverIO.Config` 注釈下で
+// capability を直書きすると tsc --noEmit が TS2353 ("'tauri:options' does not exist in type
+// 'RequestedStandaloneCapabilities'") で失敗するため、型を明示した定数に切り出す（ori-7jm.7）。
+// 注意: 行頭が「@ts-expect-error」のコメントは tsc にディレクティブとして解釈され TS2578 になる
+const tauriCapability: WebdriverIO.Capabilities & { 'tauri:options': { application: string } } = {
+  browserName: 'tauri', // 'wry' も可（同一扱い）
+  'tauri:options': { application: BINARY },
+};
+
+export const config: WebdriverIO.Config = {
   runner: 'local',
   specs: ['./tests/**/*.spec.ts'],
   maxInstances: 1,
   // external = tauri-driver (intermediary) + WebKitWebDriver (native)。v1.4.0 の default は
   // 'embedded' で、これは tauri-plugin-wdio-webdriver を app に必要とするため external を明示。
   services: [['@wdio/tauri-service', { driverProvider: 'external' }]],
-  capabilities: [{
-    browserName: 'tauri',   // 'wry' も可（同一扱い）
-    'tauri:options': { application: BINARY },
-  }],
+  capabilities: [tauriCapability],
   framework: 'mocha',
   mochaOpts: { ui: 'bdd', timeout: 60000 },
   reporters: ['spec'],
