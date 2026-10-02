@@ -45,10 +45,14 @@ scenario では、上記 7 観点に加えて **「ドメインが規定した `
    - 状態は `VERIFIED` / `UNVERIFIED` / `N/A(代替担保)` のいずれか
    - E2E で原理的に検証不能な項目（例: NoOpBus の event 発行）は `N/A(代替担保)` とし、**代替担保（unit test の file:line）を必ず併記**する。代替が無ければ `UNVERIFIED`
 
+### test-points 網羅 gate（必須）
+
+main session が渡した `spec.md#test-points` の全項目を、`test-points-map.md` とテストコードに突合する。表に無い項目、テストが実際には assert していない `COVERED`、代替担保（file:line）が無い / 実在しない `N/A(代替担保)` は **UNCOVERED** とみなし、Findings に HIGH で挙げる（LOW 不可）。
+
 ### severity 規則（厳守）
 
 - **`Then` が 1 つでも UNVERIFIED なら verdict は NEEDS_FIX、severity は HIGH（以上）。**
-- **未検証 `Then` を LOW / non-blocking に disposition することは禁止**（本 gate の趣旨そのもの）。
+- **未検証 `Then` / UNCOVERED な test-point を LOW / non-blocking に disposition することは禁止**（本 gate の趣旨そのもの）。
 - 差し戻し先は `/ori-generate`（テストコードに assertion を追加）。
 
 ## 出力フォーマット

@@ -165,9 +165,13 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
      rg -n "^\s*Then " .ori/scenarios/<id>/validation.md .ori/scenarios/<id>/spec.md
      ```
    - `ori-reviewer` の agent 指示を Read し、その全指示を Task agent のプロンプトに含める
-   - reviewer に渡す入力: `.ori/scenarios/<id>/{spec.md,manifest.yaml,validation.md}`、`.ori/scenarios/<id>/tests/`、runner config、`.ori/scenarios/<id>/docker-compose.yml`（あれば）、`.ori/architecture.md`、**上で列挙した `Then` 句の全件**
+   - reviewer に渡す入力: `.ori/scenarios/<id>/{spec.md,manifest.yaml,validation.md}`、`.ori/scenarios/<id>/test-points-map.md`、`.ori/scenarios/<id>/tests/`、runner config、`.ori/scenarios/<id>/docker-compose.yml`（あれば）、`.ori/architecture.md`、**上で列挙した `Then` 句の全件**
    - reviewer に **明示**: **各 `Then` をテストの assertion に対応付け、カバレッジ表（`Then` / 期待 assertion / テスト file:line / 状態）を出力**すること。加えて **scenario spec ↔ テストコードの整合性 / validation.md の Gherkin シナリオ ↔ テストケースの対応**、**mode 別 checklist（下記）** を判定すること
    - reviewer に **明示**: **`Then` が 1 つでも UNVERIFIED（assertion 不在 / 最終状態しか見ない / 副作用・タイミング・フォーカス未検証）なら severity=HIGH + verdict=NEEDS_FIX。未検証 `Then` を LOW に disposition してはならない**。E2E で原理的に不能な項目は代替担保（unit test の file:line）を併記して `N/A(代替担保)` とし、代替が無ければ UNVERIFIED
+   - **test-points 網羅**: `spec.md#test-points` の全項目を列挙して渡し（`scenario-test.instructions.md#test-points-map` の項目列挙 awk。`<spec>` = `.ori/scenarios/<id>/spec.md`）、`test-points-map.md` と突合させる。表の項目が spec と一致しない / `UNCOVERED` / 代替担保なしの `N/A(代替担保)` はいずれも HIGH / NEEDS_FIX（LOW 不可）。形式の SSoT は `scenario-test.instructions.md#test-points-map`
+     ```bash
+     awk '/^```/{c=!c} /^## .*\{#test-points\}/{f=1;next} /^## /{f=0} f && !c && /^- /' .ori/scenarios/<id>/spec.md
+     ```
    - 総合判定（PASS / NEEDS_FIX / REJECT）を要求する
 
    **mode 別 checklist（spec ↔ config ↔ compose 整合）**:
@@ -214,6 +218,18 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
      # 状態セル（最終列）が UNVERIFIED の行数。凡例行を誤検知しないよう列末で一致させる
      grep -Ec '\|\s*(\*\*)?UNVERIFIED(\*\*)?\s*\|\s*$' .ori/scenarios/<id>/review.md   # 1 以上なら NEEDS_FIX
      ```
+     - **test-points 対応表の機械検査**（reviewer の裁量排除）:
+       ```bash
+       m=.ori/scenarios/<id>/test-points-map.md
+       test -f "$m" || echo "MISSING test-points-map.md"
+       # spec の test-points 項目数 (SSoT: scenario-test.instructions.md#test-points-map の awk) と 表の行数 (TP-N 行) が一致すること
+       awk '/^```/{c=!c} /^## .*\{#test-points\}/{f=1;next} /^## /{f=0} f && !c && /^- /' .ori/scenarios/<id>/spec.md | wc -l
+       grep -Ec '^\|\s*TP-[0-9]+' "$m"
+       # 状態列 (最終列) が UNCOVERED の行 / 代替担保列に file:line が無い N/A(代替担保) 行
+       grep -Ec '\|\s*(\*\*)?UNCOVERED(\*\*)?\s*\|\s*$' "$m"
+       awk -F'|' '/N\/A\(代替担保\)/ && $5 !~ /[^ ]+:[0-9]+/ {n++} END{print n+0}' "$m"
+       ```
+       - 表が無い / 項目数不一致 / `UNCOVERED` ≥ 1 / 代替担保列に file:line が無い `N/A(代替担保)` ≥ 1 → **reviewer の裁量に依らず** verdict=NEEDS_FIX、severity=HIGH、差し戻し先 `/ori-generate`
      - 表が無い / 列挙した `Then` 件数と表の行数が一致しない → review 不合格として reviewer に再出力を要求（この再出力は single-pass の往復カウントに含めない）
      - `UNVERIFIED` が 1 件以上 → **reviewer の裁量に依らず** verdict=NEEDS_FIX
 7. **指摘の処理 (verdict logic — 維持)**：
@@ -225,6 +241,7 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
       | runner config の不備 | `/ori-generate`（runner config 再生成） | NEEDS_FIX |
      | docker-compose の不備 | `/ori-generate`（docker-compose 再生成） | NEEDS_FIX |
      | 前提条件（plugin / build / env）の欠落 | `/ori-generate`（app 前提 patch 再実行） | NEEDS_FIX |
+     | test-points 未カバー / 代替担保の記載漏れ | `/ori-generate`（テスト追加 or 代替担保明記） | NEEDS_FIX |
      | `Then` 未検証（assertion 不在） | `/ori-generate`（assertion 追加） | NEEDS_FIX |
      | spec 自体が誤り | `/ori-propose`（domain 修正提案） | REJECT |
    - **`Then` 未検証は severity 下限 HIGH**（LOW への disposition 不可）。カバレッジ表に UNVERIFIED が 1 つでもあれば verdict は NEEDS_FIX

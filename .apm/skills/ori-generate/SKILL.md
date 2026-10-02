@@ -26,6 +26,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
 - 出力：
   - `.ori/scenarios/<id>/tests/<scenario-id>.spec.ts`（テストコード、`@ori-generated`）
   - `.ori/scenarios/<id>/playwright.config.ts` + `teardown.mjs` + `tsconfig.json`、または `wdio.conf.ts`（runner 別。vitest は config なし）
+  - `.ori/scenarios/<id>/test-points-map.md`（`spec.md#test-points` ↔ テストケースの網羅対応表、`@ori-generated`）
   - `.ori/scenarios/<id>/docker-compose.yml`（compose-service 系 app + infra のみ。**参加者ゼロなら省略**）
 
 ## 手順
@@ -67,6 +68,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
    - **selector は pattern.md 規約で導出（G5）**: `domain/ui-fields/*.md`（field id の正典）+ page 構成（`page-groups.md` / architecture Page Map）を読み、field → testid を写像する。ui-field は `page.<page-id>.<elem>`（`<elem>` は field purpose。field id の `screen-<N>-` prefix を除いた部分）。E2E は `data-testid` を第一推奨（`ddd-vsa-hex/pattern.md` §UI selector / testid 規約）。`<page-id>` が解決できない場合は testid を推測せず `TBD`
    - 実装側 testid が pattern.md 準拠かを確認し、乖離があれば **impl-notes に記録**する（実装の testid に合わせてテストを捏造しない）
    - テストファイルは `.ori/scenarios/<id>/tests/<scenario-id>.spec.ts` に出力、先頭に `// @ori-generated scenario:<scenario-id>` マーカー
+   - **test-points 網羅対応表を生成する（R5）**: `spec.md#test-points` の全項目（項目の数え方は `scenario-test.instructions.md#test-points-map` の awk が SSoT。インデントなしの `- ` 行のみが項目で、sub-bullet は項目に含めず親項目の説明として扱う）を `.ori/scenarios/<id>/test-points-map.md` に写す。形式・規則の SSoT は `scenario-test.instructions.md#test-points-map`。項目を省略・統合しない。E2E で原理的に検証不能な項目は `N/A(代替担保)` とし、代替担保（unit test の file:line）を必ず併記する。代替が無ければ `UNCOVERED` のまま残す（推測で COVERED にしない）
 
 8. **runner config の生成**（runner 別、`.ori/scenarios/<id>/` 直下）:
    - **playwright**（compose-service web 駆動）: `playwright.config.ts`。`webServer` で compose を起動（`docker compose up -d --wait` — healthy 後に CLI が終了するため停止は `teardown.mjs` の globalTeardown で明示 `down`）、`url` / `port` で TCP 起動待機。あわせて `tsconfig.json` も出力
