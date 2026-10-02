@@ -104,7 +104,7 @@ scenario の manifest.yaml は以下のフィールドを持つ:
 - **`contracts`**: サービス間契約の宣言
   - `http`: HTTP エンドポイントのリスト（例: `["POST /api/orders", "GET /api/orders/:id"]`）
   - `events`: イベント名のリスト（例: `["OrderCreated", "PaymentCompleted"]`）
-  - `slices`: 参照する slice ID のリスト（例: `["create-order", "process-payment"]`）
+  - `slices`: 参照する slice ID のリスト（例: `["create-order", "process-payment"]`）。**任意かつ非要件**: 順序制約・traceability のための情報リンクであり、scenario 検証の成立要件でも slice 実装との対応表でもない。slice 依存ゲートは撤去済みのため blocking しない（未指定・未実装 slice の参照でも scenario は scaffold / RED 可能）
 - **`runner`**: runner の明示 override（例: `playwright` / `wdio` / `vitest`）。未指定時は derive phase が優先チェーンで解決（後述）。無効な指定（tauri 参加なのに `playwright` 等）は derive でエラー停止する
 - **`infrastructure`**: インフラ構成の宣言
   - `services`: 参加者リスト（app 名 + infra 名）。起動方法は `workspace.apps[].runtime` または infra catalog から解決される
@@ -147,8 +147,9 @@ infrastructure:
 
 1. **DDD pipeline 完了**: `/ori-distill` で workflows + validation が整備される
 2. **manifest scaffold**: `new-scenario.js <id>`（ori-flow skill bundle の `scripts/`）。id は validation.md の section anchor から選択する（`--list-validation` で anchor 一覧と coverage を確認。§id-convention）。`/ori-arch` 完了時の次アクション・`/ori-feature-status` の coverage 表示が導線になる
-3. **beads dep 設定**: 参加 slice の beads issue に `bd depends` が自動設定
-4. **全 slice 完了で unblock**: 参加 slice が全て完了したら、scenario の `/ori-flow` が unblock
+3. **即 `/ori-flow` 可能（scenario-first 既定）**: scaffold 直後から scenario の `/ori-flow`（derive → generate → review → finalize）を回してよい。参加 slice の完了は待たない（slice が 0 件完了でも 4 phase は通る）
+
+scenario は slice 完了から独立している。ori は scenario を実行しない（実行は CI / 手動）ため、slice 完了は ori にとって検証可能な前提ではない。slice 未実装の状態で生成されたテストは実行時に RED となり、それが未実装を可視化する。参加 slice の beads issue への `bd depends` 設定・slice 完了ゲートは行わない（`contracts.slices` は blocking しない情報リンク。§optional-fields）。
 
 ## 4 phase フロー {#four-phase-flow}
 
@@ -191,7 +192,7 @@ scenario は 4 phase で実装する。詳細は各 SKILL.md に委譲。
 
 - **scenario → page**: オプション、配列（`pages: [id, ...]`）
 - **page → scenario**: 参照しない
-- **scenario → slice**: contracts.slices で参照
+- **scenario → slice**: contracts.slices で参照（任意の情報リンク。1:1 対応は不要）
 - **scenario → app**: infrastructure.services で app 名を参照（起動方法は `workspace.apps[].runtime` から解決）
 
 ## beads 連携 {#beads-integration}
@@ -199,7 +200,7 @@ scenario は 4 phase で実装する。詳細は各 SKILL.md に委譲。
 - **EpicKind**: `scenario`
 - **issue 名**: `ori-scenario-<scenario-id>`
 - **phase issue**: derive / generate / review / finalize
-- **依存**: 参加 slice の beads issue に `bd depends` 自動設定
+- **依存**: phase issue 間の順序依存のみ。参加 slice の beads issue への `bd depends` は設定しない（scenario-first。§creation-timing）
 - **dirty 伝播**: `/ori-sync` が `.ori/scenarios/` も走査、finalize で解除
 
 ### phase 台帳 (status.yaml) と bd の役割 {#phase-ledger}
@@ -219,4 +220,8 @@ scenario は 4 phase で実装する。詳細は各 SKILL.md に委譲。
 - **runner config（playwright.config.ts / wdio.conf.ts）は派生ファイル**: 直接編集には `/ori-sync --force` が必要
 - **docker-compose.yml は派生ファイル**: 直接編集には `/ori-sync --force` が必要
 - **推測で埋めない**: `TBD` を残し、人間判断に委ねる箇所を明示
+- **scenario = 検証軸、実装は別ワークフロー**: scenario は未充足を RED として示すことに徹する。ori は scenario を実行せず（実行は CI / 手動）、RED の対処も scenario 側では行わない
+  - RED の対処は実装軸の別ワークフローで行う: `/ori-flow <slice-id>`（未実装・未 finalize の slice）または `/ori-bug`（case 4: cross-slice bug）
+  - scenario に実装を書かない（impl phase を持たない 4 phase 設計を維持し、2 軸の独立性を保つ）
+  - scenario と slice を 1:1 対応させる必要はない（1 scenario が複数 slice に跨る / slice を持たない scenario も可）
 - **自動 scaffold は禁止**: scenario が存在しなくても勝手に新規作成を呼ばない（ユーザ確認必須）

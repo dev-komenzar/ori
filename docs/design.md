@@ -180,7 +180,7 @@ AI ハーネス(Claude Code, OpenCode, Codex, Gemini CLI, GitHub Copilot, Cursor
 **特徴**:
 - 複数 service を横断する E2E テストを検証対象とする
 - slice/page と異なり **4-phase** で処理(derive → generate → review → finalize)
-- 参加 slice の完了を beads dep で待つ
+- 参加 slice の完了を待たない(scenario-first。slice 未実装なら生成テストが実行時 RED になり未実装を可視化する。`contracts.slices` は blocking しない情報リンク)
 - **2 run mode の参加者を混在させられる**(下記 run-mode 抽象)
 - **build-then-test**: E2E はビルド済み artifact に対して実行(local app は事前ビルド、compose-service app は image 起動)
 
@@ -213,7 +213,7 @@ scenario の参加者(app)は 2 run mode のいずれかで起動される:
 - scenario manifest に `pages: [<page-id>, ...]` field(オプション、配列)
 - /ori-flow は **slice / page を 7-phase、scenario を 4-phase で処理**(content templates が type で切替)
 - Page の verify phase は「hosted slice が全部 generated」を要求 → beads dep で順序強制
-- Scenario の derive phase は「参加 slice が全部 generated」を要求 → beads dep で順序強制
+- Scenario は参加 slice の完了を要求しない(scenario-first。beads dep による slice 順序強制なし。ori は scenario を実行しないため slice 完了は検証可能な前提ではない)
 
 ### 命名規約
 
@@ -485,7 +485,7 @@ MVP v0.1 = **32 skills**、3-tier 分類で組織(tier 詳細は実装時に確�
 
 | Phase | Slice 文脈 | Page 文脈 | Scenario 文脈 |
 |---|---|---|---|
-| verify/derive | derives_from(workflow step, aggregate, ui-field)の completeness | hosted slices が全部 generated + page-grouping doc 完全 + scenario doc 解決可能 |参加 slice が全部 generated + workflows + validation.md 参照可能 + runner chain 解決 |
+| verify/derive | derives_from(workflow step, aggregate, ui-field)の completeness | hosted slices が全部 generated + page-grouping doc 完全 + scenario doc 解決可能 | workflows + validation.md 参照可能 + runner chain 解決(参加 slice の完了は不要) |
 | plan | bd issue: handler 実装、unit test | bd issue: layout 実装、UI tests、E2E from scenarios | — |
 | test-red | handler の unit/integration test | UI tests + a11y + scenario 駆動 E2E | — |
 | impl-green | handler 実装 | layout + slice composition + routing wiring | — |

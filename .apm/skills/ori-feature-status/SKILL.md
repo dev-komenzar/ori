@@ -32,6 +32,10 @@ ori status (全 <N> slice / page)
   capture-form                  page    done             -       0 open         2026-05-13 21:42
   switch-edit-target            slice   scaffold         -       7 open         (not started)
 
+Note: status.yaml が無い slice は phase=scaffold / last activity=(not started) と表示される。この状態は
+      /ori-doctor の `no status.yaml` WARN 対象（復元手順は ori-doctor SKILL.md）。ただし status.yaml があり
+      phases が空の slice も同じ表示になりうる（こちらは WARN 対象外）
+
 Legend: in progress / done / blocked / ✓ dirty (1 mark) / ✓✓ dirty (≥2)
 
 scenario coverage (validation.md ↔ .ori/scenarios, 1:1):
