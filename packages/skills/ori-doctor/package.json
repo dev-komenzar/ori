@@ -4,11 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@ori-ori/parser": "workspace:*",
     "consola": "^3.2.3",
     "yaml": "^2.5.0"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
   }
 }
