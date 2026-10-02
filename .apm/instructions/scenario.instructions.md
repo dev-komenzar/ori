@@ -147,8 +147,9 @@ infrastructure:
 
 1. **DDD pipeline 完了**: `/ori-distill` で workflows + validation が整備される
 2. **manifest scaffold**: `new-scenario.js <id>`（ori-flow skill bundle の `scripts/`）。id は validation.md の section anchor から選択する（`--list-validation` で anchor 一覧と coverage を確認。§id-convention）。`/ori-arch` 完了時の次アクション・`/ori-feature-status` の coverage 表示が導線になる
-3. **beads dep 設定**: 参加 slice の beads issue に `bd depends` が自動設定
-4. **全 slice 完了で unblock**: 参加 slice が全て完了したら、scenario の `/ori-flow` が unblock
+3. **即 `/ori-flow` 可能（scenario-first 既定）**: scaffold 直後から scenario の `/ori-flow`（derive → generate → review → finalize）を回してよい。参加 slice の完了は待たない（slice が 0 件完了でも 4 phase は通る）
+
+scenario は slice 完了から独立している。ori は scenario を実行しない（実行は CI / 手動）ため、slice 完了は ori にとって検証可能な前提ではない。slice 未実装の状態で生成されたテストは実行時に RED となり、それが未実装を可視化する。参加 slice の beads issue への `bd depends` 設定・slice 完了ゲートは行わない（`contracts.slices` は blocking しない情報リンク。§optional-fields）。
 
 ## 4 phase フロー {#four-phase-flow}
 
@@ -199,7 +200,7 @@ scenario は 4 phase で実装する。詳細は各 SKILL.md に委譲。
 - **EpicKind**: `scenario`
 - **issue 名**: `ori-scenario-<scenario-id>`
 - **phase issue**: derive / generate / review / finalize
-- **依存**: 参加 slice の beads issue に `bd depends` 自動設定
+- **依存**: phase issue 間の順序依存のみ。参加 slice の beads issue への `bd depends` は設定しない（scenario-first。§creation-timing）
 - **dirty 伝播**: `/ori-sync` が `.ori/scenarios/` も走査、finalize で解除
 
 ### phase 台帳 (status.yaml) と bd の役割 {#phase-ledger}

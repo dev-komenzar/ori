@@ -49,9 +49,9 @@ scenario の 4 phase に対応する beads issue を作成する:
 
 ### 依存管理 {#dependency-management}
 
-- 参加 slice の beads issue に `bd depends` を自動設定
-- 全 slice 完了後に scenario の `/ori-flow` が unblock
-- 例: `bd dep add ori-scenario-order-flow-e2e ori-create-order`
+- scenario は参加 slice の完了に依存しない（scenario-first 既定）。参加 slice の beads issue への `bd depends` は設定せず、scaffold 直後から `/ori-flow` 可能
+- 依存は scenario 内の phase issue 間（derive → generate → review → finalize）の順序のみ
+- `contracts.slices` は traceability のための任意情報リンクで blocking しない（詳細: scenario.instructions.md §creation-timing）
 
 ### dirty 伝播 {#dirty-propagation}
 

@@ -85,6 +85,8 @@ manifest テンプレートは skill bundle 内の `./templates/slice-manifest.y
 
 ### scenario workflow (4 phase)
 
+scenario は **scenario-first が既定**: 参加 slice（`contracts.slices`）の完了を待たずに 4 phase を実行する。slice 完了ゲート・slice への beads dep は存在しない（slice 未実装なら生成テストが実行時に RED になる。詳細は scenario.instructions.md §creation-timing）。
+
 3. **phase 1: derive** — `/ori-derive <id>` を起動（scenario spec を domain docs から合成）
 4. **phase 2: generate** — `/ori-generate <id>` を起動（scenario test code を生成）
 5. **phase 3: review** — `/ori-review <id>` を起動（scenario の adversarial review）
