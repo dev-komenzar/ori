@@ -50,7 +50,13 @@ pnpm tauri init
 pnpm install
 cd ../..
 
-# ステップ 4: readiness 検証 (静的 + build。exit 0=PASS / 1=FAIL)
+# ステップ 4: /ori-bootstrap を再実行 — init 済みを確認し、runner deps (root package.json)
+#   の追加と specta scaffold の apply を行う (コマンドは `bootstrap.js guide` でも確認できる)
+/ori-bootstrap
+#   scaffold の実体: bash .apm/skills/ori-init/scripts/install-tauri-scaffold.sh \
+#                      --dest . --app-name my-tauri-app --bc-name <bc-kebab>
+
+# ステップ 5: readiness 検証 (静的 + build。exit 0=PASS / 1=FAIL)
 node .apm/skills/ori-bootstrap/scripts/bootstrap.js verify
 ```
 
@@ -64,7 +70,7 @@ node .apm/skills/ori-bootstrap/scripts/bootstrap.js verify
   cross-root 関係 (tauri-specta による bindings 生成) が宣言される。
   BC 名は kebab (`task-management`) / snake (`task_management`) を
   agent が識別子規則に従って両 root に設定する。`apps/` には何も書かない。
-- `/ori-bootstrap` （ステップ 3-4） — architecture.md から stack を確定して
+- `/ori-bootstrap` （ステップ 3-5） — architecture.md から stack を確定して
   **upstream framework init** (`pnpm create vite@latest` + `pnpm tauri init`) を
   案内する。ori は network / 対話 / 既存ファイル削除リスクを避けるため自動実行しない。
   TS / Rust 双方の bootstrap 系 (`package.json` / `tsconfig.json` / `Cargo.toml` /

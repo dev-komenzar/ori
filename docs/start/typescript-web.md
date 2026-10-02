@@ -43,7 +43,11 @@ pnpm create vite@latest . --template vanilla-ts
 pnpm install
 cd ../..
 
-# ステップ 4: readiness 検証 (静的 + build。exit 0=PASS / 1=FAIL)
+# ステップ 4: /ori-bootstrap を再実行 — init 済みを確認し、runner deps (root package.json。
+#   playwright なら @playwright/test) を追加する (コマンドは `bootstrap.js guide` でも確認できる)
+/ori-bootstrap
+
+# ステップ 5: readiness 検証 (静的 + build。exit 0=PASS / 1=FAIL)
 node .apm/skills/ori-bootstrap/scripts/bootstrap.js verify
 ```
 
@@ -55,7 +59,7 @@ node .apm/skills/ori-bootstrap/scripts/bootstrap.js verify
 - `/ori-architect` （ステップ 2） — **`/ori-architect` スキル** (`.apm/skills/ori-architect/SKILL.md`)
   が要件対話 (platforms / os_integration / ui_native) から `.ori/architecture.md`
   1 ファイルだけを生成する。`apps/` には何も書かない。
-- `/ori-bootstrap` （ステップ 3-4） — architecture.md から stack を確定して
+- `/ori-bootstrap` （ステップ 3-5） — architecture.md から stack を確定して
   **upstream framework init** (`pnpm create vite@latest` 等) を案内する。ori は
   network / 対話 / 既存ファイル削除リスクを避けるため自動実行しない。
   続けて runner deps (root package.json) を追加し、`bootstrap.js verify` で

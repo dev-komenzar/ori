@@ -57,7 +57,7 @@ done
 
 [[ -z "$DEST" || -z "$APP_NAME" || -z "$BC_NAME" ]] && { usage; exit 2; }
 
-# kebab → snake for Rust identifier rules (mirrors render-architecture.js).
+# kebab → snake for Rust identifier rules (TS=kebab / Rust=snake).
 BC_NAME_RS="${BC_NAME//-/_}"
 APP_NAME_RS="${APP_NAME//-/_}"
 

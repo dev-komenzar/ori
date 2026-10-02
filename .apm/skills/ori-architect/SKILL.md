@@ -364,5 +364,5 @@ node ./scripts/sync-page-map.js --dry-run
 - **codebase 準備パス (次の step)**：`/ori-bootstrap` — upstream framework init の案内、readiness 検証、runner deps 追加、(typescript-tauri) specta scaffold。apps/ が未初期化でもここで揃う
 - **最初の slice 作成パス**：`/ori-bootstrap` 完了後に `/ori-flow new-slice <id>` で新 slice を scaffold → 7-phase 開発を回す
 - **scenario scaffold パス**: `node .apm/skills/ori-flow/scripts/new-scenario.js --list-validation` で validation.md の未 cover section（scenario 候補）を確認 → ユーザ確認の上 `new-scenario.js <id>` で scaffold → `/ori-flow <id>`（4 phase。scenario id = validation section anchor、1:1）
-- **domain 起点で進めるパス**：`/ori-distill phase=discovery` で distill-ddd phase 1 から domain を立ち上げる
+- **domain が未整備な場合のパス**：`.ori/domain/` が空なら `/ori-distill phase=discovery` で domain を先に立ち上げ、その後 `/ori-architect` をやり直す
 - **既存 domain がある場合のパス**：`/ori-migrate` で `docs/domain/` 等を `.ori/domain/` に昇格

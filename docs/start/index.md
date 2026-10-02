@@ -83,6 +83,7 @@ mkdir -p apps/my-app && cd apps/my-app
 pnpm create vite@latest . --template vanilla-ts      # package.json / tsconfig.json 等が揃う (例: pure TypeScript)
 pnpm install
 cd ../..
+/ori-bootstrap                                       # 再実行: runner deps 追加 (+ tauri なら specta scaffold apply)
 node .apm/skills/ori-bootstrap/scripts/bootstrap.js verify   # readiness 検証 (静的 + build)
 
 # 6. 最初の slice を派生して実装
@@ -103,7 +104,7 @@ node .apm/skills/ori-flow/scripts/new-slice.js <slice-id>   # workflow から sl
 2. `.apm/skills/ori-architect/patterns/<pattern>/stacks/<stack>/example-slice/` に worked sample を追加 (AI が `/ori-flow new-slice` で参照する study material)
 3. 生成結果の golden fixture (`packages/skills/ori-architect/tests/fixtures/agent-generated/`) を追加し、
    `golden-agent-vs-tpl.test.ts` と doctor guardrails で検証する
-3. 必要なら新規 adapter (`packages/arch-adapter-<name>/`) を実装
+3. 必要なら新規 adapter (`packages/arch-adapters/<name>/`) を実装
 4. このインデックスにエントリを追加して PR
 
 の流れになります。ori 自体は薄いオーケストレータで、スタック固有の知識は pattern stack + adapter に閉じ込める設計です。
