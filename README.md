@@ -159,7 +159,7 @@ stateDiagram-v2
 
 ori は「AI に任意のコードを書かせるための薄いハーネス」ではありません。**「DDD ドキュメント → slice / page + DDD のコード骨格」というアーキテクチャまで指定する、opinionated（oriented）なハーネス**です。
 
-- `/ori-architect` が要件対話で pattern (`ddd-vsa-hex`) と stack (`typescript` / `typescript-tauri`) を確定し、slice ごとに `domain / application / infrastructure / presentation / tests` を切り、`index.ts` を唯一の public API として slice 間の直接 import を禁ずる雛形を吐きます
+- `/ori-architect` が要件対話で pattern (`ddd-vsa-hex`) と stack (`typescript` / `typescript-tauri`) を確定して `.ori/architecture.md` に宣言し、`/ori-flow` が slice ごとに `domain / application / infrastructure / presentation / tests` を切り、`index.ts` を唯一の public API として slice 間の直接 import を禁ずる骨格を生成します
 - `.ori/architecture.md` を SSoT として、arch-adapter が ESLint / Rust 等の言語ネイティブ linter にコンパイルされ、規約逸脱を CI で止めます
 - AI に与えるのは「任意のスタイルで書く自由」ではなく「決められたスロットを埋める自由」です
 
