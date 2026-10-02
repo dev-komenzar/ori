@@ -32,6 +32,9 @@ ori status (全 <N> slice / page)
   capture-form                  page    done             -       0 open         2026-05-13 21:42
   switch-edit-target            slice   scaffold         -       7 open         (not started)
 
+Note: phase が `scaffold (not started)` の slice は status.yaml 不在 = /ori-flow 未走。/ori-doctor の
+      `scaffolded but /ori-flow never run` WARN と同一の状態（fix: /ori-flow <id>）
+
 Legend: in progress / done / blocked / ✓ dirty (1 mark) / ✓✓ dirty (≥2)
 
 scenario coverage (validation.md ↔ .ori/scenarios, 1:1):

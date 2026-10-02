@@ -101,7 +101,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
    ```
    個別検査は以下で構成：
    - `check-domain-schema.sh` — ドメイン文書の frontmatter + anchor 検証
-   - `check-slice-schema.sh` — slice の manifest/status ファイル存在確認
+   - `check-slice-schema.sh` — slice の manifest/status ファイル存在確認（status.yaml 不在 = 未 finalize slice を WARN + `/ori-flow <id>` 動線付きで報告）
    - `check-dirty-integrity.sh` — dirty=[] なのに review.md 不在/verdict≠PASS を検出（status.yaml の手動改竄チェック）
    - `check-hash-consistency.sh` — 派生ファイルの upstream 参照実在確認
    - `check-cross-ref.sh` — derives_from / upstream の cross-reference 検証
@@ -133,6 +133,11 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 ✓ .ori/domain/discovery.md
 ✗ .ori/domain/aggregates.md:42 — H2 "Note Aggregate" missing {#id}
   fix: edit aggregates.md, add anchor manually (human judgment)
+
+═══ Slice Schema (未 finalize slice) ═══
+⚠ slices/detect-external-changes: scaffolded but /ori-flow never run (no status.yaml)
+  fix: /ori-flow detect-external-changes
+  ℹ WARN のみ（ERROR 化しない）。進行中 slice も含むため、/ori-feature-status の phase 表示（scaffold / not started）と突き合わせて判断
 
 ═══ Hash Consistency ═══
 ⚠ slices/capture-auto-save: 1 upstream out of sync

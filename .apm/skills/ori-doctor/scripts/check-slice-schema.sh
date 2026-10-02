@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # ori-doctor: check slice document schema
 # Validates: spec.md structure, status.yaml presence, manifest.yaml presence
+# status.yaml absent = scaffolded but not finalized via /ori-flow (WARN only: never ERROR,
+# in-progress slices must not fail the doctor run)
 set -euo pipefail
 
 # Auto-detect project root (PWD-first; SCRIPT_DIR fallback last).
@@ -39,7 +41,8 @@ for dir in .ori/slices/*/; do
     ((ISSUES++)) || true
   fi
   if [[ ! -f "$dir/status.yaml" ]]; then
-    echo "  WARN  slices/$id: missing status.yaml"
+    echo "  WARN  slices/$id: scaffolded but /ori-flow never run (no status.yaml)"
+    echo "        fix: /ori-flow $id"
     ((ISSUES++)) || true
   fi
 done
