@@ -53,7 +53,29 @@ test.describe('scenario:<scenario-id>', () => {
 // @ori-generated scenario:<scenario-id>
 ```
 
-このマーカーは `/ori-sync` が派生ファイルを識別するために使用する。直接編集する場合は `/ori-sync --force` が必要。
+このマーカーは `/ori-sync` が派生ファイルを識別するために使用する。直接編集せず、source（manifest / ドメイン文書）を編集して `/ori-sync` → `/ori-flow` で再生成する（`scenario.instructions.md` §caveats）。
+
+## test-points 網羅対応表 {#test-points-map}
+
+`/ori-generate` は `spec.md#test-points` の全項目を `.ori/scenarios/<id>/test-points-map.md` に対応表として出力する（`@ori-generated`）。`/ori-review` はこの表と spec を突合して欠落を検出する。
+
+```markdown
+<!-- @ori-generated scenario:<scenario-id> -->
+| TP | test-point (spec.md#test-points) | テストケース (file:line) | 代替担保 (file:line) | 状態 |
+|---|---|---|---|---|
+| TP-1 | 発火タイミング (debounce 500ms) | tests/x.spec.ts:42 | — | COVERED |
+| TP-2 | event 発行 (NoOpBus) | — | apps/n/src/.../bus.test.ts:10 | N/A(代替担保) |
+| TP-3 | sort 順 | — | — | **UNCOVERED** |
+```
+
+- 行数は spec の test-points 項目数と一致させる（1 項目 = 1 行。省略・統合禁止）
+- **項目の数え方（SSoT）**: `spec.md#test-points` 節内の **インデントなしの `- ` 行のみ**が 1 項目（sub-bullet・fenced code 内は数えない）。generate / review は同じ次の awk を使う:
+  ```bash
+  awk '/^```/{c=!c} /^## .*\{#test-points\}/{f=1;next} /^## /{f=0} f && !c && /^- /' .ori/scenarios/<id>/spec.md
+  ```
+- 状態は `COVERED` / `N/A(代替担保)` / `UNCOVERED` のいずれか
+- **`N/A(代替担保)` は「代替担保」列に `file:line` 形式（`path:数字`）が必須**（E2E 不能の理由 + unit test 等）。`file:line` が無ければ（空 / `—` / `-` / `なし` 等）`UNCOVERED` として扱う
+- `UNCOVERED` は review で HIGH / NEEDS_FIX（LOW 不可）。`/ori-generate` が未カバーを残す場合も隠さず `UNCOVERED` と書く
 
 ## 事前条件 {#preconditions}
 

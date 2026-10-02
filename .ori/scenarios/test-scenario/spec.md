@@ -8,7 +8,9 @@ coherence:
 
 # test-scenario — Scenario Specification
 
-> This file is a derived document. Edit the source manifest + domain docs and re-run `/ori-flow test-scenario phase=derive`. Use `/ori-sync` if you need to edit here directly; ori will create a proposal for the upstream review.
+> sample fixture: 原典 domain doc（`.ori/domain/validation.md`）なし。`derives_from` は空で、Gherkin はこの fixture 内に直接記載している。
+
+> This file is a derived document. Edit the source manifest + domain docs and re-run `/ori-flow test-scenario phase=derive`. If upstream needs to change, create a proposal with `/ori-propose`.
 
 ## 概要 {#overview}
 
@@ -16,15 +18,52 @@ coherence:
 
 ## シナリオステップ {#scenario-steps}
 
-1. データベースに接続する
-2. テーブルを作成する
-3. レコードを挿入する
-4. レコードを取得する
-5. レコードを更新する
-6. レコードを削除する
-7. Redisに接続する
-8. キーを設定する
-9. キーを取得する
+```gherkin
+Scenario: データベースに接続する
+  Given データベースサーバーが起動している
+  When 接続を確立する
+  Then 接続が成功する
+
+Scenario: テーブルを作成する
+  Given データベースに接続している
+  When テーブルを作成する
+  Then テーブルが作成される
+
+Scenario: レコードを挿入する
+  Given テーブルが存在する
+  When レコードを挿入する
+  Then レコードが挿入される
+
+Scenario: レコードを取得する
+  Given レコードが存在する
+  When レコードを取得する
+  Then レコードが取得できる
+
+Scenario: レコードを更新する
+  Given レコードが存在する
+  When レコードを更新する
+  Then レコードが更新される
+
+Scenario: レコードを削除する
+  Given レコードが存在する
+  When レコードを削除する
+  Then レコードが削除される
+
+Scenario: Redisに接続する
+  Given Redisサーバーが起動している
+  When 接続を確立する
+  Then 接続が成功する
+
+Scenario: キーを設定する
+  Given Redisに接続している
+  When キーを設定する
+  Then キーが設定される
+
+Scenario: キーを取得する
+  Given キーが存在する
+  When キーを取得する
+  Then キーが取得できる
+```
 
 ## テスト観点 {#test-points}
 

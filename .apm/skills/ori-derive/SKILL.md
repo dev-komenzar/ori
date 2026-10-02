@@ -14,7 +14,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
 - **派生器**：`manifest.yaml` の `derives_from:` に列挙されたドメイン section を読み、slice 単位の spec または scenario 単位の spec に再構成
 - **runner 解決器**（scenario のみ、ori-bc9）：優先チェーン（manifest 明示 > 参加(local 系) app の `runtime.runner` > global `scenario_test_runner` > playwright default）で UI 駆動 runner を解決して spec.md に記録。「1 scenario = 1 UI runner」制約と無効 override をエラー停止で強制
 - **整合性チェッカー**：複数 upstream に矛盾があれば停止し、`/ori-propose` を促す
-- **記録係**：spec.md は **derived** ファイル。`coherence.source: derived` で書き、人間が直接編集すると `/ori-sync --force` が要求される
+- **記録係**：spec.md は **derived** ファイル。`coherence.source: derived` で書き、直接編集は不可。更新手順は `.apm/instructions/scenario.instructions.md` §caveats に従う
 
 ## 入力 / 出力
 
@@ -143,7 +143,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
    - 概要 / シナリオステップ / テスト観点 / 実装ノートの 4 セクションを必須として埋める
    - 不明な事項は **推測で埋めず** `**TBD**` マーカーを残し、後段で人間に問う
    - 上流 section の文言を引用する際は `> domain/workflows.md#order-workflow より:` の出典を残す
-   - validation.md の Gherkin シナリオを参照し、シナリオステップに反映
+   - **`#scenario-steps` は Gherkin（`Scenario:` / `Given` / `When` / `Then` の行）で書くことを必須とする**。`.ori/domain/validation.md#<id>` の Gherkin を転記する（番号付きリストの自然言語ステップは不可。review gate が `Then` 行を機械抽出するため）
    - 実装ノートに `runner: <name>`（チェーン段階）を記録（手順 7 の結果）
    - 実装ノートに **前提条件（test readiness）** を記録する（runner が wdio の場合は必須。SSoT は `.apm/instructions/scenario.instructions.md` / `scenario-test.instructions.md`）:
      - **build 契約**: `runtime.build` が `runtime.binary` を生成すること。Tauri の `cargo build` 単体は devUrl 参照の dev binary になるため不可（G2）
@@ -153,7 +153,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
      - **fixture seed**: 既存データ前提 scenario の seed 要否と frontmatter 形式（G6）
 9. **spec.md の自己検証**：
    - 必須 H2 4 種が揃っているか（`## 概要`、`## シナリオステップ`、`## テスト観点`、`## 実装ノート`）
-   - シナリオステップが validation.md の Gherkin シナリオと整合しているか
+   - `#scenario-steps` に `^\s*Then ` が 1 件以上あり、件数が `.ori/domain/validation.md#<id>` の `Then` 件数と一致するか（不一致・0 件は修正対象）
    - runner=wdio の場合、実装ノートに前提条件（build 契約 / plugin / storage env / symlink / fixture seed）が記録されているか
    - 全 H2/H3 に `{#id}` があるか（grep: `^###? [^{]+$`）
    - frontmatter `coherence.source: derived` と `upstream:` の有無
@@ -184,14 +184,14 @@ coherence:
   source: derived
   upstream:
     - path: domain/workflows.md#order-workflow
-      hash: abc123
+      hash: a1b2c3d4e5f6
     - path: domain/validation.md
-      hash: def456
+      hash: 0f9e8d7c6b5a
 ---
 
 # <scenario-id> — Scenario Specification
 
-> This file is a derived document. Edit the source manifest + domain docs and re-run `/ori-flow <scenario-id> phase=derive`. Use `/ori-sync` if you need to edit here directly; ori will create a proposal for the upstream review.
+> This file is a derived document. Edit the source manifest + domain docs and re-run `/ori-flow <scenario-id> phase=derive`. If upstream needs to change, create a proposal with `/ori-propose`.
 
 ## 概要 {#overview}
 
@@ -199,9 +199,14 @@ coherence:
 
 ## シナリオステップ {#scenario-steps}
 
-1. ステップ 1
-2. ステップ 2
-3. ステップ 3
+Gherkin 形式（`.ori/domain/validation.md#<scenario-id>` から転記。`Then` を 1 件以上含むこと）:
+
+```gherkin
+Scenario: シナリオ名
+  Given 前提
+  When 操作
+  Then 期待結果
+```
 
 ## テスト観点 {#test-points}
 
@@ -216,7 +221,7 @@ coherence:
 ## 注意
 
 - **自動 scaffold は禁止**：slice / scenario が存在しなくても勝手に新規作成を呼ばない（ユーザ確認必須）
-- **spec.md は派生ファイル**：直接編集には `/ori-sync --force` が必要
+- **spec.md は派生ファイル**：直接編集は不可。更新手順は `.apm/instructions/scenario.instructions.md` §caveats に従う
 - **推測で埋めない**：`TBD` を残し、人間判断に委ねる箇所を明示
 - このスキルは test や impl を書かない。**phase 1 = spec 派生のみ**
 - **SSoT 参照原則** (ori-fzr.6 以降): spec.md の section 仕様 / 記述例 / DoD 由来 item 雛形は **このスキル内に hardcoded で書かない**。常に `.apm/instructions/feature-spec.instructions.md` / `feature-manifest.instructions.md` / `.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` を読み込んで参照する。pattern.md DoD rule の改訂時にスキル更新が漏れて drift するのを防ぐため
