@@ -25,7 +25,8 @@ ori ハーネスの全 skill と状態遷移を俯瞰します。
 |------|---------|---------|
 | 初期化 | `/ori-init` | `.ori/` skeleton 生成 |
 | DDD フェーズ 1-11 | `/ori-distill` | `.ori/domain/{discovery,aggregates,...}` 生成 |
-| Architecture 決定 | `/ori-arch` → `/ori-architect` | `.ori/architecture.md` を要件対話から生成 |
+| Architecture 決定 | `/ori-architect` | `.ori/architecture.md` を要件対話から生成 (`apps/` は未初期化でよい) |
+| codebase 準備 | `/ori-bootstrap` | upstream framework init を案内 + runner deps / tauri scaffold + readiness verify (`bootstrap.js verify`) |
 | 初回実装 | `/ori-flow <id>` | slice を 7 phase で完走 |
 
 #### 2. 1 slice 実装（7 phase）
@@ -87,9 +88,10 @@ ori ハーネスの全 skill と状態遷移を俯瞰します。
 stateDiagram-v2
     [*] --> Init: /ori-init
     Init --> DDD: /ori-distill
-    DDD --> Arch: /ori-arch → /ori-architect
+    DDD --> Arch: /ori-architect
+    Arch --> Boot: /ori-bootstrap
     
-    Arch --> FlowDerive: /ori-flow <id>
+    Boot --> FlowDerive: /ori-flow <id>
     
     state "1 slice 7 phase" as s7 {
         FlowDerive: derive<br/>domain→spec.md
@@ -157,7 +159,7 @@ stateDiagram-v2
 
 ori は「AI に任意のコードを書かせるための薄いハーネス」ではありません。**「DDD ドキュメント → slice / page + DDD のコード骨格」というアーキテクチャまで指定する、opinionated（oriented）なハーネス**です。
 
-- `/ori-arch` → `/ori-architect` が要件対話で pattern (`ddd-vsa-hex`) と stack (`typescript` / `typescript-tauri`) を確定し、slice ごとに `domain / application / infrastructure / presentation / tests` を切り、`index.ts` を唯一の public API として slice 間の直接 import を禁ずる雛形を吐きます
+- `/ori-architect` が要件対話で pattern (`ddd-vsa-hex`) と stack (`typescript` / `typescript-tauri`) を確定し、slice ごとに `domain / application / infrastructure / presentation / tests` を切り、`index.ts` を唯一の public API として slice 間の直接 import を禁ずる雛形を吐きます
 - `.ori/architecture.md` を SSoT として、arch-adapter が ESLint / Rust 等の言語ネイティブ linter にコンパイルされ、規約逸脱を CI で止めます
 - AI に与えるのは「任意のスタイルで書く自由」ではなく「決められたスロットを埋める自由」です
 
@@ -178,7 +180,8 @@ apm install dev-komenzar/ori
 $ claude/opencode/...                          # Launch your agent
 $ /ori-init                                    # .ori/ skeleton + config.yaml (silent)
 $ /ori-distill                                 # AI が distill-ddd phase 1-11 を対話実行
-$ /ori-arch                                    # /ori-architect に委譲し要件対話から architecture.md を生成
+$ /ori-architect                               # 要件対話から architecture.md を生成
+$ /ori-bootstrap                               # upstream framework init を案内 → readiness verify (app が build 可能か)
 $ /ori-flow app-startup                        # 1 slice を 7 phase で実装
 $ /ori-sync                                    # 変更伝播計算
 ```
@@ -205,7 +208,7 @@ $ /ori-sync                                    # 変更伝播計算
 
 **v0.4.0 — greenfield 利用可能**
 
-新規プロジェクトを 0 から立ち上げる動線 (`/ori-init` → `/ori-distill` → `/ori-arch` → `/ori-flow`) は通しで動作します。MVP として `ddd-vsa-hex` パターン + TypeScript / TypeScript-Tauri スタックを sweet spot にサポートしています。
+新規プロジェクトを 0 から立ち上げる動線 (`/ori-init` → `/ori-distill` → `/ori-architect` → `/ori-bootstrap` → `/ori-flow`) は通しで動作します。MVP として `ddd-vsa-hex` パターン + TypeScript / TypeScript-Tauri スタックを sweet spot にサポートしています。
 
 未対応：ブラウンフィールド (既存コードベースへの後付け導入) は `/ori-migrate-domain` を含む v0.5+ のロードマップです。
 

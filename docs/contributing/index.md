@@ -2,7 +2,7 @@
 
 ## init テンプレートを募集しています
 
-ori が一番欲しいのは、新しいスタックの **slice ベース DDD template** です。現状 `/ori-arch` の MVP は `ddd-vsa-hex-typescript` / `ddd-vsa-hex-typescript-tauri` のみで、これ以外のスタックは未対応です。
+ori が一番欲しいのは、新しいスタックの **slice ベース DDD template** です。現状 `/ori-architect` の MVP は `ddd-vsa-hex-typescript` / `ddd-vsa-hex-typescript-tauri` のみで、これ以外のスタックは未対応です。
 
 - **言語別**: Python / Go / Rust / Kotlin / Scala / Swift...
 - **フレームワーク別**: Next.js / Nuxt / Remix / Django / FastAPI / Spring / Axum / Tauri...
@@ -34,7 +34,7 @@ ori/
 │   ├── coherence/        # propagation 計算 + ハッシュ管理
 │   ├── slice-runner/     # 7-phase workflow runner + beads bridge
 │   ├── init-core/        # /ori-init 共通ロジック
-│   ├── arch-adapters/    # ori-arch から bundle される adapter 群
+│   ├── arch-adapters/    # ori-architect から bundle される adapter 群
 │   └── skills/           # skill ごとの esbuild bundle entry
 ├── .apm/                 # APM 配布アセット
 │   ├── apm.yml
@@ -49,7 +49,7 @@ ori/
 
 | やりたいこと | 編集する場所 |
 |---|---|
-| 新しい template / adapter を追加 | `packages/templates/`, `packages/arch-adapters/`, `.apm/skills/ori-arch/adapters/` |
+| 新しい template / adapter を追加 | `packages/templates/`, `packages/arch-adapters/`, `.apm/skills/ori-architect/adapters/` |
 | skill のロジックを直す | `.apm/skills/<skill-name>/` (SKILL.md + scripts) |
 | 設計を変える | `docs/design.md` → 関連 skill / packages へ反映 |
 | propagation / SSoT guardrail | `packages/coherence/`, `packages/parser/` |

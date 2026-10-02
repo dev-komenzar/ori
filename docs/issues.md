@@ -19,7 +19,7 @@
 - **影響度**: 限定的。ori の実装編集はほぼ `/ori-flow` → `/ori-test-red` /
   `/ori-impl-green` 経由で、skill が正典を読むため。ただし直接編集ケースでは規約が
   効かない。
-- **対応方針（将来）**: `/ori-arch` が `architecture.md` の
+- **対応方針（将来）**: `/ori-architect` が `architecture.md` の
   `roots[].language` / `layer_set` から test concretion 正典を解決し、glob-scoped
   rule を **動的 emit** する段階を追加する。または instructions を stack 概念と
   連動させて `stacks/<stack>/` を参照できるよう APM 配布機構を拡張する。

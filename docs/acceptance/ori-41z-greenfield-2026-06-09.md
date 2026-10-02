@@ -1,5 +1,7 @@
 # ori-41z greenfield acceptance — 2026-06-09 execution (v0.3 Phase H4b)
 
+> **注記 (ori-63f)**: 旧フロー (DDD → upstream init → `/ori-arch`) 時点の記録。以下は歴史記録として改変しない。`/ori-arch` は `/ori-architect` に統合・廃止され、現行の大フローは DDD → `/ori-architect` → `/ori-bootstrap` → `/ori-flow`。現行の再現手順は [README.md](README.md) §1 を参照。
+
 `ori-s44` (PR #32) で deferred とした完了条件 ③ 「AI が `/ori-flow new-slice` で
 example-slice/ を on-demand 参照して slice を生成できる」を greenfield で end-to-end
 検証する acceptance の **本セッション (execution) ログ**。

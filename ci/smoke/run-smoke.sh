@@ -3,9 +3,11 @@
 # script-level parts of `/ori-flow` on a freshly-scaffolded user project.
 #
 # Scope (what this driver IS):
-#   - drives the bash/node scripts owned by /ori-init, /ori-architect, /ori-doctor
-#     in the same sequence /ori-flow would (manifest scaffold → architecture
-#     seed (agent-output fixture) → tauri scaffold → DoD sweep)
+#   - drives the bash/node scripts owned by /ori-init, /ori-architect,
+#     /ori-bootstrap, /ori-doctor in the new big-flow order
+#     (DDD → /ori-architect → /ori-bootstrap → /ori-flow): skeleton →
+#     architecture seed (agent-output fixture) → upstream-init stand-in +
+#     tauri scaffold (/ori-bootstrap) → manifest → DoD sweep
 #   - asserts file outputs, sentinel substitution, and check-dod-sweep.sh
 #     heuristics against a known empty slice
 #   - runs `cargo check` on the tauri scaffold so the specta entry-point
@@ -98,7 +100,8 @@ assert_file "$WORK/.ori/.gitignore"
 assert_grep "current_agent: claude" "$WORK/.ori/config.yaml"
 assert_grep "name: $APP_NAME" "$WORK/.ori/config.yaml"
 
-# ----- step 2: seed .ori/architecture.md (agent 生成の決定的代替) ------------
+# ----- step 2: /ori-architect — seed .ori/architecture.md (agent 生成の決定的代替) --
+# 新フローでは /ori-architect が /ori-bootstrap (upstream init) より先に走る。
 # ori-c79 で固定 stack テンプレート (stacks/*/architecture.md.tpl) を廃止し、
 # .ori/architecture.md は ori-architect スキルが要件対話から生成する
 # (LLM は CI では回せない)。ここでは golden test の agent 生成 fixture
@@ -119,12 +122,14 @@ assert_grep "cross_root:"   "$ARCH"
 assert_grep "sub_layers:"   "$ARCH"
 assert_grep "phase_hooks:"  "$ARCH"
 
-# ----- step 3: simulate `pnpm tauri init` -----------------------------------
+# ----- step 3: /ori-bootstrap — simulate upstream init (`pnpm tauri init`) ----
+# /ori-bootstrap は architecture.md から stack を確定して upstream init を案内する
+# (自動実行しない)。smoke では案内される init の決定的 stand-in を置く。
 # A real `pnpm tauri init` is interactive (asks for app name / window title /
 # frontend dist / dev URL). The smallest scaffold that satisfies
 # install-tauri-scaffold.sh's pre-checks AND lets cargo check compile the
 # specta entry is a minimal Cargo.toml + lib.rs + main.rs.
-log "step 3: simulate pnpm tauri init (minimal Cargo skeleton)"
+log "step 3: simulate upstream init for /ori-bootstrap (minimal Cargo skeleton)"
 APP_DIR="$WORK/apps/$APP_NAME"
 ST_DIR="$APP_DIR/src-tauri"
 mkdir -p "$ST_DIR/src/bin" "$APP_DIR/src"
@@ -159,7 +164,7 @@ fn main() {}
 EOF
 
 # ----- step 4: install-tauri-scaffold.sh -------------------------------------
-log "step 4: install-tauri-scaffold.sh (/ori-bootstrap install scaffold)"
+log "step 4: install-tauri-scaffold.sh (/ori-bootstrap tauri scaffold apply)"
 bash "$SKILLS_DIR/ori-init/scripts/install-tauri-scaffold.sh" \
   --dest "$WORK" --app-name "$APP_NAME" --bc-name "$BC_NAME"
 

@@ -4,6 +4,22 @@ ori (織) — DDD-driven slice/page scaffolding with CoDD coherence.
 
 ローカル変更ログ。npm scope は `@ori-ori/*`、monorepo 配下の全 publishable パッケージは同期 version で release する。
 
+## Unreleased
+
+**フロー刷新 (epic `ori-63f`)**: 大フローを **DDD → `/ori-architect` → `/ori-bootstrap` → `/ori-flow`** に反転。architecture (stack) を先に確定し、その結果に基づいて codebase を準備する (upstream framework init は `/ori-architect` の後)。
+
+### `/ori-bootstrap` 新設（F2）
+
+- **`/ori-bootstrap`** ([`ori-63f.1`](https://github.com/dev-komenzar/ori/issues)) — `.ori/architecture.md` から stack を確定して upstream framework init を案内 (自動実行しない)、runner deps 追加と tauri specta scaffold の apply、`bootstrap.js verify` による readiness 検証 (静的 + build) を担う codebase 準備 step
+
+### `/ori-arch` を `/ori-architect` に統合・廃止（F1）
+
+- **`/ori-arch` 廃止** ([`ori-63f.2`](https://github.com/dev-komenzar/ori/issues)) — 責務を `/ori-architect` (architecture 生成。`apps/` 未初期化でも可) と `/ori-bootstrap` (upstream init 案内・runner deps・tauri scaffold) に分割。`patterns/` / `adapters/` / `scripts/` は `.apm/skills/ori-architect/` に移設し、`packages/skills/ori-arch` は `packages/skills/ori-architect` (`@ori-ori/skill-ori-architect`) に rename。tpl 廃止後 guidance のみだった `render-architecture.js` は削除
+
+### 大フロー順序反転の docs 一括更新（F3）
+
+- **docs / smoke の新順序化** ([`ori-63f.3`](https://github.com/dev-komenzar/ori/issues)) — `docs/design.md` §17、`docs/start/*`、`docs/acceptance/README.md`、`README.md` (状態遷移表 / Mermaid)、`ci/smoke/run-smoke.sh` のコメントを `architect → bootstrap` 順に更新。過去の acceptance / smoke 実施記録は歴史記録として据え置き、冒頭に旧フロー注記を追記
+
 ## v0.5.0 — 2026-09-11
 
 **Scenario 概念導入 + architect 動的生成化 + Review バイパス不能化** を軸とした release。service 横断 E2E テスト生成のための scenario 概念を新設し、validation.md anchor と 1:1 機械ガードまで含めて整備した。`/ori-architect` は固定テンプレートを廃し、要件対話ベースの動的生成へ転換。L1/L2/L3 防御線を強化し review バイパスを不能化。テスト規約を pattern/stacks 階層に一本化し正典化。配布動線は引き続き APM single package (`apm install dev-komenzar/ori`) のみ。

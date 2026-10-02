@@ -1,5 +1,7 @@
 # Phase K greenfield acceptance — 2026-06-11 execution (ori-6kd.1)
 
+> **注記 (ori-63f)**: 旧フロー (DDD → upstream init → `/ori-arch`) 時点の記録。以下は歴史記録として改変しない。`/ori-arch` は `/ori-architect` に統合・廃止され、現行の大フローは DDD → `/ori-architect` → `/ori-bootstrap` → `/ori-flow`。現行の再現手順は [README.md](README.md) §1 を参照。
+
 `ori-6kd` (Phase K epic) の完了条件を実機 (greenfield `/tmp/ori-acceptance-k`)
 で実証する acceptance の **execution session log**。
 

@@ -1,5 +1,7 @@
 # ori-s44 greenfield acceptance — 2026-06-07 (v0.3 Phase H4)
 
+> **注記 (ori-63f)**: 旧フロー (DDD → upstream init → `/ori-arch`) 時点の記録。以下は歴史記録として改変しない。`/ori-arch` は `/ori-architect` に統合・廃止され、現行の大フローは DDD → `/ori-architect` → `/ori-bootstrap` → `/ori-flow`。現行の再現手順は [README.md](README.md) §1 を参照。
+
 v0.3 Phase H3 (`packages/templates/` 物理撤去 / PR #31) merge 後の retry。
 Phase H4 main (`ori-s44`) として「APM 配布された ori v0.3 が三段構え動線
 (`/ori-init` → upstream framework init → `/ori-arch`) を end-to-end 完走するか」

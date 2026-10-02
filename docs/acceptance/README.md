@@ -16,15 +16,15 @@ skill が visible になる) を回避するため。
 | **prep** | scaffold + manifest 整備 + bd issue 起票 + greenfield 環境準備 | `ori slice new <id>` で manifest skeleton 完成、bd ready で対象 epic + slice issue が見える、`pnpm test` で worked example PASS |
 | **run** | `/ori-flow <id>` で 7 phase (derive → plan → test-red → impl-green → refactor → review → finalize) 自動実行 | 全 phase closed、acceptance criteria 全 PASS、friction を bd 起票 |
 
-prep の進め方 (design.md §17 三段構え):
+prep の進め方 (大フロー: DDD → `/ori-architect` → `/ori-bootstrap` → `/ori-flow`。design.md §17):
 
 1. test 用 dir を作成 (`/tmp/ori-acceptance-greenfield-<n>`)
 2. `bash <ori-repo>/.apm/skills/ori-init/scripts/create-skeleton.sh --dest <test-dir>` で `.ori/` scaffold (ori-ks7 fix 後は bd init も自動)
-3. **upstream framework init**: `cd <test-dir> && mkdir -p apps/<app> && cd apps/<app> && pnpm create vite@latest . --template vanilla-ts` (Tauri 併用なら `pnpm add -D @tauri-apps/cli && pnpm tauri init` も)。`package.json` / `tsconfig.json` / `vitest.config.ts` 等 bootstrap 系はここで揃う
-4. `<test-dir>` で `node <ori-repo>/.apm/skills/ori-arch/scripts/render-architecture.js --pattern ddd-vsa-hex --stack typescript --bc <bc-name>` → `.ori/architecture.md` が書き出される
-   - **stack ↔ adapter matrix に注意** (ori-t48 / Phase K 2026-06-11 で発覚した friction): rust adapter (`export.js --adapter=rust`) を acceptance に含めるなら、`--stack typescript-tauri` を指定して rust root を含む multi-root architecture.md を render する必要がある。`--stack typescript` (単一 root / language=typescript) で `--adapter=rust` を叩くと `WARN Adapter "rust" produced no files. rust adapter skipped: root "default" is language=typescript, not rust.` で no-op になり `tests/arch.rs` が生成されない (skip 自体は silent overwrite を避ける safe default)。 rust 検証ありの acceptance では Step 3 で `pnpm tauri init` も実行し、export 時に `--adapter=rust --root=rs` を明示する
-5. test dir で `pnpm install && pnpm test` を走らせて upstream init 出力 (sample test 含む) の sanity check
-6. `node <ori-repo>/.apm/skills/ori-flow/scripts/new-slice.js <slice-id>` → manifest.yaml の `derives_from:` を埋める (AI は `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/example-slice/` を参照して slice を生成)
+3. **architecture 決定**: `<test-dir>` の agent session で `/ori-architect` を実行し、要件対話から `.ori/architecture.md` を生成する (`apps/` は未初期化でよい。旧 `render-architecture.js` は廃止済み)
+   - **stack ↔ adapter matrix に注意** (ori-t48 / Phase K 2026-06-11 で発覚した friction): rust adapter (`export.js --adapter=rust`) を acceptance に含めるなら、decision_points で rust root を含む multi-root (typescript-tauri) architecture.md を生成する必要がある。単一 root (language=typescript) で `--adapter=rust` を叩くと `WARN Adapter "rust" produced no files. rust adapter skipped: root "default" is language=typescript, not rust.` で no-op になり `tests/arch.rs` が生成されない (skip 自体は silent overwrite を避ける safe default)。rust 検証ありの acceptance では export 時に `--adapter=rust --root=rs` を明示する
+4. **codebase 準備**: `/ori-bootstrap` が案内する upstream framework init を実行する (`cd <test-dir> && mkdir -p apps/<app> && cd apps/<app> && pnpm create vite@latest . --template vanilla-ts`。Tauri 併用なら `pnpm add -D @tauri-apps/cli && pnpm tauri init` も)。`package.json` / `tsconfig.json` / `vitest.config.ts` 等 bootstrap 系はここで揃う。続けて runner deps 追加 + (typescript-tauri) specta scaffold を `/ori-bootstrap` の手順で適用する
+5. `<test-dir>` で `node <ori-repo>/.apm/skills/ori-bootstrap/scripts/bootstrap.js verify` (静的 + build) が PASS することを確認し、`pnpm install && pnpm test` で upstream init 出力 (sample test 含む) の sanity check
+6. `node <ori-repo>/.apm/skills/ori-flow/scripts/new-slice.js <slice-id>` → manifest.yaml の `derives_from:` を埋める (AI は `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript/example-slice/` を参照して slice を生成)
 7. 関連 domain 文書を `.ori/domain/` に置く
 8. prep session を **終了**して、新規 session で run
 

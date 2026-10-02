@@ -1,6 +1,6 @@
 # CI smoke (Slice DoD chain)
 
-`/ori-flow` のうち **deterministic な script-level 部分** (`/ori-init` → `/ori-arch render` → `install-tauri-scaffold.sh` → `/ori-doctor sweep`) を fresh project 上で非対話駆動する smoke が `ci/smoke/` 配下にあります。
+`/ori-flow` のうち **deterministic な script-level 部分** (`/ori-init` → `/ori-architect` の architecture.md seed → `/ori-bootstrap` の tauri scaffold (`install-tauri-scaffold.sh`) → `/ori-doctor sweep`) を fresh project 上で非対話駆動する smoke が `ci/smoke/` 配下にあります。
 
 ## 目的
 
@@ -11,8 +11,8 @@ skill が AI harness 経由で実行される一方、内部の bash/node script
 | 工程 | 確認内容 |
 |---|---|
 | `/ori-init` | `.ori/` skeleton 生成が動く |
-| `/ori-arch render` | architecture.md → 各 adapter 設定の書き出し |
-| `install-tauri-scaffold.sh` | `pnpm tauri init` 相当 + specta scaffold |
+| `/ori-architect` seed | golden agent-output fixture を `.ori/architecture.md` として seed (LLM 非依存の stand-in) |
+| `install-tauri-scaffold.sh` (`/ori-bootstrap`) | `pnpm tauri init` 相当 (stand-in) の後に specta scaffold を apply |
 | `cargo check` (export-types) | Rust 側の最小コンパイル |
 | `/ori-doctor sweep` | 空 slice manifest から `rule:dod-1` (sub_layers 未充填) を検出 |
 

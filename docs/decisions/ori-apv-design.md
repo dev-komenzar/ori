@@ -1,6 +1,8 @@
 # ori-apv (Phase J1) — adapter を template + injection 構造で再設計
 
-> **2026-06-10 後注**: 本 doc 内の adapter bundle path (`.apm/contexts/adapters/<name>/`) は J1 時点の決定。Phase K1 (`ori-6kd.2`) で `.apm/skills/ori-arch/adapters/<name>/` に再 co-locate、Phase K3 (`ori-6kd.3`) で `.apm/contexts/` dir 自体を物理撤去。現行の path は [CHANGELOG.md](../../CHANGELOG.md) v0.3-K / [docs/design.md §15-16](../design.md) 参照。
+> **2026-06-10 後注**: 本 doc 内の adapter bundle path (`.apm/contexts/adapters/<name>/`) は J1 時点の決定。Phase K1 (`ori-6kd.2`) で `.apm/skills/ori-architect/adapters/<name>/` に再 co-locate、Phase K3 (`ori-6kd.3`) で `.apm/contexts/` dir 自体を物理撤去。現行の path は [CHANGELOG.md](../../CHANGELOG.md) v0.3-K / [docs/design.md §15-16](../design.md) 参照。
+>
+> **ori-63f 後注**: 本 doc 内の `/ori-arch` は J1 時点の名称。現在は `/ori-architect` に統合・廃止済み (生成物ヘッダの文言も `Regenerate via the /ori-architect skill` に更新)。
 
 - **Issue**: ori-apv (Phase J epic = ori-c4w)
 - **内包**: ori-0ok (eslint.config.ori.js ヘッダの旧 CLI 案内修正)
@@ -120,7 +122,7 @@ export function buildBridges(spec: ArchitectureSpec, root: RootConfig): Bridge[]
 **確定**: `render-architecture.ts` の `resolvePatternsDir` パターンを複製して `resolveAdaptersDir` を新設。adapter は `<adaptersDir>/<name>/index.js` を dynamic import。
 
 ```ts
-// In packages/skills/ori-arch/src/export.ts (bundle → .apm/skills/ori-arch/scripts/export.js)
+// In packages/skills/ori-architect/src/export.ts (bundle → .apm/skills/ori-architect/scripts/export.js)
 async function resolveAdaptersDir(args: ParsedArgs): Promise<string> {
   const candidates: string[] = [];
   if (args.adaptersDir) candidates.push(args.adaptersDir);
@@ -175,7 +177,7 @@ export interface OriArchAdapter {
 **dev での build ordering**: root `package.json` の `pretest` hook で `pnpm run build:adapters` を実行、`packages/arch-adapters/<name>/src/integration.test.ts` が build 済 `index.js` の templates を読めるよう確保。
 
 **棄却案**:
-- adapters dir を `.apm/skills/ori-arch/adapters/` に置く: issue 確定済の `.apm/contexts/adapters/` を覆す理由なし
+- adapters dir を `.apm/skills/ori-architect/adapters/` に置く: issue 確定済の `.apm/contexts/adapters/` を覆す理由なし
 - `import.meta.resolve` (Node 22 native): apm install 先の Node version 保証なし
 
 ### Q5. test 移植戦略
@@ -200,11 +202,11 @@ export interface OriArchAdapter {
 
 **書き換え文言** (両 template 共通):
 ```
-Regenerate via the /ori-arch skill (Claude Code) — see .apm/skills/ori-arch/SKILL.md
+Regenerate via the /ori-arch skill (Claude Code) — see .apm/skills/ori-architect/SKILL.md
 ```
 
 **J1 スコープ外として明示**:
-- `.apm/skills/ori-arch/SKILL.md`: PR #33 (ori-1gs) が touch 中、merge 競合回避
+- `.apm/skills/ori-architect/SKILL.md`: PR #33 (ori-1gs) が touch 中、merge 競合回避
 - `docs/start/*.md` 群: docs gap は別 issue (ori-3ju 等) で起票済
 - 旧 `packages/arch-adapter-*/src/index.ts`: J2 (ori-osm) で物理削除
 - adapter notes の peer install hint (`pnpm add -D eslint-plugin-boundaries` 等): consumer 環境への正しい guidance、skill-only モデルと無関係
@@ -222,8 +224,8 @@ grep -r '/ori-arch skill' .apm/contexts/adapters/ | wc -l  # 期待: 2 (rust + e
 3. `.apm/contexts/adapters/{eslint,rust,generic}/templates/*.tpl` 作成 (新 placeholder convention 適用)
 4. `scripts/build-adapters.mjs` 新設 (esbuild config は build-skills.mjs 踏襲)
 5. root `package.json` に `build:adapters` 追加、`pretest` で build を kick
-6. `packages/skills/ori-arch/src/export.ts` / `check.ts` の `loadAdapter` を新方式に置換 (`resolveAdaptersDir` 追加、`createRequire` 削除)
-7. `packages/skills/ori-arch/package.json` から旧 devDeps `@ori-ori/arch-adapter-*` 削除
+6. `packages/skills/ori-architect/src/export.ts` / `check.ts` の `loadAdapter` を新方式に置換 (`resolveAdaptersDir` 追加、`createRequire` 削除)
+7. `packages/skills/ori-architect/package.json` から旧 devDeps `@ori-ori/arch-adapter-*` 削除
 8. 旧 `packages/arch-adapter-*/` は **本 PR では削除しない** (J2 ori-osm の所掌、重複は許容)
 9. `pnpm test` 全 pass を確認、`pnpm typecheck` PASS、grep 検証 (旧 CLI 案内 / npm package 参照が残らない)、template formatter PASS
 

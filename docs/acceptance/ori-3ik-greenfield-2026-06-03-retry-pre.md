@@ -1,5 +1,7 @@
 # ori-3ik greenfield acceptance retry (pre-`/ori-flow`) — 2026-06-03
 
+> **注記 (ori-63f)**: 旧フロー (DDD → upstream init → `/ori-arch`) 時点の記録。以下は歴史記録として改変しない。`/ori-arch` は `/ori-architect` に統合・廃止され、現行の大フローは DDD → `/ori-architect` → `/ori-bootstrap` → `/ori-flow`。現行の再現手順は [README.md](README.md) §1 を参照。
+
 前回 (`docs/acceptance/ori-3ik-greenfield-2026-06-03.md`) で blocked になった
 3 件の P1 (ori-9gy, ori-ap7, ori-3ju) を含む 6 件の friction を PR #13 で
 解消したのち、scaffold までの greenfield 動線を `/tmp/` で再走した記録。
