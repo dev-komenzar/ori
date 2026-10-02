@@ -10,6 +10,8 @@ ori:
 
 # ori-fzr.13 — Integration Smoke Report
 
+> **注記 (ori-63f)**: 旧フロー時点の記録 (歴史記録として改変しない)。`/ori-arch` / `render-architecture.js` は廃止済みで、現行は `/ori-architect` → `/ori-bootstrap`。現行手順は [ci-smoke.md](../contributing/ci-smoke.md) を参照。
+
 ## TL;DR
 
 - **Structural smoke (scaffolding + config + sweep heuristics): PASS**

@@ -1,6 +1,6 @@
 # init テンプレートを募集しています
 
-現状の `/ori-arch`（→ `/ori-architect` が要件対話から生成）は MVP として `pattern:ddd-vsa-hex` × `stack:typescript` / `typescript-tauri`（slice ベース + DDD + Vertical Slice + Hexagonal）を中心にサポートしています。将来的には**コミュニティから template を集めたい**と考えています：
+現状の `/ori-architect`（要件対話から生成。旧 `/ori-arch` を統合）は MVP として `pattern:ddd-vsa-hex` × `stack:typescript` / `typescript-tauri`（slice ベース + DDD + Vertical Slice + Hexagonal）を中心にサポートしています。将来的には**コミュニティから template を集めたい**と考えています：
 
 - **言語別**: Python / Go / Rust / Kotlin / Scala / Swift...
 - **フレームワーク別**: Next.js / Nuxt / Remix / Django / FastAPI / Spring / Axum / Tauri...
@@ -18,9 +18,9 @@
 
 | Adapter | 状態 | bundle 場所 |
 |---|---|---|
-| ESLint | 利用可能 | `.apm/skills/ori-arch/adapters/eslint/` |
-| 汎用 regex | 利用可能 | `.apm/skills/ori-arch/adapters/generic/` |
-| Rust | 利用可能 | `.apm/skills/ori-arch/adapters/rust/` |
+| ESLint | 利用可能 | `.apm/skills/ori-architect/adapters/eslint/` |
+| 汎用 regex | 利用可能 | `.apm/skills/ori-architect/adapters/generic/` |
+| Rust | 利用可能 | `.apm/skills/ori-architect/adapters/rust/` |
 | Python (import-linter) | 計画中 | — |
 | JVM (ArchUnit) | 計画中 | — |
 | Go (depguard) | 計画中 | — |

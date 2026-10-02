@@ -60,10 +60,10 @@ describe("generic adapter — contract", () => {
     ]);
   });
 
-  it("notes mention /ori-arch check invocation (skill-based)", async () => {
+  it("notes mention /ori-architect check invocation (skill-based)", async () => {
     const spec = parseArchitectureSpec(SPEC);
     const result = await adapter.export(spec, spec.roots[0]!);
-    expect(result.notes?.join("\n")).toMatch(/\/ori-arch check/);
+    expect(result.notes?.join("\n")).toMatch(/\/ori-architect check/);
     expect(result.notes?.join("\n")).not.toMatch(/ori arch check/);
   });
 });

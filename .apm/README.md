@@ -13,7 +13,7 @@ APM resolves the contents below into each AI harness's native format (`.claude/`
 | Path | Type | Purpose |
 |------|------|---------|
 | `instructions/` | Instructions | file-glob-scoped rule files applied automatically when AI touches matching paths |
-| `skills/` | Skills | user-invocable workflows (`/ori-init`, `/ori-arch`, `/ori-architect`, `/ori-flow`, `/ori-sync`, `/ori-derive`, …) — each carries its own `scripts/` (esbuild bundle) と必要に応じ `templates/` `patterns/` `adapters/` を bundle 隣接で同梱 |
+| `skills/` | Skills | user-invocable workflows (`/ori-init`, `/ori-architect`, `/ori-bootstrap`, `/ori-flow`, `/ori-sync`, `/ori-derive`, …) — each carries its own `scripts/` (esbuild bundle) と必要に応じ `templates/` `patterns/` `adapters/` を bundle 隣接で同梱 |
 | `agents/` | Agents | `ori-reviewer` — fresh-context adversarial reviewer (レビューはユーザ対話不要のため agent 方式のまま) |
 
 > ヒアリングが必要な step はスキルで実装する (agent は headless でユーザと対話できない)。

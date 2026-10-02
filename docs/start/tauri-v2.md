@@ -25,60 +25,63 @@ pnpm --version
 rustc --version
 ```
 
-## 2. プロジェクト初期化 (二段構え)
+## 2. プロジェクト初期化 (architect → bootstrap)
 
-design.md §17 の「upstream init → ori artifact」二段構え。
+大フロー: **DDD (`/ori-init` → `/ori-distill`) → `/ori-architect` → `/ori-bootstrap` → `/ori-flow`** (design.md §17)。
+architecture (stack) を先に確定し、その結果に基づいて `/ori-bootstrap` が upstream init を案内する。
 
 ```bash
 mkdir my-tauri-app && cd my-tauri-app
 
 # ステップ 1: .ori/ skeleton + config.yaml (silent)
 /ori-init
+/ori-distill                                         # DDD phase 1-11
 
-# ステップ 2: upstream framework init (ユーザが直接実行)
-#   vite + Tauri を立ち上げ、TS 側 (apps/<app>/src/) と Rust 側
-#   (apps/<app>/src-tauri/) の bootstrap 系を upstream で揃える
+# ステップ 2: architecture.md (multi-root) を生成
+/ori-architect                                       # 要件対話から生成 (apps/ は未初期化でよい)
+
+# ステップ 3: codebase 準備 — /ori-bootstrap が stack=typescript-tauri を確定し、
+#   下記の upstream framework init を案内する (自動実行はしない。ユーザが直接実行)
+/ori-bootstrap
 mkdir -p apps/my-tauri-app && cd apps/my-tauri-app
 pnpm create vite@latest . --template vanilla-ts
 pnpm add -D @tauri-apps/cli
 pnpm tauri init
+pnpm install
 cd ../..
 
-# ステップ 3: architecture.md (multi-root) を生成（/ori-architect に委譲）
-/ori-arch                                            # /ori-architect に委譲して要件対話から生成
-pnpm install
+# ステップ 4: /ori-bootstrap を再実行 — init 済みを確認し、runner deps (root package.json)
+#   の追加と specta scaffold の apply を行う (コマンドは `bootstrap.js guide` でも確認できる)
+/ori-bootstrap
+#   scaffold の実体: bash .apm/skills/ori-init/scripts/install-tauri-scaffold.sh \
+#                      --dest . --app-name my-tauri-app --bc-name <bc-kebab>
+
+# ステップ 5: readiness 検証 (静的 + build。exit 0=PASS / 1=FAIL)
+node .apm/skills/ori-bootstrap/scripts/bootstrap.js verify
 ```
 
 役割分担:
 
 - `/ori-init` （ステップ 1） — **silent**。`.ori/` skeleton と
   `.ori/config.yaml` のみ生成。
-- **upstream framework init** （ステップ 2） — `pnpm create vite@latest` +
-  `pnpm tauri init` を **ユーザ自身に** 走ってもらい、TS / Rust 双方の
-  bootstrap 系 (`package.json` / `tsconfig.json` / `Cargo.toml` /
-  `tauri.conf.json` / `build.rs` / `capabilities/default.json` /
-  `src/main.rs` 等) を upstream の最新形式で揃える。
-- `/ori-arch` （ステップ 3） — **`/ori-architect` スキル** が要件対話
+- `/ori-architect` （ステップ 2） — **`/ori-architect` スキル** が要件対話
   (platforms=[web, desktop] / os_integration=tauri / ui_native=web) から
-  `.ori/architecture.md` 1 ファイルを生成。両 root (`ts` + `rs`) と
+  `.ori/architecture.md` 1 ファイルだけを生成。両 root (`ts` + `rs`) と
   cross-root 関係 (tauri-specta による bindings 生成) が宣言される。
-  旧 render コマンドは tpl 廃止後 guidance のみを返す:
-
-  ```bash
-  node .apm/skills/ori-arch/scripts/render-architecture.js \
-    --pattern ddd-vsa-hex \
-    --stack typescript-tauri \
-    --bc task-management
-  # → exit 2: "ori-architect スキルが要件対話から生成します"
-  ```
-
   BC 名は kebab (`task-management`) / snake (`task_management`) を
-  agent が識別子規則に従って両 root に設定する。
+  agent が識別子規則に従って両 root に設定する。`apps/` には何も書かない。
+- `/ori-bootstrap` （ステップ 3-5） — architecture.md から stack を確定して
+  **upstream framework init** (`pnpm create vite@latest` + `pnpm tauri init`) を
+  案内する。ori は network / 対話 / 既存ファイル削除リスクを避けるため自動実行しない。
+  TS / Rust 双方の bootstrap 系 (`package.json` / `tsconfig.json` / `Cargo.toml` /
+  `tauri.conf.json` / `build.rs` / `capabilities/default.json` / `src/main.rs` 等) は
+  upstream の最新形式で揃う。続けて runner deps (root package.json) の追加と
+  specta scaffold の apply を行い、`bootstrap.js verify` で app が build 可能かを判定する。
 
 ## 3. 推奨される構造
 
 `/ori-flow new-slice <id>` で slice を作るとき、AI は
-`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/`
+`.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/`
 を参照して以下のような構造を生成します:
 
 ```
@@ -179,11 +182,11 @@ Rust 識別子規約により `<slice_id>` の hyphen は underscore に置き�
 
 ```bash
 # TS root → eslint
-node .apm/skills/ori-arch/scripts/export.js --adapter=eslint    # eslint.config.ori.js を再生成
+node .apm/skills/ori-architect/scripts/export.js --adapter=eslint    # eslint.config.ori.js を再生成
 pnpm lint                                                       # eslint がルール違反を検出
 
 # Rust root → rust adapter
-node .apm/skills/ori-arch/scripts/export.js --adapter=rust --root=rs   # apps/<app>/src-tauri/tests/arch.rs を再生成
+node .apm/skills/ori-architect/scripts/export.js --adapter=rust --root=rs   # apps/<app>/src-tauri/tests/arch.rs を再生成
 cd apps/<app>/src-tauri && cargo test --test arch
 ```
 
@@ -225,10 +228,10 @@ pnpm tauri build               # 各 OS のインストーラを生成
 
 ## 関連リンク
 
-- [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md) — pattern 本体
+- [`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md`](../../.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md) — pattern 本体
 - [`.apm/skills/ori-architect/SKILL.md`](../../.apm/skills/ori-architect/SKILL.md) — architecture.md 生成スキル (multi-root の decision 例: os_integration=tauri)
-- [`.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/`](../../.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/) — AI 専用 worked example (TS + Rust)
-- [`packages/skills/ori-arch/tests/fixtures/golden-constants.ts`](../../packages/skills/ori-arch/tests/fixtures/golden-constants.ts) — agent 生成結果の期待 IR (旧 `architecture.md.tpl` 由来、ori-c79.6 で tpl 廃止)
-- [`packages/arch-adapter-rust/README.md`](../../packages/arch-adapter-rust/README.md) — Rust adapter
+- [`.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/`](../../.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/) — AI 専用 worked example (TS + Rust)
+- [`packages/skills/ori-architect/tests/fixtures/golden-constants.ts`](../../packages/skills/ori-architect/tests/fixtures/golden-constants.ts) — agent 生成結果の期待 IR (旧 `architecture.md.tpl` 由来、ori-c79.6 で tpl 廃止)
+- [`packages/arch-adapters/rust/`](../../packages/arch-adapters/rust/) — Rust adapter
 - [Tauri 2 公式ドキュメント](https://tauri.app/)
 - [tauri-specta リポジトリ](https://github.com/specta-rs/tauri-specta)

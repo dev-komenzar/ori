@@ -167,7 +167,7 @@ async function renderResult(spec: string) {
 describe("eslint adapter — template + injection integration", () => {
   it("renders boundaries v6 dependencies rule with elements and capture interpolation", async () => {
     const content = await render(TS_SPEC);
-    expect(content).toContain("Regenerate via the /ori-arch skill");
+    expect(content).toContain("Regenerate via the /ori-architect skill");
     expect(content).not.toContain("ori arch export");
     expect(content).toContain('import boundaries from "eslint-plugin-boundaries"');
     // v6 rule name

@@ -5,7 +5,7 @@ description: /ori-flow phase 3。spec.md のテスト観点から failing test �
 
 ユーザが `/ori-test-red <slice-id>` を呼ぶ、または `/ori-flow` 内部から phase 3 として起動した際に、**該当 slice の `<source_root>/<bc>/slices/<slice-id>/tests/` 配下に failing test を書く**。**impl (production application logic) は書かない**。RED が観測できた時点で完了。`<source_root>` は `.ori/architecture.md` の `root.path`（単一 root）または `roots[<id>].path`（multi-root）、なければ `.ori/config.yaml` `workspace.apps[<app>].path + "/src"` で resolve（後述）。
 
-**stack=typescript-tauri** の場合は **Slice DoD rule 2/3** (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` の "Slice Definition of Done") を強制するため、test だけでなく **boundary 契約一式 (stub Rust command + invoke_handler 登録 + specta rebuild + bindings 経由 test)** を p3 sub-step として emit する (= **b3 emit**)。
+**stack=typescript-tauri** の場合は **Slice DoD rule 2/3** (`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` の "Slice Definition of Done") を強制するため、test だけでなく **boundary 契約一式 (stub Rust command + invoke_handler 登録 + specta rebuild + bindings 経由 test)** を p3 sub-step として emit する (= **b3 emit**)。
 
 ## 引数
 
@@ -27,12 +27,12 @@ description: /ori-flow phase 3。spec.md のテスト観点から failing test �
   - `.ori/config.yaml`（`workspace.apps:` から `app:` 解決、fallback として `apps[].path`/src を `<source_root>` に使う）
   - `.ori/architecture.md`（あれば `root.path` / `roots[<id>].path` を canonical な `<source_root>` として優先採用。`stack:` field から typescript-tauri 判定）
   - `.apm/instructions/ddd-test.instructions.md`（test 共通メタルール; concretion の正典は下記 test.md）
-  - `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/test.md`（Rust stub 規約: "#commands-rs-required"）
+  - `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/test.md`（Rust stub 規約: "#commands-rs-required"）
   - `.apm/instructions/ui-test.instructions.md`（UI selector / `setupProductionBuilder()` の glue）
   - テスト concretion 正典（stack-specific）:
-    - `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/test.md`（vitest + fast-check + assertion 記法）
-    - `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/test.md`（boundary test / `setupProductionBuilder`）
-    - `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/rust/test.md`（cargo test + proptest / Tauri command surface）
+    - `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript/test.md`（vitest + fast-check + assertion 記法）
+    - `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/test.md`（boundary test / `setupProductionBuilder`）
+    - `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/rust/test.md`（cargo test + proptest / Tauri command surface）
 - 出力：
   - 全 stack: `<source_root>/<bc>/slices/<slice-id>/tests/<topic>.test.ts`
   - stack=typescript-tauri 追加:
@@ -49,9 +49,9 @@ description: /ori-flow phase 3。spec.md のテスト観点から failing test �
 
 | 規定 | 参照 |
 | --- | --- |
-| Slice DoD rules 1-4 | `.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definition of Done" |
-| Test contract instantiation (typescript-tauri) | `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/architecture.md.tpl` "Test Contract" section |
-| 参照実装 (commands.rs / dod.test.ts / setupProductionBuilder.ts) | `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/` |
+| Slice DoD rules 1-4 | `.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` "Slice Definition of Done" |
+| Test contract instantiation (typescript-tauri) | `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/architecture.md.tpl` "Test Contract" section |
+| 参照実装 (commands.rs / dod.test.ts / setupProductionBuilder.ts) | `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/` |
 | 初期 scaffold (export-types.rs / specta-build.sh / setupProductionBuilder skeleton) | `.apm/skills/ori-init/scripts/install-tauri-scaffold.sh` + `.apm/skills/ori-init/scripts/templates/tauri-stack/` |
 
 ## `<app>` `<bc>` `<source_root>` `<stack>` の解決

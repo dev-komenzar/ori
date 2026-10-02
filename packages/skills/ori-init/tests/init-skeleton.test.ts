@@ -111,11 +111,11 @@ describe("ori-init create-skeleton.sh — skeleton creation (ori-1ih)", () => {
         expect(await fileExists(join(dest, rel))).toBe(true);
       }
       // init must NOT scaffold app code at the project root — that is
-      // /ori-arch's job. (Note: bd init legitimately creates CLAUDE.md /
+      // /ori-bootstrap's job. (Note: bd init legitimately creates CLAUDE.md /
       // AGENTS.md as harness integration, so we don't assert on those.)
       expect(await fileExists(join(dest, "package.json"))).toBe(false);
       expect(await fileExists(join(dest, "src-tauri"))).toBe(false);
-      // apps/ scaffolding is delegated to /ori-arch — config.yaml records
+      // apps/ scaffolding is delegated to /ori-bootstrap — config.yaml records
       // the *intent* but the directory must not yet exist at init time.
       expect(await fileExists(join(dest, "apps"))).toBe(false);
     } finally {

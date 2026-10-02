@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ori-init: install Tauri / specta scaffold into a freshly `pnpm tauri init`-ed app.
 #
-# Called by /ori-arch after the upstream framework init for stack=typescript-tauri
+# Called by /ori-bootstrap after the upstream framework init for stack=typescript-tauri
 # completes (apps/<app>/src-tauri/ exists). Implements the specta infra side of
 # Slice DoD enforcement (rules 2–4 in
-# .apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md):
+# .apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md):
 #
 #   - src-tauri/Cargo.toml      : tauri-specta + specta + specta-typescript deps
 #   - src-tauri/src/bin/export-types.rs : specta bindings export entry
@@ -57,7 +57,7 @@ done
 
 [[ -z "$DEST" || -z "$APP_NAME" || -z "$BC_NAME" ]] && { usage; exit 2; }
 
-# kebab → snake for Rust identifier rules (mirrors render-architecture.js).
+# kebab → snake for Rust identifier rules (TS=kebab / Rust=snake).
 BC_NAME_RS="${BC_NAME//-/_}"
 APP_NAME_RS="${APP_NAME//-/_}"
 

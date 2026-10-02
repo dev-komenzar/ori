@@ -1,5 +1,7 @@
 # ori-3ik: Greenfield Acceptance Log (2026-06-03)
 
+> **注記 (ori-63f)**: 旧フロー (DDD → upstream init → `/ori-arch`) 時点の記録。以下は歴史記録として改変しない。`/ori-arch` は `/ori-architect` に統合・廃止され、現行の大フローは DDD → `/ori-architect` → `/ori-bootstrap` → `/ori-flow`。現行の再現手順は [README.md](README.md) §1 を参照。
+
 ## 目的
 
 v0.2 epic (ori-5mi) のキー検証ステップとして、greenfield 新規 repo 上で

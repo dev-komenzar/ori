@@ -52,14 +52,14 @@ description: /ori-flow phase 6 (slice/page) または phase 3 (scenario)。slice
 | gate | check 内容 | 実行コマンド (典型例、stack 依存) |
 | --- | --- | --- |
 | **(a) boundary test green** | `<source_root>/<bc>/slices/<slice-id>/tests/` 配下 (`dod.test.ts` を含む) が GREEN | `pnpm -F <app> test <source_root>/<bc>/slices/<slice-id>/tests` |
-| **(b) arch lint pass** | `/ori-arch` が生成した architecture adapter (eslint-plugin-boundaries / Rust `tests/arch.rs`) が pass | `pnpm -F <app> lint && (cd apps/<app>/src-tauri && cargo test --test arch)` (stack=typescript-tauri) / `pnpm -F <app> lint` (stack=typescript) |
+| **(b) arch lint pass** | `/ori-architect` が生成した architecture adapter (eslint-plugin-boundaries / Rust `tests/arch.rs`) が pass | `pnpm -F <app> lint && (cd apps/<app>/src-tauri && cargo test --test arch)` (stack=typescript-tauri) / `pnpm -F <app> lint` (stack=typescript) |
 | **(c) public_entry 整合性** | slice 外から slice 内部 (`domain/` `application/` `infrastructure/`) への直 import が無い (= `index.ts` / `mod.rs` 経由のみ)。大部分は (b) でカバーされるが spot grep で二重に確認 | `rg -n "slices/<slice-id>/(domain\|application\|infrastructure)/" <source_root> --glob='!**/slices/<slice-id>/**'` がヒット 0 件 |
 
 3 gate のいずれかが fail なら **reviewer agent は spawn しない**。即 verdict を NEEDS_FIX or REJECT として該当 phase に差し戻す (詳細は手順 4)。
 
 ### なぜ DoD 個別 rules を review checklist にしないか {#why-no-dod-checklist}
 
-Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definition of Done") は **test contract で構造的に強制されている**ため、review が独立 checklist を持つと SSoT 二重化 → drift 源になる。各 DoD rule の検査責務は以下に分散済み:
+Slice DoD (`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` "Slice Definition of Done") は **test contract で構造的に強制されている**ため、review が独立 checklist を持つと SSoT 二重化 → drift 源になる。各 DoD rule の検査責務は以下に分散済み:
 
 | DoD rule | 強制責務 |
 | --- | --- |

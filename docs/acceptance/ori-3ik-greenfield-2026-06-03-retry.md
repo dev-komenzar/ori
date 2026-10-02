@@ -1,5 +1,7 @@
 # ori-3ik greenfield acceptance — 2026-06-03 retry (post PR #13)
 
+> **注記 (ori-63f)**: 旧フロー (DDD → upstream init → `/ori-arch`) 時点の記録。以下は歴史記録として改変しない。`/ori-arch` は `/ori-architect` に統合・廃止され、現行の大フローは DDD → `/ori-architect` → `/ori-bootstrap` → `/ori-flow`。現行の再現手順は [README.md](README.md) §1 を参照。
+
 PR #13 (ori-9gy 等 6 件解消) merge 後の retry。前 session pre-retry log
 (`docs/acceptance/ori-3ik-greenfield-2026-06-03-retry-pre.md`) で scaffold 動線は
 完璧と確認済。本 retry は **`/ori-flow` 7-phase end-to-end の検証**が目的。

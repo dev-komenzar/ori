@@ -1,5 +1,7 @@
 # scenario 実行モデル tauri stack acceptance — 2026-09-07 prep (ori-bc9.5)
 
+> **注記 (ori-63f)**: 旧フロー (upstream init 相当 → architecture 生成) 時点の記録。以下は歴史記録として改変しない。現行の大フローは DDD → `/ori-architect` → `/ori-bootstrap` (upstream init 案内 + readiness verify) → `/ori-flow` で、architecture 生成が upstream init より先。現行の再現手順は [README.md](README.md) §1 を参照。
+
 `ori-bc9.5` のうち **typescript-tauri stack** (local mode / build-then-test / WDIO) の
 session acceptance の **prep log**。run session は本 log の手順に従って別 session で
 実施する (実行環境の構築コストが大きいため分離。慣行の 2-session pattern)。

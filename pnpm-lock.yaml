@@ -93,7 +93,7 @@ importers:
 
   packages/skills/_hello: {}
 
-  packages/skills/ori-arch:
+  packages/skills/ori-architect:
     dependencies:
       '@ori-ori/parser':
         specifier: workspace:*
@@ -101,6 +101,19 @@ importers:
       consola:
         specifier: ^3.2.3
         version: 3.4.2
+      yaml:
+        specifier: ^2.5.0
+        version: 2.9.0
+    devDependencies:
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@22.19.19)
+
+  packages/skills/ori-bootstrap:
+    dependencies:
+      '@ori-ori/parser':
+        specifier: workspace:*
+        version: link:../../parser
       yaml:
         specifier: ^2.5.0
         version: 2.9.0

@@ -25,9 +25,9 @@ description: /ori-flow phase 4。failing test を GREEN にする最小実装を
   - `<source_root>/<bc>/slices/<slice-id>/tests/*.test.ts`（phase 3 で RED 確認済み）
   - 実装規約 (SSoT):
     - `.apm/instructions/ddd-typescript.instructions.md`
-    - `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/test.md` (Tauri stack の場合、特に "#commands-rs-required" section)
-    - `.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` (Slice DoD)
-    - `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/` (worked code)
+    - `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/test.md` (Tauri stack の場合、特に "#commands-rs-required" section)
+    - `.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` (Slice DoD)
+    - `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/` (worked code)
 - 出力：
   - `<source_root>/<bc>/slices/<slice-id>/{domain,application,infrastructure,presentation}/...`
   - Tauri stack: `apps/<app>/src-tauri/src/<bc_rs>/slices/<slice_rs>/{domain.rs,application.rs,infrastructure.rs,commands.rs}` (commands.rs は stub `Err("pending")` → real impl 置換)
@@ -160,11 +160,11 @@ skill 起動時に以下の順序で resolve:
 
 | 用途 | 参照先 |
 | --- | --- |
-| pure TS slice の domain / application / infrastructure 形 | `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript/example-slice/task-management/slices/complete-task/` |
-| Tauri stack の Rust 側 (commands.rs / application.rs / infrastructure.rs / domain.rs) | `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/rust/task_management/slices/complete_task/` |
-| Tauri stack の TS 側 (shared/ipc / shared/test-fixtures / boundary test) | `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/ts/task-management/` |
-| Slice DoD の rule 全文 | `.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definition of Done" |
-| commands.rs Green 条件 (Tauri stack) | `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/test.md` "#commands-rs-required" section |
+| pure TS slice の domain / application / infrastructure 形 | `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript/example-slice/task-management/slices/complete-task/` |
+| Tauri stack の Rust 側 (commands.rs / application.rs / infrastructure.rs / domain.rs) | `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/rust/task_management/slices/complete_task/` |
+| Tauri stack の TS 側 (shared/ipc / shared/test-fixtures / boundary test) | `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/example-slice/ts/task-management/` |
+| Slice DoD の rule 全文 | `.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` "Slice Definition of Done" |
+| commands.rs Green 条件 (Tauri stack) | `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/test.md` "#commands-rs-required" section |
 | 境界契約宣言の写し方 | `.apm/instructions/feature-spec.instructions.md` "境界契約 section 必須化" |
 | production fixture 雛形 | ori-init scaffold (`install-tauri-scaffold.sh` 配置物) — `apps/<app>/src/<bc>/shared/test-fixtures/setupProductionBuilder.ts` |
 | `phase_hooks` 由来 specta 再生成 | `architecture.md` frontmatter `phase_hooks.flow-impl-green-post` + `apm-scripts/specta-build.sh` |

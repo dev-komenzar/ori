@@ -81,7 +81,8 @@ AI ハーネス(Claude Code, OpenCode, Codex, Gemini CLI, GitHub Copilot, Cursor
 #### Skills(32 個、3-tier 分類は実装時に確定)
 - DDD phase 1-11(`ori-ddd-1-discovery` 〜 `ori-ddd-11b-ui-grouping`、12 個)
 - Setup: `ori-init`
-- Architecture: `ori-arch`
+- Architecture: `ori-architect`(decision + `.ori/architecture.md` 生成)
+- Codebase 準備: `ori-bootstrap`(upstream init 案内 + runner deps 追加 + tauri specta scaffold + readiness verify。ori-63f で新設)
 - Flow: `ori-flow` + 7 phases(verify→plan→test-red→impl-green→refactor→review→finalize)
 - Proposal: `ori-propose`, `ori-review-proposals`
 - Maintenance: `ori-sync`, `ori-feature-status`, `ori-doctor`, `ori-model`, `ori-graph`, `ori-bug`, `ori-migrate`, `ori-distill`
@@ -299,7 +300,7 @@ MVP は **`ddd-vsa-hex` 1 個** のみ curated。複数 pattern は v0.2+。
 ### Pattern 構成
 
 ```
-.apm/skills/ori-arch/patterns/ddd-vsa-hex/
+.apm/skills/ori-architect/patterns/ddd-vsa-hex/
 ├── pattern.md                       # stack-agnostic 概念定義(Summary, When, Tradeoffs, Layer, Dependency, Naming, Cross-cutting placement)
 ├── ai-notes.md                      # AI 行動指示(AI considerations, Test strategy, Migration)
 └── stacks/                          # pattern × stack の実現形
@@ -316,7 +317,7 @@ MVP は **`ddd-vsa-hex` 1 個** のみ curated。複数 pattern は v0.2+。
 - **stack-agnostic な pattern.md / ai-notes.md** と **stack-specific な stacks/<stack>/** を物理パスで階層分け
 - **example-slice/ は study material**(target にコピーしない): AI が `/ori-flow new-slice` 等で参照、`package.json` 等 bootstrap ファイルは含めない(upstream の framework init が担当)
 - **target に書き出すのは `.ori/architecture.md` のみ**: 空 skeleton や worked slice の物理コピーは行わない(ori 責務は「upstream 出力に設定を加える」)
-- **`architecture.md.tpl` は撤廃 (ori-c79.6)**: 固定テンプレートの cartesian product 方式は廃止され、旧 tpl の期待 IR は golden test の GOLDEN 定数 (`packages/skills/ori-arch/tests/fixtures/golden-constants.ts`) に引き継がれた。`.ori/architecture.md` の生成は `/ori-architect` スキルが要件対話から行う (§7)
+- **`architecture.md.tpl` は撤廃 (ori-c79.6)**: 固定テンプレートの cartesian product 方式は廃止され、旧 tpl の期待 IR は golden test の GOLDEN 定数 (`packages/skills/ori-architect/tests/fixtures/golden-constants.ts`) に引き継がれた。`.ori/architecture.md` の生成は `/ori-architect` スキルが要件対話から行う (§7)
 
 ### Pattern.md の必須 sections
 
@@ -353,7 +354,7 @@ ori:
 ---
 ```
 
-### Layer 構造(概略、詳細は `.apm/skills/ori-arch/architecture-md-schema.md`)
+### Layer 構造(概略、詳細は `.apm/skills/ori-architect/architecture-md-schema.md`)
 
 Top-level layers:
 - `shared`(kind: shared)
@@ -426,7 +427,8 @@ MVP v0.1 = **32 skills**、3-tier 分類で組織(tier 詳細は実装時に確�
 **Tier 1 — Core(必須)**:
 - `ori-init`(setup)
 - `ori-ddd-{1..11b}`(12 個)
-- `ori-arch`
+- `ori-architect`
+- `ori-bootstrap`
 - `ori-flow`
 - `ori-sync`
 
@@ -517,7 +519,7 @@ runtime:
   # local:          build / binary / target (host | ios-simulator | android-emulator) / runner / test_env
 ```
 
-- 供給源は **`/ori-architect` の知識(SKILL.md の generation_procedure)+ golden fixtures**(`packages/skills/ori-arch/tests/fixtures/agent-generated/`)。言語ごとの起動知識は「runtime image + コマンド」という**データ**として表現し、Dockerfile レシピの保守を ori に持ち込まない(design 原則「これ以外 ori はファイルを足さない」)
+- 供給源は **`/ori-architect` の知識(SKILL.md の generation_procedure)+ golden fixtures**(`packages/skills/ori-architect/tests/fixtures/agent-generated/`)。言語ごとの起動知識は「runtime image + コマンド」という**データ**として表現し、Dockerfile レシピの保守を ori に持ち込まない(design 原則「これ以外 ori はファイルを足さない」)
 - parser が runtime block を検証する(**WorkspaceSchema + AppRuntimeSchema 新設**。旧: `workspace:` は未検証 passthrough)
 - scenario manifest は参加者選択に専念する(`infrastructure.services` は app 名 + infra 名のリスト)
 
@@ -531,6 +533,7 @@ scenario の generate は「生成物だけで E2E が走る」よう app 側の
 - **node_modules 解決 (G3)**: `.ori/scenarios/node_modules` → `apps/<app>/node_modules` の symlink(`.ori/.gitignore` で ignore)
 - **fixture seed (G6)**: 既存データ前提の scenario は `onPrepare` で seed する。frontmatter 形式(例 `createdAt: YYYYMMDDhhmmss`)の SSoT は domain / app 側
 - **frontend import の扱い**: SvelteKit 等の entry への plugin import は framework 固有のため ori はコード生成せず、impl-notes の要求として記録する(`ori-oan.2` 決定)
+- **codebase 準備時の検証 (`/ori-bootstrap verify`、ori-63f D6)**: 静的チェック + `runtime.build` 実走 (binary 実在) までを行い、**起動 smoke は行わない** (起動可否は scenario 実行時に分類。実行は CI / 手動)。G2 は FAIL、G1 (plugin 配線) / G3 (symlink) は `/ori-generate` が冪等 patch するため WARN 扱い
 
 #### runner matrix
 
@@ -560,7 +563,7 @@ scenario の UI 駆動 runner は **derive phase が次の優先チェーンで�
 #### 資産配置と実行
 
 - scenario ディレクトリは self-contained(所在一覧は §4)。compose-service 系ゼロの scenario は `docker-compose.yml` を省略する
-- runner deps はプロジェクト **root package.json** に `/ori-arch` が追加(`pnpm add -D @playwright/test` 等 — Cargo.toml への `cargo add` と同型 precedent)
+- runner deps はプロジェクト **root package.json** に `/ori-bootstrap` が追加(`pnpm add -D @playwright/test` 等 — Cargo.toml への `cargo add` と同型 precedent)
 - scenario 間は **直列実行**(host port 衝突回避)
 
 #### scope 境界
@@ -762,13 +765,13 @@ slice/page manifest の `app:` field を skill が解決する順序:
 
 slice 出力 path は `<source_root>/<bc>/slices/<slice-id>/...`(BC top-level の `domain/` と `shared/contracts/events/` も `<source_root>/<bc>/` 配下)。
 
-**brownfield 適用例**: 既存 repo の subdir(例: `promptnotes/src/`)を source root にしたい場合、`.ori/config.yaml` で `workspace.apps[0].path: promptnotes` を設定する。これで fallback path は `promptnotes/src` に解決され、`/ori-arch` 実行後は `.ori/architecture.md root.path: promptnotes/src` が canonical となる。
+**brownfield 適用例**: 既存 repo の subdir(例: `promptnotes/src/`)を source root にしたい場合、`.ori/config.yaml` で `workspace.apps[0].path: promptnotes` を設定する。これで fallback path は `promptnotes/src` に解決され、`/ori-architect` 実行後は `.ori/architecture.md root.path: promptnotes/src` が canonical となる。
 
 ---
 
 ## 12. .ori/architecture.md schema(v1)
 
-詳細は `.apm/skills/ori-arch/architecture-md-schema.md` 参照。要点:
+詳細は `.apm/skills/ori-architect/architecture-md-schema.md` 参照。要点:
 
 ### Top-level
 
@@ -908,7 +911,7 @@ slice_internal:
 | rust | Rust | `tests/arch.rs` または `cargo-modules` config |
 | generic | any | `.ori/arch-rules.json` + tiny CLI checker(regex) |
 
-Adapter は APM bundle 内に統合(`.apm/skills/ori-arch/adapters/<name>/index.js`、template + JSON injection 分離構造)。`@ori-ori/arch-adapter-*` npm package は v0.3-J で publish 停止(`packages/arch-adapter-*/` 物理撤去)。Phase K1 (`ori-6kd.2`) で adapter bundle を `.apm/skills/ori-arch/adapters/` に co-locate し、runtime artifact を消費 skill bundle と同 tree に常駐させる構造に整理した。ori-arch skill が dynamic import で skill 隣接の bundle を解決する。
+Adapter は APM bundle 内に統合(`.apm/skills/ori-architect/adapters/<name>/index.js`、template + JSON injection 分離構造)。`@ori-ori/arch-adapter-*` npm package は v0.3-J で publish 停止(`packages/arch-adapter-*/` 物理撤去)。Phase K1 (`ori-6kd.2`) で adapter bundle を消費 skill 隣接 (当時 `.apm/skills/ori-arch/adapters/`、ori-63f で `ori-architect/` へ再移設) に co-locate し、runtime artifact を消費 skill bundle と同 tree に常駐させる構造に整理した。ori-architect skill が dynamic import で skill 隣接の bundle を解決する。
 
 ---
 
@@ -1064,7 +1067,7 @@ ori/                               # APM package source
 │   │   │   └── templates/                # Phase K3: skill 同梱化
 │   │   │       ├── slice-manifest.yaml.tpl
 │   │   │       └── page-manifest.yaml.tpl
-│   │   └── ori-arch/
+│   │   └── ori-architect/
 │   │       ├── SKILL.md
 │   │       ├── scripts/                  # esbuild bundle(per-skill)
 │   │       ├── adapters/                 # Phase K1: per-skill artifact co-locate
@@ -1099,17 +1102,17 @@ packages/                        # TS monorepo(開発時 SSoT)
 ├── parser/
 ├── coherence/
 ├── arch-adapters/               # adapter source(template + JSON injection 分離)
-│   ├── eslint/                  # → .apm/skills/ori-arch/adapters/eslint/index.js に bundle
-│   ├── generic/                 # → .apm/skills/ori-arch/adapters/generic/index.js に bundle
-│   └── rust/                    # → .apm/skills/ori-arch/adapters/rust/index.js に bundle
+│   ├── eslint/                  # → .apm/skills/ori-architect/adapters/eslint/index.js に bundle
+│   ├── generic/                 # → .apm/skills/ori-architect/adapters/generic/index.js に bundle
+│   └── rust/                    # → .apm/skills/ori-architect/adapters/rust/index.js に bundle
 ├── slice-runner/                # slice/page 生成本体
 └── skills/                      # skill ごとの bundle entry
-    ├── ori-arch/src/export.ts
+    ├── ori-architect/src/export.ts
     ├── ori-sync/src/sync.ts
     └── ...
 ```
 
-ビルド時に esbuild が各 skill bundle を `.apm/skills/<name>/scripts/` に書き出し、各 adapter bundle を `.apm/skills/ori-arch/adapters/<name>/index.js` に書き出す (Phase K1: `templates/*.tpl` も `packages/arch-adapters/<name>/templates/` から同 dir にコピーされる)。CI で `pnpm build && git diff --exit-code .apm/` で stale check。
+ビルド時に esbuild が各 skill bundle を `.apm/skills/<name>/scripts/` に書き出し、各 adapter bundle を `.apm/skills/ori-architect/adapters/<name>/index.js` に書き出す (Phase K1: `templates/*.tpl` も `packages/arch-adapters/<name>/templates/` から同 dir にコピーされる)。CI で `pnpm build && git diff --exit-code .apm/` で stale check。
 
 > v0.3-J で `packages/arch-adapter-{eslint,rust,generic}/` (旧 publishable npm package) は物理撤去。配布は APM 単独 (`apm install dev-komenzar/ori`) に一本化、`@ori-ori/arch-adapter-*` の npm publish は停止。
 >
@@ -1126,7 +1129,7 @@ packages/                        # TS monorepo(開発時 SSoT)
   - 実体ありで bundled に移行済 package — `@ori-ori/arch-adapter-{eslint,rust,generic}` (v0.3-J で APM bundle に embed、新規 publish 停止)
     ```bash
     npm deprecate @ori-ori/arch-adapter-eslint@'<=0.2.0' \
-      "Now bundled into .apm/skills/ori-arch/adapters/eslint via APM. Use 'apm install dev-komenzar/ori' instead. See https://github.com/dev-komenzar/ori"
+      "Now bundled into .apm/skills/ori-architect/adapters/eslint via APM. Use 'apm install dev-komenzar/ori' instead. See https://github.com/dev-komenzar/ori"
     ```
   - 内部 library で bundled に移行済 package — `@ori-ori/parser` (v0.3-M), `@ori-ori/slice-runner` / `@ori-ori/coherence` (v0.3-N) はいずれも `private: true`、skill bundle 内に esbuild で inline 済、新規 publish 停止
     ```bash
@@ -1161,13 +1164,13 @@ packages/                        # TS monorepo(開発時 SSoT)
 
 | 種別 | 場所 | 用途 |
 |---|---|---|
-| Architecture schema | `.apm/skills/ori-arch/architecture-md-schema.md` | `.ori/architecture.md` の形式 (Phase K2 で `ori-arch` 配下に co-locate) |
-| Pattern | `.apm/skills/ori-arch/patterns/<name>/{pattern.md, ai-notes.md, stacks/<stack>/...}` | cross-skill(arch, types, flow, impl-green が参照)。stack-agnostic / stack-specific を階層分け |
-| Tech catalog | `.apm/skills/ori-arch/references/tech/<id>.md` | ori-arch 専属 |
+| Architecture schema | `.apm/skills/ori-architect/architecture-md-schema.md` | `.ori/architecture.md` の形式 (Phase K2 で旧 `ori-arch` 配下に co-locate、ori-63f で `ori-architect` へ再移設) |
+| Pattern | `.apm/skills/ori-architect/patterns/<name>/{pattern.md, ai-notes.md, stacks/<stack>/...}` | cross-skill(architect, types, flow, impl-green が参照)。stack-agnostic / stack-specific を階層分け |
+| Tech catalog | `.apm/skills/ori-architect/references/tech/<id>.md` | ori-architect 専属 |
 | Slice / Page / Scenario manifest templates | `.apm/skills/ori-flow/templates/{slice,page,scenario}-manifest.yaml.tpl` | `/ori-flow new-slice` / `new-page` / `new-scenario` が bundle 隣接で参照 (Phase K3) |
 | Hook scripts | `.apm/hooks/scripts/` | APM auto-deploy |
 | Skill scripts | `.apm/skills/<name>/scripts/` | per-skill esbuild bundle |
-| Adapter | `.apm/skills/ori-arch/adapters/<name>/` | adapter 統合 (Phase K1) |
+| Adapter | `.apm/skills/ori-architect/adapters/<name>/` | adapter 統合 (Phase K1) |
 | Contributor docs | `docs/contributing/*.md` | ori 開発者向け |
 
 ### Phase K co-location map
@@ -1182,8 +1185,10 @@ Phase K (2026-06-10) で旧 `.apm/contexts/` (cross-skill 共有 SSoT) を全廃
 | `.apm/contexts/templates/{slice,page}-manifest.yaml.tpl` | `.apm/skills/ori-flow/templates/...` | K3 (`ori-6kd.3`) |
 | `.apm/contexts/skill-scripts-build.md` | `docs/skill-scripts-build.md` | K3 (`ori-6kd.3`) |
 
+> ori-63f で `/ori-arch` を `/ori-architect` に統合したため、上表の `.apm/skills/ori-arch/` 配下 (adapters / schema / patterns) は現在 `.apm/skills/ori-architect/` にある。
+
 ```
-.apm/skills/ori-arch/
+.apm/skills/ori-architect/
 ├── architecture-md-schema.md          # .ori/architecture.md の形式 (Phase K2)
 ├── adapters/                          # (Phase K1) per-adapter bundle + templates
 └── patterns/                          # (Phase K2)
@@ -1236,24 +1241,26 @@ Project root には ori / harness / contributor 向けメタ artifact(`.ori/`, `
 │   │   └── .gitkeep
 │   ├── state/                              # snapshot + queue(gitignore)
 │   │   └── .gitignore
-│   └── architecture.md                     # /ori-arch で populate
+│   └── architecture.md                     # /ori-architect で populate
 ├── .gitignore
 ├── README.md
 └── AGENTS.md                               # AI-aware conventions stub
 ```
 
-`/ori-init` は **silent** で .ori/ skeleton のみ作成。`apps/` directory も生成 **しない**(/ori-arch の framework init が apps/<app>/ を populate)。`.ori/config.yaml` には repo folder 名から導出した default app entry を書き込む。
+`/ori-init` は **silent** で .ori/ skeleton のみ作成。`apps/` directory も生成 **しない**(後段 `/ori-bootstrap` が案内する upstream framework init が apps/<app>/ を populate)。`.ori/config.yaml` には repo folder 名から導出した default app entry を書き込む。
 
-### `/ori-arch` の責務分担(2026-09-02 改訂 — decide を `/ori-architect` に一元化)
+### `/ori-architect` → `/ori-bootstrap` の責務分担(ori-63f で改訂 — 旧 `/ori-arch` を統合・廃止)
 
-`/ori-arch` は次の 2 ステップで動く。**worked example の物理コピーは行わない**。要件の決定 (pattern / stack / BC 名 = decision_points) は `/ori-architect` に一元化している (§7):
+大フローは **DDD (`/ori-init` → `/ori-distill`) → `/ori-architect` → `/ori-bootstrap` → `/ori-flow`**。architecture (decision_points) を先に確定し、その結果 (stack) に基づいて codebase を準備する。**worked example の物理コピーは行わない**。要件の決定 (pattern / stack / BC 名 = decision_points) は `/ori-architect` に一元化している (§7):
 
-1. **upstream framework init**: `pnpm create vite@latest`, `pnpm tauri init` 等を**ユーザに案内** (skill は自動実行しない)。bootstrap 系ファイル(`package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, `.gitignore`, `README.md` 等)はここで生まれる
-2. **ori artifact 追加**: `/ori-architect` スキルに委譲して、要件対話 (elicit → decide) から `.ori/architecture.md` を 1 ファイルだけ生成させる (compose → generate → self-check → confirm)。生成結果は doctor の guardrails (g-1..g-8) で機械検証する
+1. **architecture 決定**: `/ori-architect` が要件対話 (elicit → decide) から `.ori/architecture.md` を 1 ファイルだけ生成する (compose → generate → self-check → confirm)。生成結果は doctor の guardrails (g-1..g-8) で機械検証する。`apps/<app>/` は未初期化でよい
+2. **codebase 準備**: `/ori-bootstrap` が architecture.md から stack を確定し、upstream framework init (`pnpm create vite@latest`, `pnpm tauri init` 等) を**ユーザに案内** (skill は自動実行しない)。bootstrap 系ファイル(`package.json`, `tsconfig.json`, `eslint.config.js`, `vitest.config.ts`, `.gitignore`, `README.md` 等)はここで生まれる。続けて runner deps の追加と (typescript-tauri) specta scaffold の apply を行い、`bootstrap.js verify` (静的 + build) で app が build 可能かを PASS/FAIL 判定する
 
-`example-slice/` (`.apm/skills/ori-arch/patterns/<pattern>/stacks/<stack>/example-slice/`) は AI 専用の study material で、target にコピーされない。AI は `/ori-flow new-slice <id>` 等で初回 slice を生成する際に on-demand で参照し、ユーザーの実ドメインに沿った slice を直接生成する。これにより「他人の `task-management` example を消して自分のものを書く」工数が消え、ユーザー固有の domain を最初から扱える。
+`example-slice/` (`.apm/skills/ori-architect/patterns/<pattern>/stacks/<stack>/example-slice/`) は AI 専用の study material で、target にコピーされない。AI は `/ori-flow new-slice <id>` 等で初回 slice を生成する際に on-demand で参照し、ユーザーの実ドメインに沿った slice を直接生成する。これにより「他人の `task-management` example を消して自分のものを書く」工数が消え、ユーザー固有の domain を最初から扱える。
 
-### /ori-arch 後の構造(single-app + Tauri 例)
+### ori 適用後の構造(single-app + Tauri 例)
+
+> `/ori-bootstrap` 直後に存在するのは upstream init の出力 (`package.json` / `src-tauri/` 等) と specta scaffold のみ。以下の `<bc>/` / `slices/` / `pages/` / `@ori-generated` 等は `/ori-flow` (slice / page / scenario) の進行で生成される。
 
 ```
 <project>/
@@ -1290,7 +1297,7 @@ Project root には ori / harness / contributor 向けメタ artifact(`.ori/`, `
         └── package.json                    # app 固有 manifest
 ```
 
-### /ori-arch 後の構造(monorepo: frontend + backend 例)
+### ori 適用後の構造(monorepo: frontend + backend 例)
 
 ```
 <project>/
@@ -1351,11 +1358,11 @@ monorepo では:
 | **@ori-imported** | 人間先行 file を ori 管理下に取り込んだ marker。 |
 | **@ori-stub** | 操作 signature 宣言済、body 未実装の marker。 |
 | **@ori-operation / @ori-status** | aggregate 内 operation 単位の SSoT 保護 marker。 |
-| **tech catalog** | curated tech 集合(`.apm/skills/ori-arch/references/tech/<id>.md`)。 |
+| **tech catalog** | curated tech 集合(`.apm/skills/ori-architect/references/tech/<id>.md`)。 |
 | **variants** | tech doc 内の sub-選択肢(例: nextjs の rendering: ssr/ssg/isr)。 |
 | **phase_hooks** | tech doc 内の phase 後処理 hook 宣言。 |
 | **axes-vocabulary** | stack axis 名の controlled vocabulary。 |
-| **dynamic axes** | /ori-arch が DDD docs から推論して、必要な axis 群を proposal する方式。 |
+| **dynamic axes** | /ori-architect が DDD docs から推論して、必要な axis 群を proposal する方式。 |
 | **APM** | Microsoft Agent Package Manager。ori の配布手段。 |
 | **Beads** | 分散グラフ issue tracker。ori MVP の task management。 |
 | **harness** | AI ハーネス(Claude Code, OpenCode, etc.)。 |
@@ -1378,7 +1385,7 @@ Phase B(MVP v0.1 dogfooding on promptnotes-vcsdd, epic = `ori-qzq`)で 2 slice(c
 
 v0.2 スコープ外として deferred(2026-06-03 決定):
 
-- F2 / `ori-29p` test infra auto-scaffold — 起点が brownfield(既存 project の package.json / test stack 尊重)。greenfield では `/ori-arch` の framework_init が test runner install を担うため不要
+- F2 / `ori-29p` test infra auto-scaffold — 起点が brownfield(既存 project の package.json / test stack 尊重)。greenfield では `/ori-bootstrap`(当時は `/ori-arch` の framework_init)が test runner install を担うため不要
 - F5 / `ori-5wv` brownfield migration helper(`/ori-migrate-domain`) — v0.2 acceptance は greenfield で PASS、brownfield ケースを v0.2 blocker とする根拠なし。連動で `ori-6us`(移行ロス gaps)も同時 defer
 - `ori-100` `--setup-issues` CLI feature — CLI 廃止方針(v0.3)で不要。代替として AI が直接 `bd create` を行う方向に置換(`ori-zds`)
 
@@ -1393,7 +1400,7 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 - templates / docs / SKILL.md の CLI 言及を skill ベースに書き換え
 - ✓ `packages/cli` 撤去(`ori-7dx`、2026-06-11) + `@ori-ori/*` 4 packages を npm deprecate
 - pre-commit hook で `build:skills` stale check + contributing docs 整備
-- **テンプレート方式の根本見直し**(`ori-5er`、2026-06-07 追加): `packages/templates/` 全廃 → `.apm/skills/ori-arch/patterns/<name>/stacks/<stack>/` 構造へ。target には `.ori/architecture.md` のみ書き、bootstrap は upstream の framework init に委譲、worked example は AI 専用 study material として skill 側保持
+- **テンプレート方式の根本見直し**(`ori-5er`、2026-06-07 追加): `packages/templates/` 全廃 → patterns/<name>/stacks/<stack>/ 構造へ (当時 `.apm/contexts/patterns/`、現 `.apm/skills/ori-architect/patterns/`)。target には `.ori/architecture.md` のみ書き、bootstrap は upstream の framework init に委譲、worked example は AI 専用 study material として skill 側保持
 
 採用済み(2026-06-04 時点):
 
@@ -1402,13 +1409,13 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 - ✓ Phase E(`ori-ju9`): `.apm/skills/` 内 SKILL.md / scripts コメントの CLI 言及書き換え
 - ◐ Phase C(`ori-wuf`): `packages/templates/` の CLI 言及を skill scripts ベースに書き換え → Phase H で対象自体が消滅したため自然解消
 - ◐ Phase D(`ori-csa`): ドキュメント(README / docs/start / design §15)の CLI 動線書き換え(進行中)
-- ✓ Phase H1(`ori-p2f`): `.apm/skills/ori-arch/patterns/ddd-vsa-hex/` 新構造作成(pattern.md / ai-notes.md / stacks/typescript/{architecture.md.tpl, example-slice/} / stacks/typescript-tauri/...)
-- ✓ Phase H2(`ori-62h`): `/ori-arch` SKILL.md 改修 + scripts/ 再設計(`copy-template.sh` 廃止、`render-architecture.js` 新設)
-- ✓ Phase H3(`ori-27a`): `packages/templates/` 物理撤去 + `resolve-upstream.test.ts` を `packages/skills/ori-derive/` に移管、生きた SSoT は `.apm/skills/ori-arch/patterns/` に一本化
+- ✓ Phase H1(`ori-p2f`): patterns/ddd-vsa-hex/ 新構造作成 (現 `.apm/skills/ori-architect/patterns/ddd-vsa-hex/`)(pattern.md / ai-notes.md / stacks/typescript/{architecture.md.tpl, example-slice/} / stacks/typescript-tauri/...)
+- ✓ Phase H2(`ori-62h`): 旧 `/ori-arch`(ori-63f で `/ori-architect` に統合) SKILL.md 改修 + scripts/ 再設計(`copy-template.sh` 廃止、`render-architecture.js` 新設)
+- ✓ Phase H3(`ori-27a`): `packages/templates/` 物理撤去 + `resolve-upstream.test.ts` を `packages/skills/ori-derive/` に移管、生きた SSoT は patterns/ (現 `.apm/skills/ori-architect/patterns/`) に一本化
 
 未着手(2026-06-07 計画):
 
-- ○ Phase H4(`ori-s44`): 受け入れテスト — greenfield で `apm install` → `/ori-init` → upstream init → `/ori-arch` → `render-architecture` の通しテスト
+- ○ Phase H4(`ori-s44`): 受け入れテスト — greenfield で `apm install` → `/ori-init` → upstream init → 旧 `/ori-arch` → `render-architecture` の通しテスト(当時の計画。現行手順は `/ori-init` → `/ori-distill` → `/ori-architect` → `/ori-bootstrap`、[acceptance/README.md](acceptance/README.md) 参照)
 
 (Phase H 全体の動機 — 2026-06-07 確定): APM 配布経由で `packages/templates/` が lookup path から外れ `copy-template.sh` が失敗する障害が判明し(greenfield 検証)、同時に「target に worked example を物理コピーする方式」自体が ori 責務(設計原則 1「DDD ドキュメント = SSoT、コードは派生」)と整合しないことが明確化したため、テンプレート方式を全廃。詳細決定は §6 / §17 参照。
 
@@ -1418,20 +1425,20 @@ v0.2 スコープ外として deferred(2026-06-03 決定):
 
 スコープ:
 
-- ✓ Phase J1(`ori-apv`、PR #34): adapter を template + JSON injection 分離構造に再設計、当時は `.apm/contexts/adapters/<name>/{templates,index.js}` に bundle、ori-arch skill は dynamic import で skill 隣接から解決(`ori-0ok` 内包) — Phase K1 で `.apm/skills/ori-arch/adapters/` に移動
+- ✓ Phase J1(`ori-apv`、PR #34): adapter を template + JSON injection 分離構造に再設計、当時は `.apm/contexts/adapters/<name>/{templates,index.js}` に bundle、旧 ori-arch skill(現 ori-architect)は dynamic import で skill 隣接から解決(`ori-0ok` 内包) — Phase K1 で `.apm/skills/ori-arch/adapters/` に移動 (ori-63f で `ori-architect/` へ再移設)
 - ✓ Phase J2(`ori-osm`): 旧 `packages/arch-adapter-{eslint,rust,generic}/` を物理撤去 + `@ori-ori/arch-adapter-*@<=0.2.0` を npm deprecate 強化(`ori-u5d` 内包、`scripts/npm-deprecate-adapters.sh` 参照)
 - ○ Phase J3(未起票、J2 merge 後): greenfield acceptance retry — `/tmp/ori-acceptance-j/` で `apm install` → 追加 `pnpm add` 無しで adapter 動作確認
 
 #### Phase K — runtime artifact を consuming skill bundle に co-locate(epic = `ori-6kd`)
 
-動機: 旧 `.apm/contexts/` は「cross-skill 共有 SSoT」として運用してきたが、ほぼ全 entry が 1 つの consuming skill (`ori-arch` か `ori-flow`) しか参照しておらず、共有の事実が成立していない。runtime artifact が skill bundle と別 tree にあると (1) APM install 後の解決 path が複雑化し、(2) `apm_modules/<owner>/<repo>/.apm/contexts/...` walk が必要になり、(3) "どの skill が壊れたら artifact が stale になるか" の責務帰属が曖昧になる。Phase J1 の `.apm/contexts/adapters/` 構造で同じ問題が顕在化したため、全 runtime artifact を consuming skill bundle と co-locate に揃える。
+動機: 旧 `.apm/contexts/` は「cross-skill 共有 SSoT」として運用してきたが、ほぼ全 entry が 1 つの consuming skill (旧 `ori-arch`〔現 `ori-architect`〕か `ori-flow`) しか参照しておらず、共有の事実が成立していない。runtime artifact が skill bundle と別 tree にあると (1) APM install 後の解決 path が複雑化し、(2) `apm_modules/<owner>/<repo>/.apm/contexts/...` walk が必要になり、(3) "どの skill が壊れたら artifact が stale になるか" の責務帰属が曖昧になる。Phase J1 の `.apm/contexts/adapters/` 構造で同じ問題が顕在化したため、全 runtime artifact を consuming skill bundle と co-locate に揃える。
 
 スコープ:
 
-- ✓ Phase K1(`ori-6kd.2`): adapter bundle を `.apm/skills/ori-arch/adapters/<name>/` に co-locate、templates SSoT を `packages/arch-adapters/<name>/templates/` に格上げ、`resolveAdaptersDir` を `--adapters-dir` + bundle-adjacent の 2 候補のみに簡略化 (apm_modules walk / `$ORI_ADAPTERS_DIR` env / legacy parent-of-repo fallback を削除)
-- ✓ Phase K2(`ori-6kd.4`): `architecture-md-schema.md` と `patterns/` を `.apm/skills/ori-arch/` 配下に co-locate、`resolvePatternsDir` を bundle-adjacent 1 候補に簡略化
+- ✓ Phase K1(`ori-6kd.2`): adapter bundle を `.apm/skills/ori-arch/adapters/<name>/` (現 `ori-architect/`) に co-locate、templates SSoT を `packages/arch-adapters/<name>/templates/` に格上げ、`resolveAdaptersDir` を `--adapters-dir` + bundle-adjacent の 2 候補のみに簡略化 (apm_modules walk / `$ORI_ADAPTERS_DIR` env / legacy parent-of-repo fallback を削除)
+- ✓ Phase K2(`ori-6kd.4`): `architecture-md-schema.md` と `patterns/` を `.apm/skills/ori-architect/` 配下に co-locate、`resolvePatternsDir` を bundle-adjacent 1 候補に簡略化
 - ✓ Phase K3(`ori-6kd.3`): `.apm/contexts/templates/{slice,page}-manifest.yaml.tpl` を `.apm/skills/ori-flow/templates/` に co-locate、`loadTemplate` を bundle-adjacent (`dirname(import.meta.url)/../templates`) に変更、`skill-scripts-build.md` を `docs/skill-scripts-build.md` に移管、`.apm/contexts/` を物理撤去
-- ○ Phase K4(`ori-6kd.1`): Phase K greenfield acceptance retry — `apm install dev-komenzar/ori` 後の skill bundle で `/ori-flow new-slice` / `new-page` / `/ori-arch render-architecture` が動作することを 2-session pattern で確認
+- ○ Phase K4(`ori-6kd.1`): Phase K greenfield acceptance retry — `apm install dev-komenzar/ori` 後の skill bundle で `/ori-flow new-slice` / `new-page` / 旧 `/ori-arch render-architecture`(現 `/ori-architect`)が動作することを 2-session pattern で確認
 
 得られた pattern: **「runtime artifact は常に consuming skill bundle 隣に置く」** — esbuild bundle output (`scripts/*.js`)、template/asset (`templates/`, `patterns/`)、adapter (`adapters/`) いずれも `import.meta.url` 基準で bundle-adjacent に解決する。`.apm/<top-level>/` (旧 `contexts/`) のような cross-skill 共有 dir は導入しない — 共有が必要なら最も依存度の高い skill に co-locate し、他 skill は path 参照のみで再利用する。
 

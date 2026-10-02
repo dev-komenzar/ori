@@ -1,5 +1,7 @@
 # scenario 実行モデル TS stack acceptance — 2026-09-07 (ori-bc9.5)
 
+> **注記 (ori-63f)**: 旧フロー (upstream init 相当 → architecture 生成) 時点の記録。以下は歴史記録として改変しない。現行の大フローは DDD → `/ori-architect` → `/ori-bootstrap` (upstream init 案内 + readiness verify) → `/ori-flow` で、architecture 生成が upstream init より先。現行の再現手順は [README.md](README.md) §1 を参照。
+
 `ori-bc9` (scenario 実行モデルの一般化) の child 5 のうち **typescript stack** の
 session acceptance 実行 log。run-mode 抽象 (compose-service + infra 混在)・
 runner chain 解決・generate I/O・runner config 所有 lifecycle を greenfield で実証した。

@@ -159,7 +159,7 @@ _Add your build and test commands here_
 ### 全体像
 
 ```
-/ori-init → /ori-distill → /ori-arch → /ori-architect → /ori-flow <id> × N → /ori-sync
+/ori-init → /ori-distill → /ori-architect → /ori-bootstrap → /ori-flow <id> × N → /ori-sync
                                                                                     ↓
                                     ┌─── ドメイン変更時はここに戻る ←──────────────┘
                                     ↓
@@ -227,9 +227,9 @@ domain/ 編集 → /ori-sync (dirtyマーク伝播)
 stateDiagram-v2
     [*] --> Init: /ori-init
     Init --> DDD: /ori-distill
-    DDD --> Arch: /ori-arch → /ori-architect
-
-    Arch --> s7: /ori-flow <id>
+    DDD --> Arch: /ori-architect
+    Arch --> Boot: /ori-bootstrap
+    Boot --> s7: /ori-flow <id>
 
     state s7 {
         Derive: derive

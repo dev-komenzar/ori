@@ -3,11 +3,12 @@
 - **Issue**: ori-c79 (architect-expert agent: マルチプラットフォーム対応の設計)
 - **Status**: 2026-08-28 grill-me セッションで Q1〜Q7 確定 → 実装完了 (c103ce4)
 - **更新 (2026-08-31, ori-8gz)**: agent → スキル (`/ori-architect`) に書き直し。Q5・Q8 は **supersede**、Q9 を追記
+- **更新 (ori-63f)**: `/ori-arch` は `/ori-architect` に統合・廃止、upstream init 案内は `/ori-bootstrap` へ移設 (Q11)。本文中の `/ori-arch` 言及は当時の決定の歴史記録として据え置く
 - **後続**: ori-8gz (agent→スキル変換、完了) / ori-6pb (spawn 配線、ori-8gz で廃止)
 
 ## 背景
 
-現状 `/ori-arch` は pattern × stack の **cartesian product** (`.apm/skills/ori-arch/patterns/<pattern>/stacks/<stack>/architecture.md.tpl`) を対話で選んで render する方式。プラットフォームが増えるたびに `stacks/` に固定テンプレートを追加する必要があり、対応可能な組み合わせ (web+ios+android+desktop+CLI+Electron+Tauri…) の爆発を扱いきれない。
+現状 `/ori-arch` は pattern × stack の **cartesian product** (`.apm/skills/ori-architect/patterns/<pattern>/stacks/<stack>/architecture.md.tpl`) を対話で選んで render する方式。プラットフォームが増えるたびに `stacks/` に固定テンプレートを追加する必要があり、対応可能な組み合わせ (web+ios+android+desktop+CLI+Electron+Tauri…) の爆発を扱いきれない。
 
 **参考調査**:
 
@@ -95,15 +96,27 @@
 発生していたため、**decide を ori-architect に一元化**し、ori-arch は「前提確認 + upstream
 framework init 案内 + handoff」のみに縮小する。
 
-- **ori-arch** — upstream framework init 案内 + `/ori-architect` への委譲のみ。
+- **ori-arch** — upstream framework init 案内 + `/ori-architect` への委譲のみ (当時の決定。**ori-63f で `/ori-architect` に統合・廃止**、upstream init 案内は `/ori-bootstrap` へ移設 — Q11 参照)。
   pattern / stack / BC 名の決定 (decision_points) は行わない
 - **ori-architect** — elicit (pattern は ddd-vsa-hex 固定) → decide → compose → generate →
   self-check → confirm の全責務。`questions.bc_names.default` は `task-management` に統一
-- **大フロー順序**: ori-init → ori-distill → ori-arch → ori-architect → ori-flow
+- **大フロー順序** (当時): ori-init → ori-distill → ori-arch → ori-architect → ori-flow
   (distill を arch の前に統一。旧 ori-arch SKILL.md / start docs の arch→distill 記述を修正)
 - **design.md §7**: dynamic axes + tech catalog の未実装ビジョンを現行の decision_points モデルに書き換え
 - コード・テストは無変更 (invariants / guardrails / questions / generation_procedure は
   ori-architect に残し、doctor / golden test の機械 parse 契約を維持)
+
+### Q11. /ori-arch を /ori-architect に統合し、upstream init を /ori-bootstrap へ (ori-63f)
+
+**確定**: Q10 で縮小した `/ori-arch` (前提確認 + upstream init 案内 + 委譲) を廃止し、
+大フローの順序を反転する。architecture (stack) が先に決まれば upstream init の内容が決まるため。
+
+- **大フロー順序**: ori-init → ori-distill → **ori-architect → ori-bootstrap** → ori-flow
+- **ori-architect** — `apps/` 未初期化でも動く (前提反転)。`.ori/architecture.md` 1 ファイルのみ生成
+- **ori-bootstrap** (新設) — stack 確定 → upstream framework init 案内 (自動実行しない) →
+  runner deps / tauri specta scaffold の apply → `bootstrap.js verify` で readiness 判定
+- 旧 `/ori-arch` の patterns / adapters / scripts は `.apm/skills/ori-architect/` に移設。
+  `render-architecture.js` は tpl 廃止後 guidance を返すだけだったため削除
 
 ## 実装
 
