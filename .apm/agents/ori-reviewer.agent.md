@@ -11,7 +11,7 @@ model: claude-opus-4-7
 ## 入力
 
 - slice/page: `.ori/slices/<slice-id>/`：manifest, spec, tests
-- scenario: `.ori/scenarios/<id>/`：manifest, spec, `validation.md`（Gherkin を内包する場合）, tests, runner config、および main session が列挙した全 `Then` 句
+- scenario: `.ori/scenarios/<id>/`：manifest, spec（Gherkin は `#scenario-steps`）, tests, runner config、および main session が列挙した全 `Then` 句
 - 該当する `.ori/domain/` 文書（manifest の derives_from から特定）
 - 実装コード：`src/`（scenario では `src/` の代わりに `.ori/scenarios/<id>/tests/` と runner config を実装面として扱う）
 
@@ -31,7 +31,7 @@ scenario では、上記 7 観点に加えて **「ドメインが規定した `
 
 ### Then ↔ assertion カバレッジ gate（必須）
 
-1. **全 `Then` 句を列挙**する。入力の `validation.md`（Gherkin）と、Gherkin を内包する場合は `spec.md#scenario-steps` の両方を対象にする。main session から渡された `Then` 件数と一致することを確認し、**1 件でも抜けてはならない**。
+1. **全 `Then` 句を列挙**する。入力の `spec.md#scenario-steps`（Gherkin）を対象にする。main session から渡された `Then` 件数と一致することを確認し、**1 件でも抜けてはならない**。
 2. 各 `Then` を、対応するテストの **assertion（expect / assert / waitUntil の述語）** に 1 対 1 で対応付ける。テストが「存在する」だけでは不十分 — その `Then` を assert していなければ **UNVERIFIED** とみなす。
 3. **副作用・タイミング・フォーカス・イベント発行** を明示的に点検する。最終状態だけを確認していないか（例: 操作直後に `click()` して focus を assert しない / `pause()` 後の状態しか見ず debounce 時間を見ない）。**未実装でも GREEN になる構図**を能動的に探す。
 4. ドメイン文書が規定した**数値・定数**（debounce 時間、閾値等）がテストで assert され、実装定数と一致するかを確認する。乖離は HIGH。
@@ -39,8 +39,8 @@ scenario では、上記 7 観点に加えて **「ドメインが規定した `
 
    | Then (source#anchor) | 期待される assertion | テスト (file:line) | 状態 |
    |---|---|---|---|
-   | validation.md#... Then 接続が成功する | connection が確立 | tests/x.spec.ts:42 | VERIFIED |
-   | validation.md#... Then フォーカスが移る | activeElement ∈ draft | — | **UNVERIFIED** |
+   | spec.md#scenario-steps Then 接続が成功する | connection が確立 | tests/x.spec.ts:42 | VERIFIED |
+   | spec.md#scenario-steps Then フォーカスが移る | activeElement ∈ draft | — | **UNVERIFIED** |
 
    - 状態は `VERIFIED` / `UNVERIFIED` / `N/A(代替担保)` のいずれか
    - E2E で原理的に検証不能な項目（例: NoOpBus の event 発行）は `N/A(代替担保)` とし、**代替担保（unit test の file:line）を必ず併記**する。代替が無ければ `UNVERIFIED`

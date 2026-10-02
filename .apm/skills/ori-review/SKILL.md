@@ -38,7 +38,7 @@ description: /ori-flow phase 6 (slice/page) または phase 3 (scenario)。slice
 - 入力：
   - `.ori/scenarios/<id>/spec.md`
   - `.ori/scenarios/<id>/manifest.yaml`
-  - `.ori/scenarios/<id>/validation.md`（Gherkin 形式の検証シナリオ。存在しない場合は `spec.md#scenario-steps` を `Then` の出所とする）
+  - `.ori/scenarios/<id>/spec.md#scenario-steps`（Gherkin 形式のシナリオ。`Then` の出所）
   - `.ori/scenarios/<id>/tests/`（テストコード）
   - `.ori/scenarios/<id>/playwright.config.ts` / `wdio.conf.ts`（runner config。vitest は config なし）
   - `.ori/scenarios/<id>/docker-compose.yml`（compose-service 系参加時のみ。参加者ゼロなら不在も正常）
@@ -145,7 +145,7 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
 
 2. **前提確認**：
    - phase 2（generate）完了が必須
-   - manifest.yaml / spec.md / テストコードの存在を確認（validation.md は Gherkin を内包する場合のみ。無ければ `spec.md#scenario-steps` を `Then` の出所にする）
+   - manifest.yaml / spec.md / テストコードの存在を確認（`Then` の出所は `spec.md#scenario-steps`）
    - runner config を確認: spec.md の `runner:` 記録に従い `playwright.config.ts` / `wdio.conf.ts` が存在すること（vitest は config なしが正常）
    - docker-compose.yml: `infrastructure.services` に compose-service 系参加があるのに compose が不在、または逆（参加ゼロなのに存在）なら `/ori-generate` 差し戻し
 3. **テストコードの構文チェック**：
@@ -160,13 +160,14 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
    ```
    - 構文エラー → `/ori-generate` に差し戻し (verdict=NEEDS_FIX、reason="docker-compose syntax error")。手順 7 へ
 5. **`Then` 句の決定的列挙 → `ori-reviewer` agent を fresh context で spawn**：
-   - **全 `Then` 句（Gherkin）を列挙**し、件数と一覧を reviewer に渡す（reviewer の網羅漏れ防止）。`validation.md` が無い scenario は `spec.md#scenario-steps` の各ステップを列挙する:
+   - **全 `Then` 句（Gherkin）を列挙**し、件数と一覧を reviewer に渡す（reviewer の網羅漏れ防止）。`spec.md#scenario-steps` の各ステップを列挙する:
      ```bash
-     rg -n "^\s*Then " .ori/scenarios/<id>/validation.md .ori/scenarios/<id>/spec.md
+     awk '/\{#scenario-steps\}/{f=1;next} /^## /{f=0} f && /^[[:space:]]*Then /{print FILENAME":"FNR": "$0}' .ori/scenarios/<id>/spec.md
      ```
+   - 上の抽出結果が 0 件なら reviewer を spawn せず、verdict=NEEDS_FIX（reason="spec.md#scenario-steps に Then が無い"）で `/ori-derive` に差し戻す。手順 7 へ
    - `ori-reviewer` の agent 指示を Read し、その全指示を Task agent のプロンプトに含める
-   - reviewer に渡す入力: `.ori/scenarios/<id>/{spec.md,manifest.yaml,validation.md}`、`.ori/scenarios/<id>/test-points-map.md`、`.ori/scenarios/<id>/tests/`、runner config、`.ori/scenarios/<id>/docker-compose.yml`（あれば）、`.ori/architecture.md`、**上で列挙した `Then` 句の全件**
-   - reviewer に **明示**: **各 `Then` をテストの assertion に対応付け、カバレッジ表（`Then` / 期待 assertion / テスト file:line / 状態）を出力**すること。加えて **scenario spec ↔ テストコードの整合性 / validation.md の Gherkin シナリオ ↔ テストケースの対応**、**mode 別 checklist（下記）** を判定すること
+   - reviewer に渡す入力: `.ori/scenarios/<id>/{spec.md,manifest.yaml}`、`.ori/scenarios/<id>/test-points-map.md`、`.ori/scenarios/<id>/tests/`、runner config、`.ori/scenarios/<id>/docker-compose.yml`（あれば）、`.ori/architecture.md`、**上で列挙した `Then` 句の全件**
+   - reviewer に **明示**: **各 `Then` をテストの assertion に対応付け、カバレッジ表（`Then` / 期待 assertion / テスト file:line / 状態）を出力**すること。加えて **scenario spec ↔ テストコードの整合性 / spec.md#scenario-steps の Gherkin シナリオ ↔ テストケースの対応**、**mode 別 checklist（下記）** を判定すること
    - reviewer に **明示**: **`Then` が 1 つでも UNVERIFIED（assertion 不在 / 最終状態しか見ない / 副作用・タイミング・フォーカス未検証）なら severity=HIGH + verdict=NEEDS_FIX。未検証 `Then` を LOW に disposition してはならない**。E2E で原理的に不能な項目は代替担保（unit test の file:line）を併記して `N/A(代替担保)` とし、代替が無ければ UNVERIFIED
    - **test-points 網羅**: `spec.md#test-points` の全項目を列挙して渡し（`scenario-test.instructions.md#test-points-map` の項目列挙 awk。`<spec>` = `.ori/scenarios/<id>/spec.md`）、`test-points-map.md` と突合させる。表の項目が spec と一致しない / `UNCOVERED` / 代替担保なしの `N/A(代替担保)` はいずれも HIGH / NEEDS_FIX（LOW 不可）。形式の SSoT は `scenario-test.instructions.md#test-points-map`
      ```bash
@@ -204,8 +205,8 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
      ## Then ↔ assertion coverage
      | Then (source#anchor) | 期待 assertion | テスト (file:line) | 状態 |
      |---|---|---|---|
-     | validation.md#... Then 接続が成功する | connection 確立 | tests/x.spec.ts:42 | VERIFIED |
-     | validation.md#... Then フォーカスが移る | activeElement ∈ draft | — | **UNVERIFIED** |
+     | spec.md#scenario-steps Then 接続が成功する | connection 確立 | tests/x.spec.ts:42 | VERIFIED |
+     | spec.md#scenario-steps Then フォーカスが移る | activeElement ∈ draft | — | **UNVERIFIED** |
 
      ## Findings
      - **HIGH** spec.md#scenario-steps: Then「フォーカスが移る」がテストで未検証
@@ -312,8 +313,8 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
 
 | Then (source#anchor) | 期待 assertion | テスト (file:line) | 状態 |
 |---|---|---|---|
-| validation.md#... Then 接続が成功する | connection 確立 | tests/test-scenario.test.ts:42 | VERIFIED |
-| validation.md#... Then キーが設定される | store に key が存在 | tests/test-scenario.test.ts:88 | VERIFIED |
+| spec.md#scenario-steps Then 接続が成功する | connection 確立 | tests/test-scenario.test.ts:42 | VERIFIED |
+| spec.md#scenario-steps Then キーが設定される | store に key が存在 | tests/test-scenario.test.ts:88 | VERIFIED |
 | spec.md#scenario-steps Then フォーカスが移る | activeElement ∈ draft | — | **UNVERIFIED** |
 
 ### Semantic findings (reviewer: claude-opus-4-7, capability=reasoning, fresh context)

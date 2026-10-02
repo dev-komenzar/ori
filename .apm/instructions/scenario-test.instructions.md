@@ -53,7 +53,7 @@ test.describe('scenario:<scenario-id>', () => {
 // @ori-generated scenario:<scenario-id>
 ```
 
-このマーカーは `/ori-sync` が派生ファイルを識別するために使用する。直接編集する場合は `/ori-sync --force` が必要。
+このマーカーは `/ori-sync` が派生ファイルを識別するために使用する。直接編集せず、source（manifest / ドメイン文書）を編集して `/ori-sync` → `/ori-flow` で再生成する（`scenario.instructions.md` §caveats）。
 
 ## test-points 網羅対応表 {#test-points-map}
 

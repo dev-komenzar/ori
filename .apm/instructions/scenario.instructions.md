@@ -66,7 +66,6 @@ scenario の generate は、生成物だけで E2E が走るよう app 側の前
 .ori/scenarios/<scenario-id>/
   manifest.yaml          # SSoT（人間が書く）
   spec.md                # 派生（/ori-derive が生成）
-  validation.md          # 派生（Gherkin 形式、/ori-derive が生成）
   tests/
     <scenario-id>.spec.ts  # 生成テストコード（/ori-generate が生成）
   docker-compose.yml     # 自動生成（/ori-generate が生成。compose-service 系 app + infra のみ、対象ゼロなら省略）
@@ -158,7 +157,7 @@ scenario は 4 phase で実装する。詳細は各 SKILL.md に委譲。
 ### 1. derive (`/ori-derive <scenario-id>`)
 
 - **入力**: manifest.yaml + ドメイン文書（workflows + validation）
-- **出力**: spec.md（自然言語 + 参照マッピング）+ validation.md（Gherkin）+ runner 解決結果の記録
+- **出力**: spec.md（自然言語 + 参照マッピング + `#scenario-steps` は Gherkin（`Scenario:` / `Given` / `When` / `Then`）で書くことが必須。`Then` 件数は domain/validation.md#<id> と一致させる）+ runner 解決結果の記録。scenario dir に `validation.md` は生成しない（Gherkin の原典は `.ori/domain/validation.md`、派生側は spec.md に内包）
 - **責務**: ドメイン文書から scenario の仕様を派生。矛盾があれば停止し `/ori-propose` を促す
 - **runner chain の解決**（優先チェーン）:
   1. manifest の `runner:`（明示指定）
@@ -170,7 +169,7 @@ scenario は 4 phase で実装する。詳細は各 SKILL.md に委譲。
 
 ### 2. generate (`/ori-generate <scenario-id>`)
 
-- **入力**: manifest.yaml + spec.md（runner 解決済み）+ validation.md（Gherkin）+ `.ori/architecture.md`（runtime blocks）
+- **入力**: manifest.yaml + spec.md（runner 解決済み。Gherkin は `#scenario-steps`）+ `.ori/architecture.md`（runtime blocks）
 - **出力**: テストコード + runner config（`playwright.config.ts` / `wdio.conf.ts`、vitest は config なし）+ docker-compose.yml（compose-service 系 app + infra のみ。`local` 系 app は compose に含めない）
 - **責務**: Gherkin シナリオからテストコードを生成、`infrastructure.services` を runtime block / infra catalog から解決して docker-compose.yml を生成
 - **サービス名解決ルール**: ① `workspace.apps` と一致 → app service（runtime block から生成）② infra catalog と一致 → catalog から生成 ③ 不一致 → 停止してユーザ確認（推測で埋めない）
@@ -215,10 +214,11 @@ scenario は 4 phase で実装する。詳細は各 SKILL.md に委譲。
 
 ## 注意 {#caveats}
 
-- **spec.md / validation.md は派生ファイル**: 直接編集には `/ori-sync --force` が必要
-- **テストコードは派生ファイル**: 直接編集には `/ori-sync --force` が必要
-- **runner config（playwright.config.ts / wdio.conf.ts）は派生ファイル**: 直接編集には `/ori-sync --force` が必要
-- **docker-compose.yml は派生ファイル**: 直接編集には `/ori-sync --force` が必要
+- **派生ファイルの正規更新手順（唯一）**: spec.md・テストコード・runner config・docker-compose.yml はすべて派生ファイル。直接編集しない（`/ori-sync --force` は廃止済）。手順は次の 1 つ:
+  1. 変えたい内容の **source を編集**する（`manifest.yaml` / ドメイン文書 / `.ori/architecture.md`）
+  2. `/ori-sync` で dirty を伝播 → `/ori-flow <scenario-id>`（該当 phase を再実行）で再生成
+  3. source 側に不備があり上流の変更が要る場合は `/ori-propose` で提案を作成する
+- **spec.md frontmatter の hash**: `coherence.upstream[].hash` は `/ori-derive` が `resolve-upstream.sh` の出力から書き込む値（upstream **ファイル全体**の sha256 先頭 12 hex。`path#section` 指定でも section 単位ではない）が正典。`<section-id>` や `abc123` 等の placeholder・手書き値は不可。scenario spec.md の hash 更新は `/ori-finalize` では未実装（R3 で扱う）で、現状は `/ori-derive` 実行時点の値
 - **推測で埋めない**: `TBD` を残し、人間判断に委ねる箇所を明示
 - **scenario = 検証軸、実装は別ワークフロー**: scenario は未充足を RED として示すことに徹する。ori は scenario を実行せず（実行は CI / 手動）、RED の対処も scenario 側では行わない
   - RED の対処は実装軸の別ワークフローで行う: `/ori-flow <slice-id>`（未実装・未 finalize の slice）または `/ori-bug`（case 4: cross-slice bug）

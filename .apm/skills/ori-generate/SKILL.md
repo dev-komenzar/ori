@@ -11,7 +11,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
 
 ## 役割
 
-- **テストコード生成器**：`manifest.yaml` + `spec.md`（runner 解決済み）+ `validation.md` (Gherkin) から、**runner 別**のテストコードを生成
+- **テストコード生成器**：`manifest.yaml` + `spec.md`（runner 解決済み。Gherkin は `#scenario-steps`）から、**runner 別**のテストコードを生成
 - **runner config 生成器**：runner の種類に応じた config（`playwright.config.ts` / `wdio.conf.ts`、vitest は config なし）。**compose / driver の lifecycle は config が所有**する
 - **docker-compose 生成器**：参加者のうち **compose-service 系 app + infra のみ**から `docker-compose.yml` を生成（決定的部分は `scripts/generate-docker-compose.sh` が担当）
 - **記録係**：生成物は `.ori/scenarios/<id>/` に出力（scenario ディレクトリは self-contained）
@@ -21,7 +21,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
 - 入力：
   - `.ori/scenarios/<id>/manifest.yaml`（必須。`infrastructure.services` 参加者リスト + `infrastructure.overrides`）
   - `.ori/scenarios/<id>/spec.md`（必須。runner 解決済み — derive が記録した `runner:` を確認）
-  - `.ori/scenarios/<id>/validation.md`（必須。Gherkin 形式の検証シナリオ）
+  - `.ori/scenarios/<id>/spec.md#scenario-steps`（Gherkin 形式のシナリオ。原典は `.ori/domain/validation.md#<id>`）
   - `.ori/architecture.md`（必須。`workspace.apps[].runtime` blocks + `scenario_test_runner`）
 - 出力：
   - `.ori/scenarios/<id>/tests/<scenario-id>.spec.ts`（テストコード、`@ori-generated`）
@@ -44,7 +44,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
 
 3. **spec.md の読み込み**：`.ori/scenarios/<id>/spec.md` を Read。実装ノートの `runner:` 記録（derive が優先チェーンで解決）を確認。未解決なら `/ori-derive` に差し戻す
 
-4. **validation.md の読み込み**：`.ori/scenarios/<id>/validation.md` を Read。Gherkin 形式の検証シナリオを理解
+4. **シナリオの読み込み**：`.ori/scenarios/<id>/spec.md#scenario-steps` を Read。Gherkin 形式のシナリオを理解（原典確認が要る場合は `.ori/domain/validation.md#<id>`）
 
 5. **`.ori/architecture.md` の読み込み**：`workspace.apps[].runtime` blocks と `scenario_test_runner` を確認
 
@@ -62,7 +62,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
    script の `app env hints` 出力（catalog 既定値）を参考に、**参加 app service の `environment` に接続 env を追記**する。app 固有値（DB 名等）が導出不能なら **`TBD` マーカー**を残して次へ（推測で埋めない）
 
 7. **テストコードの生成**（AI 生成 — script に頼らない）:
-   - `validation.md` の Gherkin シナリオからテストコードを生成
+   - `spec.md#scenario-steps` の Gherkin シナリオからテストコードを生成
    - runner は spec.md の `runner:` 記録に従う（playwright / wdio / vitest）
    - テストコード内に **service の起動・停止・healthcheck 待機を書かない**（lifecycle は runner config が所有 — `scenario-test.instructions.md` 参照）
    - **selector は pattern.md 規約で導出（G5）**: `domain/ui-fields/*.md`（field id の正典）+ page 構成（`page-groups.md` / architecture Page Map）を読み、field → testid を写像する。ui-field は `page.<page-id>.<elem>`（`<elem>` は field purpose。field id の `screen-<N>-` prefix を除いた部分）。E2E は `data-testid` を第一推奨（`ddd-vsa-hex/pattern.md` §UI selector / testid 規約）。`<page-id>` が解決できない場合は testid を推測せず `TBD`
@@ -105,7 +105,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
 
 ### テストコード
 
-テストコードは `validation.md` の Gherkin シナリオに基づき、runner 別の記法（playwright / wdio / vitest）で生成します。構造・命名規約の SSoT は `.apm/instructions/scenario-test.instructions.md`。
+テストコードは `spec.md#scenario-steps` の Gherkin シナリオに基づき、runner 別の記法（playwright / wdio / vitest）で生成します。構造・命名規約の SSoT は `.apm/instructions/scenario-test.instructions.md`。
 
 ### runner config
 
@@ -232,18 +232,17 @@ export const config = {
 ## 注意
 
 - **自動 scaffold は禁止**：scenario が存在しなくても勝手に新規作成を呼ばない（ユーザ確認必須）
-- **生成物は派生ファイル**：直接編集には `/ori-sync --force` が必要（テストコード / runner config / docker-compose.yml すべて）
-- **app 前提 patch は派生ファイルではない**：§「wdio の app 前提 patch」の Rust 配線（Cargo.toml / capabilities / lib.rs）と node_modules symlink は **app オリジナルへの冪等 patch**（`/ori-sync --force` 対象外）。frontend import / test build script は生成せず impl-notes の要求として残す
+- **生成物は派生ファイル**：直接編集は不可（テストコード / runner config / docker-compose.yml すべて）。更新手順は `.apm/instructions/scenario.instructions.md` §caveats に従う
+- **app 前提 patch は派生ファイルではない**：§「wdio の app 前提 patch」の Rust 配線（Cargo.toml / capabilities / lib.rs）と node_modules symlink は **app オリジナルへの冪等 patch**（派生ファイルではないため再生成対象外）。frontend import / test build script は生成せず impl-notes の要求として残す
 - **前提条件を満たす**：`runner=wdio` では `.apm/instructions/scenario.instructions.md#test-readiness` の前提（G1〜G6）を満たす。満たせない場合は `TBD` を残して人間判断に委ねる
 - **推測で埋めない**：`TBD` を残し、人間判断に委ねる箇所を明示（app↔infra 接続 env の app 固有値等）
 - **lifecycle は config 所有**：テストコード内に compose up / healthcheck 待機を書かない
 - このスキルは spec を書かない。**phase 2 = 生成のみ**
-- **SSoT 参照原則**：生成物の仕様は常に `manifest.yaml` + `spec.md` + `validation.md` + `.ori/architecture.md` を参照する
+- **SSoT 参照原則**：生成物の仕様は常に `manifest.yaml` + `spec.md`（`#scenario-steps`）+ `.ori/architecture.md` を参照する
 
 ## 次のアクション
 
 phase 2 完了後、`/ori-flow` 内部なら自動的に phase 3 へ。単独呼び出しの場合：
 
 - **メインパス**：`/ori-review <scenario-id>` — phase 3。scenario の adversarial review
-- **生成物を修正するパス**：生成物を直接編集 → `/ori-sync --force` → 再度 `/ori-generate`
-- **manifest を修正するパス**：`manifest.yaml` を編集 → 再度 `/ori-generate`
+- **生成物を修正するパス**：source（manifest.yaml / architecture.md）を編集 → `/ori-sync` → `/ori-flow`（`.apm/instructions/scenario.instructions.md` §caveats）
