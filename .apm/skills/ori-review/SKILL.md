@@ -73,7 +73,7 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
 ## なぜ fresh context (reviewer agent) か
 
 - 同一 session 内のレビューは認知バイアス（自分の実装を「正しい」と信じ込む）が強い
-- ori-reviewer は **default capability: reasoning** で起動（current_agent 設定に従い claude-opus-4-7 / deepseek-v4-pro / o1 等）
+- ori-reviewer は **default capability: reasoning** で起動（**scenario は例外**: 手順 5 の軽量既定 `deep` で spawn する。slice/page は reasoning）（current_agent 設定に従い claude-opus-4-7 / deepseek-v4-pro / o1 等）
 - 実装者と異なる model を割り当てることで adversarial 視点を確保
 - ただし reviewer の責務は **spec ↔ impl の意味的乖離のみ** — DoD / 層配置 / lint は 3 gate で機械処理済
 
@@ -175,6 +175,15 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
      ```
    - 総合判定（PASS / NEEDS_FIX / REJECT）を要求する
 
+   **reviewer 実行の安定化（軽量既定 + timeout fallback）**:
+   - **軽量既定**: scenario review の入力は小さい（spec + test + config）ため、reviewer は **軽量実行を既定**とする。reviewer には上記入力と `Then` 全件一覧だけを渡し、repo 全体の探索・追加調査は指示しない。capability は **`deep`** で spawn する（`reasoning` は要求しない）。根拠: `fast`(haiku) は adversarial 視点が弱く review に耐えず、`deep`(sonnet) は reasoning より軽く review 可能（`ori-model/SKILL.md` の capability 表）。Task agent spawn 時に model を `deep` の解決先へ**明示 override** する（agent frontmatter の `model:` / config の `ori-reviewer` override より優先）。reviewer が「深い推論が必要」と報告した場合のみ、main session が `reasoning` で **1 回だけ再 spawn** する（single-pass の往復カウントに含めない）
+   - **timeout / 無応答 / 成果物なし**（harness の inactivity timeout で打ち切られた、または Task agent 終了後に手順 6 の `grep -m1 'Then ↔ assertion coverage' .ori/scenarios/<id>/review.md` が空＝成果物なし）は **review 未完了**であり、**PASS として扱ってはならない**。timeout を「指摘ゼロ」と解釈しない
+   - **fallback 手順**（この 1 回のみ。single-pass の往復カウントには含めない）:
+     1. reviewer を再 spawn せず、**main session が同じ入力で review を代行**する（`Then` 全件のカバレッジ表 / test-points 突合 / mode 別 checklist を自ら作成）
+     2. `review.md` に `### Reviewer: main-session fallback (reason: reviewer timeout)` と明記して記録する（fresh context 保証が無いことを監査ログに残す）
+     3. 以降は手順 6（機械検査）・手順 7（verdict logic）を通常どおり適用する。機械検査を通らなければ fallback 後も PASS にしない。手順 6 の「reviewer に再出力を要求」は **main session 自身による表の修正**と読み替える
+     4. fallback でも完了できない場合は verdict を出さず `bd human ori-review-<scenario-id> --reason="reviewer timeout; fallback incomplete"` で停止する
+
    **mode 別 checklist（spec ↔ config ↔ compose 整合）**:
    - **共通**:
      - spec.md の `runner:` 記録 ↔ テストコードの import（playwright / wdio / vitest）が一致するか
@@ -199,6 +208,7 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
      - infra の healthcheck（TCP probe の image ファミリ別翻訳）が compose に存在するか
      - `runtime.healthcheck: {http: /health}` 宣告のある app のみ HTTP 待機になっているか
 6. **reviewer の出力を受け取る**：
+   - reviewer が timeout / 無応答 / 成果物なしの場合は PASS にせず、手順 5 の fallback 手順に従う
    - `.ori/scenarios/<id>/review.md` に書き込まれる
    - 形式 (簡素):
      ```markdown
@@ -317,7 +327,7 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
 | spec.md#scenario-steps Then キーが設定される | store に key が存在 | tests/test-scenario.test.ts:88 | VERIFIED |
 | spec.md#scenario-steps Then フォーカスが移る | activeElement ∈ draft | — | **UNVERIFIED** |
 
-### Semantic findings (reviewer: claude-opus-4-7, capability=reasoning, fresh context)
+### Semantic findings (reviewer: claude-sonnet-4-6, capability=deep, fresh context)
 
 - **HIGH** spec.md#scenario-steps:
   - Then「フォーカスが移る」がテストで assert されていない（カバレッジ表 UNVERIFIED）
@@ -343,6 +353,7 @@ Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Slice Definit
 - **reviewer の責務は spec ↔ impl 乖離のみ** (slice/page): 層配置 / arch lint / DoD enforcement は spawn 前に既に終わっている
 - **reviewer の責務は spec ↔ テストコード整合性のみ** (scenario): docker-compose の構文チェックは spawn 前に既に終わっている
 - **`Then` 未検証は PASS を妨げる** (scenario): カバレッジ表に `UNVERIFIED` が 1 つでもあれば verdict は NEEDS_FIX、severity は HIGH 以上。LOW への disposition は不可
+- **reviewer timeout は PASS ではない** (scenario): 無応答・成果物なしは review 未完了。main session fallback（手順 5）で review を完遂し、機械検査を通すまで PASS にしない。fallback も不能なら human に上げる
 - **E2E 不能項目は代替担保で担保** (scenario): `N/A(代替担保)` は unit test の file:line を併記した場合のみ有効。代替が無ければ `UNVERIFIED`
 - **スキル本体はメイン session**：reviewer は Task agent で spawn する
 - **single-pass 厳守**：3 周目に入ったら必ず human に上げる（無限ループ防止）
