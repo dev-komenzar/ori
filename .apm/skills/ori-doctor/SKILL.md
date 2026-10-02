@@ -112,7 +112,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
    ```
    個別検査は以下で構成：
    - `check-domain-schema.sh` — ドメイン文書の frontmatter + anchor 検証
-   - `check-slice-schema.sh` — slice の manifest/status ファイル存在確認（status.yaml 不在 = 未 finalize slice を WARN + `/ori-flow <id>` 動線付きで報告）
+   - `check-slice-schema.sh` — slice の manifest/status ファイル存在確認（status.yaml 不在 slice を WARN + 2 段の fix（status.yaml 復元 → `/ori-flow <id>`）付きで報告）
    - `check-dirty-integrity.sh` — dirty=[] なのに review.md 不在/verdict≠PASS を検出（status.yaml の手動改竄チェック）
    - `check-hash-consistency.sh` — 派生ファイルの upstream 参照実在確認
    - `check-cross-ref.sh` — derives_from / upstream の cross-reference 検証
@@ -146,10 +146,9 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 ✗ .ori/domain/aggregates.md:42 — H2 "Note Aggregate" missing {#id}
   fix: edit aggregates.md, add anchor manually (human judgment)
 
-═══ Slice Schema (未 finalize slice) ═══
-⚠ slices/detect-external-changes: scaffolded but /ori-flow never run (no status.yaml)
-  fix: /ori-flow detect-external-changes
-  ℹ WARN のみ（ERROR 化しない）。進行中 slice も含むため、/ori-feature-status の phase 表示（scaffold / not started）と突き合わせて判断
+═══ Slice Schema (status.yaml 不在 slice) ═══
+⚠ slices/detect-external-changes: no status.yaml (created outside new-slice.js or legacy); /ori-flow cannot finalize until restored
+  fix: 1) restore .ori/slices/detect-external-changes/status.yaml, 2) /ori-flow detect-external-changes
 
 ═══ Hash Consistency ═══
 ⚠ slices/capture-auto-save: 1 upstream out of sync
@@ -202,6 +201,25 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 ✗ 4 errors  ⚠ 2 warnings  ℹ 2 info
 recommended action: fix broken cross-ref first (blocks /ori-flow on edit-past-note-start)
 ```
+
+> 注: Slice Schema の status.yaml 不在は WARN のみ（ERROR 化しない）。進行中 slice も含むため `/ori-feature-status` の表示（phase=scaffold / last activity=(not started)）と突き合わせて判断する。
+
+### status.yaml 復元手順（Slice Schema WARN の fix 1 段目）
+
+`new-slice.js` は既存ディレクトリがあると `Slice already exists` で終了するため再実行では復元できない。`/ori-finalize` の `clear-dirty.sh` も status.yaml 不在だと `not found` で停止する。したがって `/ori-flow <id>` の前に `.ori/slices/<id>/status.yaml` を手で作る（`new-slice.js` の初期形）:
+
+```yaml
+slice_id: <id>
+derived_at: <ISO8601 timestamp>
+beads:
+  epic: <slice epic id>   # new-slice.js は formatEpicId("slice", id) で生成。既存の bd epic があればその id
+  current_phase: null
+  completion: []
+phases: {}
+dirty: []
+```
+
+復元用スクリプトは提供しない（検出/修復機構の新設は別 issue）。
 
 ## 注意
 
