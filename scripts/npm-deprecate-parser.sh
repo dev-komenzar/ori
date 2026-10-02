@@ -2,7 +2,7 @@
 #
 # v0.3-M (ori-1pe) — @ori-ori/parser の npm deprecate 強化
 #
-# parser は ori 内部の skill (ori-arch / ori-doctor / arch-adapters 等) からのみ
+# parser は ori 内部の skill (ori-architect / ori-doctor / arch-adapters 等) からのみ
 # 利用される library で、外部 plugin consumer が存在しないため、Phase J の
 # arch-adapter-* と同じ「private 化 + skill-only 配布」方針に揃える。
 #
@@ -19,7 +19,7 @@
 
 set -euo pipefail
 
-MESSAGE_PARSER="Now bundled into ori skill scripts (.apm/skills/ori-arch / ori-doctor 等) via APM (v0.3-M). External library consumption is no longer supported. Use 'apm install dev-komenzar/ori' instead. See https://github.com/dev-komenzar/ori"
+MESSAGE_PARSER="Now bundled into ori skill scripts (.apm/skills/ori-architect / ori-doctor 等) via APM (v0.3-M). External library consumption is no longer supported. Use 'apm install dev-komenzar/ori' instead. See https://github.com/dev-komenzar/ori"
 
 echo "→ npm deprecate @ori-ori/parser@'<=0.2.0'"
 npm deprecate "@ori-ori/parser@<=0.2.0" "$MESSAGE_PARSER"

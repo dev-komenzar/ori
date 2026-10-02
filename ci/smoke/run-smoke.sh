@@ -3,7 +3,7 @@
 # script-level parts of `/ori-flow` on a freshly-scaffolded user project.
 #
 # Scope (what this driver IS):
-#   - drives the bash/node scripts owned by /ori-init, /ori-arch, /ori-doctor
+#   - drives the bash/node scripts owned by /ori-init, /ori-architect, /ori-doctor
 #     in the same sequence /ori-flow would (manifest scaffold → architecture
 #     seed (agent-output fixture) → tauri scaffold → DoD sweep)
 #   - asserts file outputs, sentinel substitution, and check-dod-sweep.sh
@@ -106,7 +106,7 @@ assert_grep "name: $APP_NAME" "$WORK/.ori/config.yaml"
 # 新フローの決定的 stand-in であり、golden test (期待値 SSoT) と同一 source。
 log "step 2: seed architecture.md from golden agent-output fixture (typescript-tauri)"
 ARCH="$WORK/.ori/architecture.md"
-AGENT_FIXTURE="$ORI_ROOT/packages/skills/ori-arch/tests/fixtures/agent-generated/typescript-tauri/architecture.md"
+AGENT_FIXTURE="$ORI_ROOT/packages/skills/ori-architect/tests/fixtures/agent-generated/typescript-tauri/architecture.md"
 [[ -f "$AGENT_FIXTURE" ]] || fail "agent-output fixture missing: $AGENT_FIXTURE"
 sed -e "s/task_management/${BC_NAME//-/_}/g" \
     -e "s/task-management/$BC_NAME/g" \
@@ -159,7 +159,7 @@ fn main() {}
 EOF
 
 # ----- step 4: install-tauri-scaffold.sh -------------------------------------
-log "step 4: install-tauri-scaffold.sh (/ori-arch install scaffold)"
+log "step 4: install-tauri-scaffold.sh (/ori-bootstrap install scaffold)"
 bash "$SKILLS_DIR/ori-init/scripts/install-tauri-scaffold.sh" \
   --dest "$WORK" --app-name "$APP_NAME" --bc-name "$BC_NAME"
 

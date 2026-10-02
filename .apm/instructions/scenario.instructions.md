@@ -146,7 +146,7 @@ infrastructure:
 ## 作成タイミング {#creation-timing}
 
 1. **DDD pipeline 完了**: `/ori-distill` で workflows + validation が整備される
-2. **manifest scaffold**: `new-scenario.js <id>`（ori-flow skill bundle の `scripts/`）。id は validation.md の section anchor から選択する（`--list-validation` で anchor 一覧と coverage を確認。§id-convention）。`/ori-arch` 完了時の次アクション・`/ori-feature-status` の coverage 表示が導線になる
+2. **manifest scaffold**: `new-scenario.js <id>`（ori-flow skill bundle の `scripts/`）。id は validation.md の section anchor から選択する（`--list-validation` で anchor 一覧と coverage を確認。§id-convention）。`/ori-architect` 完了時の次アクション・`/ori-feature-status` の coverage 表示が導線になる
 3. **即 `/ori-flow` 可能（scenario-first 既定）**: scaffold 直後から scenario の `/ori-flow`（derive → generate → review → finalize）を回してよい。参加 slice の完了は待たない（slice が 0 件完了でも 4 phase は通る）
 
 scenario は slice 完了から独立している。ori は scenario を実行しない（実行は CI / 手動）ため、slice 完了は ori にとって検証可能な前提ではない。slice 未実装の状態で生成されたテストは実行時に RED となり、それが未実装を可視化する。参加 slice の beads issue への `bd depends` 設定・slice 完了ゲートは行わない（`contracts.slices` は blocking しない情報リンク。§optional-fields）。

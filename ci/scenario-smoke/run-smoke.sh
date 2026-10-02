@@ -27,7 +27,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ORI_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SKILLS_DIR="$ORI_ROOT/.apm/skills"
-GOLDEN_TS_FIXTURE="$ORI_ROOT/packages/skills/ori-arch/tests/fixtures/agent-generated/typescript/architecture.md"
+GOLDEN_TS_FIXTURE="$ORI_ROOT/packages/skills/ori-architect/tests/fixtures/agent-generated/typescript/architecture.md"
 
 WORK="${ORI_SMOKE_WORK:-/tmp/ori-scenario-smoke}"
 SCENARIO_ID="scenario-smoke-e2e"

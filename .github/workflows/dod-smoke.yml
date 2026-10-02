@@ -1,6 +1,6 @@
 name: dod-smoke
 
-# CI smoke for the Slice DoD enforcement chain (/ori-init → /ori-arch render →
+# CI smoke for the Slice DoD enforcement chain (/ori-init → /ori-architect →
 # install-tauri-scaffold → /ori-doctor sweep). Verifies the deterministic,
 # script-level parts of /ori-flow against a fresh user-project layout.
 #
@@ -11,21 +11,21 @@ on:
   pull_request:
     paths:
       - '.apm/skills/ori-init/**'
-      - '.apm/skills/ori-arch/**'
+      - '.apm/skills/ori-architect/**'
       - '.apm/skills/ori-doctor/**'
       - '.apm/skills/ori-flow/**'
       - 'ci/smoke/**'
-      - 'packages/skills/ori-arch/tests/fixtures/**'
+      - 'packages/skills/ori-architect/tests/fixtures/**'
       - '.github/workflows/dod-smoke.yml'
   push:
     branches: [main]
     paths:
       - '.apm/skills/ori-init/**'
-      - '.apm/skills/ori-arch/**'
+      - '.apm/skills/ori-architect/**'
       - '.apm/skills/ori-doctor/**'
       - '.apm/skills/ori-flow/**'
       - 'ci/smoke/**'
-      - 'packages/skills/ori-arch/tests/fixtures/**'
+      - 'packages/skills/ori-architect/tests/fixtures/**'
       - '.github/workflows/dod-smoke.yml'
   workflow_dispatch:
 

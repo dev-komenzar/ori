@@ -8,7 +8,7 @@ const watch = process.argv.includes("--watch")
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
 const ADAPTERS_SRC = join(ROOT, "packages/arch-adapters")
-const ADAPTERS_OUT = join(ROOT, ".apm/skills/ori-arch/adapters")
+const ADAPTERS_OUT = join(ROOT, ".apm/skills/ori-architect/adapters")
 
 const adapterDirs = readdirSync(ADAPTERS_SRC, { withFileTypes: true })
   .filter((d) => d.isDirectory())
@@ -59,7 +59,7 @@ for (const adapterName of adapterDirs) {
             b.onEnd(() => {
               copyTemplates(adapterName)
               console.log(
-                `✓ arch-adapters/${adapterName}/src/index.ts → .apm/skills/ori-arch/adapters/${adapterName}/index.js`
+                `✓ arch-adapters/${adapterName}/src/index.ts → .apm/skills/ori-architect/adapters/${adapterName}/index.js`
               )
             })
           },
@@ -71,7 +71,7 @@ for (const adapterName of adapterDirs) {
     await build(opts)
     copyTemplates(adapterName)
     console.log(
-      `✓ arch-adapters/${adapterName}/src/index.ts → .apm/skills/ori-arch/adapters/${adapterName}/index.js`
+      `✓ arch-adapters/${adapterName}/src/index.ts → .apm/skills/ori-architect/adapters/${adapterName}/index.js`
     )
   }
 }

@@ -219,7 +219,7 @@ coherence:
 - **spec.md は派生ファイル**：直接編集には `/ori-sync --force` が必要
 - **推測で埋めない**：`TBD` を残し、人間判断に委ねる箇所を明示
 - このスキルは test や impl を書かない。**phase 1 = spec 派生のみ**
-- **SSoT 参照原則** (ori-fzr.6 以降): spec.md の section 仕様 / 記述例 / DoD 由来 item 雛形は **このスキル内に hardcoded で書かない**。常に `.apm/instructions/feature-spec.instructions.md` / `feature-manifest.instructions.md` / `.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` を読み込んで参照する。pattern.md DoD rule の改訂時にスキル更新が漏れて drift するのを防ぐため
+- **SSoT 参照原則** (ori-fzr.6 以降): spec.md の section 仕様 / 記述例 / DoD 由来 item 雛形は **このスキル内に hardcoded で書かない**。常に `.apm/instructions/feature-spec.instructions.md` / `feature-manifest.instructions.md` / `.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` を読み込んで参照する。pattern.md DoD rule の改訂時にスキル更新が漏れて drift するのを防ぐため
 
 ## 次のアクション
 

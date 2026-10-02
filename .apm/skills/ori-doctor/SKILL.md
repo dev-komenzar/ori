@@ -62,7 +62,7 @@ description: ori プロジェクトの健康診断。.ori/ を歩き schema / st
 
 ### 8. Slice DoD sweep {#dod-sweep}
 
-各 slice について Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` の "Slice Definition of Done") 4 rule を sweep する。
+各 slice について Slice DoD (`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` の "Slice Definition of Done") 4 rule を sweep する。
 
 ### 9. architecture.md guardrails 検証 (ori-c79.3)
 
@@ -239,6 +239,6 @@ dirty: []
 - **orphan domain パス**：意図的なら無視、不要なら削除を検討
 - **beads 不整合パス**：`bd dolt push` / `bd dolt pull` で再同期、`bd orphans` で個別対処
 - **DoD 違反パス**: 該当 slice の missing artifact を `/ori-impl-red` (b3 stub) / `/ori-impl-green` (real impl + production wiring + specta post) で生成。`rule:dod-4` は `bash apm-scripts/specta-build.sh --app-dir apps/<app>` で再同期
-- **architecture.md guardrails 違反パス**: `/ori-architect` で要件対話から再生成させる (ori-arch 手順 6 経由)。`g-8` だけの場合は `## Decisions` 節か frontmatter `decisions:` への回答記録を追加 (自動修正しない)
+- **architecture.md guardrails 違反パス**: `/ori-architect` で要件対話から再生成させる (ori-architect 手順 6 経由)。`g-8` だけの場合は `## Decisions` 節か frontmatter `decisions:` への回答記録を追加 (自動修正しない)
 - **scenario 未 scaffold パス**: `node .apm/skills/ori-flow/scripts/new-scenario.js <id>` で scaffold → `/ori-flow <id>`。意図的に scenario 化しない section は現状 skip 記録の機構が無い（WARN のまま。常時 WARN で無視される状態になったら skip 記録を再検討）
 - **全部 green パス**：`/ori-feature-status` で次の作業候補を選ぶ

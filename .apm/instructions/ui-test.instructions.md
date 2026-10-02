@@ -12,9 +12,9 @@ applyTo: "**/*.{spec,test}.tsx, **/e2e/**/*.{spec,test}.{ts,tsx}, **/playwright/
 
 | 関心事 | 正典 |
 | --- | --- |
-| 層別 selector 優先順位 (Component: role / E2E: testid) | `.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` "Test conventions" → "UI selector / testid 規約" |
+| 層別 selector 優先順位 (Component: role / E2E: testid) | `.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` "Test conventions" → "UI selector / testid 規約" |
 | testid 命名 (VSA namespace, `.` separator, `<elem>` 機能名) | 同上 |
-| production fixture (`setupProductionBuilder()`) | `.apm/skills/ori-arch/patterns/ddd-vsa-hex/stacks/typescript-tauri/test.md` "#setup-production-builder" |
+| production fixture (`setupProductionBuilder()`) | `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/test.md` "#setup-production-builder" |
 | 実装側規約 (Smart Constructor / Result / VSA 配置) | `ddd-typescript.instructions.md` |
 
 ## 責務分離

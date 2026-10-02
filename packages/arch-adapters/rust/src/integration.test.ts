@@ -75,7 +75,7 @@ describe("rust adapter — template + injection integration", () => {
   it("renders #[test] fn with constants and matchers", async () => {
     const content = await render(SINGLE_CRATE_SPEC);
     // skill-based header replaces the old CLI hint
-    expect(content).toContain("Regenerate via the /ori-arch skill");
+    expect(content).toContain("Regenerate via the /ori-architect skill");
     expect(content).not.toContain("ori arch export");
     // constants
     expect(content).toContain('const ROOT_PATH: &str = "src"');

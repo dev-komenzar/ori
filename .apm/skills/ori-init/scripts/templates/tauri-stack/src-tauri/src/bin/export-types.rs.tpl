@@ -5,7 +5,7 @@
 //   - apm-scripts/specta-build.sh
 //   - the `phase_hooks.flow-impl-{red-pre,green-post}` declared in
 //     .ori/architecture.md (frontmatter) — see Slice DoD rule 4 in
-//     .apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md
+//     .apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md
 //
 // Output: ../src/__BC_NAME__/shared/ipc/bindings.ts
 //

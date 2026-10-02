@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ori-init: install Tauri / specta scaffold into a freshly `pnpm tauri init`-ed app.
 #
-# Called by /ori-arch after the upstream framework init for stack=typescript-tauri
+# Called by /ori-bootstrap after the upstream framework init for stack=typescript-tauri
 # completes (apps/<app>/src-tauri/ exists). Implements the specta infra side of
 # Slice DoD enforcement (rules 2–4 in
-# .apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md):
+# .apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md):
 #
 #   - src-tauri/Cargo.toml      : tauri-specta + specta + specta-typescript deps
 #   - src-tauri/src/bin/export-types.rs : specta bindings export entry

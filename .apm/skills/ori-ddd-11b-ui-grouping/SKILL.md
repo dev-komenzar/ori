@@ -114,7 +114,7 @@ ori:
 
 旧仕様では screen-N.md の `coherence.depended_by:` に back-edge を書き戻していたが、`/ori-sync` が `depends_on` edge から reverse 参照を計算するため不要。screen-N.md の `ori:` frontmatter は Phase 11a の出力のまま保持する。
 
-### `/ori-arch sync-page-map` への入力
+### `/ori-architect sync-page-map` への入力
 
 `page-groups.md` の各 page H2 (`page-grouping:<id>`) の `depends_on` を読み取り、`.ori/architecture.md` の `## Page Map` section を生成する（screen → workflow → slice の推移閉包は sync-page-map が解決）。
 
@@ -129,9 +129,9 @@ ori:
 
 **これが distill-ddd 系の最終 phase**。完了したら実装に進む：
 
-まず `ls .ori/architecture.md` で architecture.md の有無を確認し、**無ければ `/ori-arch` を最初に案内する**（`/ori-flow` は `.ori/architecture.md` 前提で動作する）。
+まず `ls .ori/architecture.md` で architecture.md の有無を確認し、**無ければ `/ori-architect` を最初に案内する**（`/ori-flow` は `.ori/architecture.md` 前提で動作する）。
 
-- **architecture 未確定**：`/ori-arch` — pattern (ddd-vsa-hex 等) / stack を決めて `.ori/architecture.md` を render。完了後に下記メインパスへ
+- **architecture 未確定**：`/ori-architect` — pattern (ddd-vsa-hex 等) / stack を決めて `.ori/architecture.md` を render。完了後に下記メインパスへ
 - **メインパス**：`/ori-flow <first-id>` — 1 slice / page を 7 phase で実装開始
   - 推奨：slice → page の順（domain ロジック先行）
 - **scaffold だけ済ませて休む**：page の新規作成を提案し beads issue だけ作っておく

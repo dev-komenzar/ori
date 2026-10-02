@@ -100,7 +100,7 @@ Phase / milestone は `bd create --labels=phase-x` で表現する。**epic と�
 
 ## `/ori-doctor` violation issue の label convention {#dod-violation-labels}
 
-`/ori-doctor` が Slice DoD (`.apm/skills/ori-arch/patterns/ddd-vsa-hex/pattern.md` の
+`/ori-doctor` が Slice DoD (`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` の
 "Slice Definition of Done") 違反を検出した時に起票する bd issue の label 規約。
 violation 種別と所在を label から grep で復元できるようにする。
 

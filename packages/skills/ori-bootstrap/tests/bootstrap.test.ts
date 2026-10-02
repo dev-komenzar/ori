@@ -12,7 +12,7 @@ const execFileAsync = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..", "..", "..", "..");
 const SCRIPT = join(REPO_ROOT, ".apm", "skills", "ori-bootstrap", "scripts", "bootstrap.js");
-const FIXTURES = join(REPO_ROOT, "packages", "skills", "ori-arch", "tests", "fixtures", "agent-generated");
+const FIXTURES = join(REPO_ROOT, "packages", "skills", "ori-architect", "tests", "fixtures", "agent-generated");
 
 interface RunResult {
   code: number;
