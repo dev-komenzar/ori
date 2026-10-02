@@ -92,6 +92,17 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 
 **Idempotency**: 起票前に `bd list --label=dod-violation --label=slice:<id> --label=rule:<rule-id> --status=open` を check し、既存 open issue があれば re-file しない (slice + rule の組で dedupe)。
 
+### 10. scenario coverage (validation.md ↔ .ori/scenarios) {#scenario-coverage}
+
+`.ori/domain/validation.md` の scenario section のうち `.ori/scenarios/<id>/manifest.yaml` が無いもの（= 未 scaffold）を **WARN** として surface する。
+
+- coverage は `validation.md` と `.ori/scenarios/` から**毎回 live 導出**する。新規 registry ファイル（`coverage.yaml` 等）は作らない（drift 源になる）
+- 導出は `node .apm/skills/ori-flow/scripts/new-scenario.js --list-validation` の出力（`candidate (not scaffolded ...)` 行 / `coverage: N/M scaffolded`）を再利用する
+- 各 candidate に fix 案内 `node <ori-flow>/scripts/new-scenario.js <id>`（scaffold 後 `/ori-flow <id>`）を付ける
+- 全 section scaffolded なら clean（WARN なし）
+- **ERROR にしない**：skip（意図的に scenario 化しない）を記録する機構が無く、false positive が恒久化するため。**skip 記録は保留**：WARN が常時出て無視される状態になったら skip 記録の導入を再検討する
+- `/ori-distill` Phase 7 では scaffold 判断をしない（arch 前では早すぎる）。検出は doctor で行う
+
 ## 手順
 
 1. **`.ori/` 存在確認**：なければ「`/ori-init` で初期化してください」と返す
@@ -106,6 +117,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
    - `check-hash-consistency.sh` — 派生ファイルの upstream 参照実在確認
    - `check-cross-ref.sh` — derives_from / upstream の cross-reference 検証
    - `check-proposals.sh` — pending proposal カウント
+   - `check-scenario-coverage.sh` — validation.md の未 scaffold scenario section を WARN（live 計算、`new-scenario.js --list-validation` 再利用）
    - `check-dod-sweep.sh` — Slice DoD 4 rule の sweep (read-only mode、report のみ)
    - `lint.js` — `.ori/` の Markdown anchor / id 規約検証 + architecture.md guardrails 検証（JS）：
      ```bash
@@ -163,6 +175,11 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 ⚠ domain/aggregates.md#tag-aggregate — derived by no slice / page
 ℹ this may be intentional (read-only reference)
 
+═══ Scenario Coverage ═══
+⚠ validation.md#s22-storage-dir-change-watcher-restart — scenario 未 scaffold
+  fix: node .apm/skills/ori-flow/scripts/new-scenario.js s22-storage-dir-change-watcher-restart → /ori-flow s22-storage-dir-change-watcher-restart
+  scenario coverage: 21/22 scaffolded, 1 candidate(s)
+
 ═══ Beads ═══
 ✓ bd doctor: all green
 
@@ -205,4 +222,5 @@ recommended action: fix broken cross-ref first (blocks /ori-flow on edit-past-no
 - **beads 不整合パス**：`bd dolt push` / `bd dolt pull` で再同期、`bd orphans` で個別対処
 - **DoD 違反パス**: 該当 slice の missing artifact を `/ori-impl-red` (b3 stub) / `/ori-impl-green` (real impl + production wiring + specta post) で生成。`rule:dod-4` は `bash apm-scripts/specta-build.sh --app-dir apps/<app>` で再同期
 - **architecture.md guardrails 違反パス**: `/ori-architect` で要件対話から再生成させる (ori-arch 手順 6 経由)。`g-8` だけの場合は `## Decisions` 節か frontmatter `decisions:` への回答記録を追加 (自動修正しない)
+- **scenario 未 scaffold パス**: `node .apm/skills/ori-flow/scripts/new-scenario.js <id>` で scaffold → `/ori-flow <id>`。意図的に scenario 化しない section は現状 skip 記録の機構が無い（WARN のまま。常時 WARN で無視される状態になったら skip 記録を再検討）
 - **全部 green パス**：`/ori-feature-status` で次の作業候補を選ぶ
