@@ -114,6 +114,15 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 - fix は `node <ori-flow>/scripts/scenario-status.js set <id> <phase> <state>` を案内する
 - status.yaml は `yaml.stringify` の block style 前提（flow style 手編集は未対応）
 
+### 12. scenario review 陳腐化 (review.md ⟷ spec/tests mtime) {#scenario-staleness}
+
+`review.md` の mtime が同 scenario の入力成果物（scenario 直下の `spec.md` / `manifest.yaml` / `validation.md` / `playwright.config.ts` / `wdio.conf.ts` / `teardown.mjs` / `tsconfig.json` / `docker-compose.yml`、および `tests/**`。`status.yaml` と `review.md` 自身は除く）より古い scenario を **WARN** で surface する（`check-scenario-staleness.sh`）。spec/tests を再生成・編集したのに旧 review.md が残っている状態（review の invalidation 機構が無い gap）の検出。
+
+- fix は `/ori-flow <id>` の再走（review→finalize の再実行）を案内する
+- 判定は mtime のみ。同秒は stale にしない。git checkout/clone は mtime を揃えるため検出漏れ（false negative）になりうる
+- `review.md` が無い scenario は対象外（未 review は §11 が扱う）
+- **ERROR 表記にしない**：再生成直後など進行中の scenario で ERROR 扱いにしないため（WARN でも `check-*.sh` は件数を exit code で返すので `run-checks.sh` の集計には数えられる）
+
 ## 手順
 
 1. **`.ori/` 存在確認**：なければ「`/ori-init` で初期化してください」と返す
@@ -125,6 +134,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
    - `check-domain-schema.sh` — ドメイン文書の frontmatter + anchor 検証
    - `check-slice-schema.sh` — slice の manifest/status ファイル存在確認（status.yaml 不在 slice を WARN + 2 段の fix（status.yaml 復元 → `/ori-flow <id>`）付きで報告）
    - `check-scenario-schema.sh` — scenario の status.yaml 台帳 ⟷ 成果物実在の突合（phases 空/未記録なのに tests/・review.md が存在、phase=done なのに成果物なし、completion と phases の不整合を WARN。fix は `scenario-status.js set` を案内）
+   - `check-scenario-staleness.sh` — review.md が spec.md / runner config / tests/** などの入力成果物より古い scenario を WARN（mtime 比較、fix は `/ori-flow <id>` 再走）
    - `check-dirty-integrity.sh` — dirty=[] なのに review.md 不在/verdict≠PASS を検出（status.yaml の手動改竄チェック）
    - `check-hash-consistency.sh` — 派生ファイルの upstream 参照実在確認
    - `check-cross-ref.sh` — derives_from / upstream の cross-reference 検証
