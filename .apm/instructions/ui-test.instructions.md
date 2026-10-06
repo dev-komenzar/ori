@@ -14,6 +14,7 @@ applyTo: "**/*.{spec,test}.tsx, **/e2e/**/*.{spec,test}.{ts,tsx}, **/playwright/
 | --- | --- |
 | 層別 selector 優先順位 (Component: role / E2E: testid) | `.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` "Test conventions" → "UI selector / testid 規約" |
 | testid 命名 (VSA namespace, `.` separator, `<elem>` 機能名) | 同上 |
+| page / widget の testid 具体値 (契約) | `.ori/pages/<id>/testids.yaml` — 規範は pattern.md "page / widget の testid 契約" |
 | production fixture (`setupProductionBuilder()`) | `.apm/skills/ori-architect/patterns/ddd-vsa-hex/stacks/typescript-tauri/test.md` "#setup-production-builder" |
 | 実装側規約 (Smart Constructor / Result / VSA 配置) | `ddd-typescript.instructions.md` |
 
