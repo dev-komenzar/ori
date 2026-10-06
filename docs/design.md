@@ -529,7 +529,10 @@ scenario の generate は「生成物だけで E2E が走る」よう app 側の
 
 - **build-then-test の binary 契約 (G2)**: `runtime.build` は `runtime.binary` を生成する command でなければならない。Tauri の `cargo build` 単体は devUrl (`http://localhost:5173`) を参照する dev binary を生成するため不可。`tauri build --debug --no-bundle`(promptnotes は `bun run build:test`)を使う。dev binary を `tauri:options.application` に渡すと `Connection refused` になる
 - **wdio plugin 前提 (G1)**: `@wdio/tauri-service` は driverProvider に関係なく `tauri-plugin-wdio` を要求する。未導入時は focus 系コマンド(`$` / `$$` / `findElement(s)` / `elementClick` / `getTitle`)ごとに 5 秒待機する。app 側配線は Cargo dep + capabilities `wdio:default` + `lib.rs` の `#[cfg(debug_assertions)]` 登録 + frontend の動的 import(`VITE_WDIO_TEST` gate)。production 非混入
-- **storage 隔離 (G4)**: ori 標準 env **`TAURI_TEST_STORAGE_DIR`** を runner config の `onPrepare` が temp dir に設定し、app は settings 解決時にこの env を最優先する。app 側 override が無いと実ユーザデータを読む
+- **storage 隔離 (G4、ori-oan.8)**: runner config の `onPrepare` が per-run temp root を作り `XDG_CONFIG_HOME` / `XDG_DATA_HOME` / `XDG_CACHE_HOME` / `XDG_STATE_HOME` を配下に向ける。Tauri の `app_config_dir` / `app_data_dir`・WebKitGTK storage・window-state は XDG 解決のため app 側 override 無しで settings を含め隔離される。temp root は `ORI_SCENARIO_TMP` で test / seed に公開。旧標準 `TAURI_TEST_STORAGE_DIR`(app override 前提、settings 系が漏れる)は廃止し app 固有扱い。wdio scenario は **Linux のみ正式サポート**(非 Linux は fail fast)
+- **実行環境 (ori-oan.10)**: `LD_LIBRARY_PATH` を外して実行する(nix devShell 由来の値で WebKitWebDriver が起動不能)。残留 tauri-driver による :4444 占有は `onPrepare` が検出して fail fast(kill はしない)
+- **plugin 警告の基準 (ori-oan.11)**: `Failed to get window states` / `Tauri plugin not available` は app 起動〜最初の reload / 再起動まで 0。reload 直後の一過性警告(`window.wdioTauri` 未ロード)は許容
+- **`browser.execute` の戻り値 (ori-oan.9)**: WebDriver は `undefined` を `null` で返すため判定は `!= null`
 - **node_modules 解決 (G3)**: `.ori/scenarios/node_modules` → `apps/<app>/node_modules` の symlink(`.ori/.gitignore` で ignore)
 - **fixture seed (G6)**: 既存データ前提の scenario は `onPrepare` で seed する。frontmatter 形式(例 `createdAt: YYYYMMDDhhmmss`)の SSoT は domain / app 側
 - **frontend import の扱い**: SvelteKit 等の entry への plugin import は framework 固有のため ori はコード生成せず、impl-notes の要求として記録する(`ori-oan.2` 決定)

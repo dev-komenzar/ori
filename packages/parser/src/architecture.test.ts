@@ -375,12 +375,12 @@ cross_slice: { prohibited_direct: true, via: [] }
         target: host
         runner: wdio
         test_env:
-          TAURI_TEST_STORAGE_DIR: /tmp/ori-test`),
+          APP_TEST_MODE: "1"`),
       );
       const runtime = spec.workspace?.apps[0]?.runtime;
       expect(runtime?.mode).toBe("local");
       if (runtime?.mode !== "local") return;
-      expect(runtime.test_env).toEqual({ TAURI_TEST_STORAGE_DIR: "/tmp/ori-test" });
+      expect(runtime.test_env).toEqual({ APP_TEST_MODE: "1" });
     });
 
     it("rejects legacy mode value local-binary (一般化後の命名は local + target)", () => {

@@ -135,7 +135,7 @@ const LocalRuntimeSchema = z
       .record(z.string())
       .optional()
       .describe(
-        "scenario 実行時に runner config が inject する test-only env。ori 標準の storage 隔離 env (例 TAURI_TEST_STORAGE_DIR) は generate が常時注入する",
+        "scenario 実行時に runner config が inject する app 固有の test-only env (固定文字列)。ori 標準の storage 隔離 (XDG_*_HOME の per-run temp 化) は generate が常時注入するため宣言不要。XDG_*_HOME / ORI_SCENARIO_TMP は予約 (宣言しても ori 標準が優先)",
       ),
   })
   .passthrough();

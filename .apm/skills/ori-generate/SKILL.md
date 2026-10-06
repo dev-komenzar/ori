@@ -65,6 +65,8 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
    - `spec.md#scenario-steps` の Gherkin シナリオからテストコードを生成
    - runner は spec.md の `runner:` 記録に従う（playwright / wdio / vitest）
    - テストコード内に **service の起動・停止・healthcheck 待機を書かない**（lifecycle は runner config が所有 — `scenario-test.instructions.md` 参照）
+   - **wdio: `browser.execute` の戻り値は `!= null` で判定する**（WebDriver は `undefined` を `null` で返すため、`!== undefined` の poll は即成立する。ori-oan.9）。例: `await browser.waitUntil(async () => (await browser.execute(() => (window as unknown as { __result?: unknown }).__result)) != null)`
+   - **wdio: temp path は `process.env.ORI_SCENARIO_TMP` 配下を使う**（例: 保存先変更 scenario の新 dir。runner config が per-run temp root を公開する）
    - **selector は pattern.md 規約で導出（G5）**: `domain/ui-fields/*.md`（field id の正典）+ page 構成（`page-groups.md` / architecture Page Map）を読み、field → testid を写像する。ui-field は `page.<page-id>.<elem>`（`<elem>` は field purpose。field id の `screen-<N>-` prefix を除いた部分）。E2E は `data-testid` を第一推奨（`ddd-vsa-hex/pattern.md` §UI selector / testid 規約）。`<page-id>` が解決できない場合は testid を推測せず `TBD`
    - 実装側 testid が pattern.md 準拠かを確認し、乖離があれば **impl-notes に記録**する（実装の testid に合わせてテストを捏造しない）
    - テストファイルは `.ori/scenarios/<id>/tests/<scenario-id>.spec.ts` に出力、先頭に `// @ori-generated scenario:<scenario-id>` マーカー
@@ -74,7 +76,10 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
    - **playwright**（compose-service web 駆動）: `playwright.config.ts`。`webServer` で compose を起動（`docker compose up -d --wait` — healthy 後に CLI が終了するため停止は `teardown.mjs` の globalTeardown で明示 `down`）、`url` / `port` で TCP 起動待機。あわせて `tsconfig.json` も出力
    - **wdio**（local tauri 駆動）: `wdio.conf.ts`。`services: [['@wdio/tauri-service', { driverProvider: 'external' }]]`、`tauri:options.application` に `runtime.binary`（絶対パス解決）を指定。`onPrepare` / `onComplete` が以下を所有する:
      - `.ori/scenarios/node_modules` → `apps/<app>/node_modules` の symlink を冪等に作成（G3。無いと spec の `@wdio/globals` 等が ESM 解決できない）
-     - `runtime.test_env` の各 env を `process.env` に設定。ori 標準の storage 隔離 env **`TAURI_TEST_STORAGE_DIR`** は `mkdtempSync` で temp dir を採番して設定（G4。app 側 override が無いと実ユーザデータを読む）
+     - **platform / port の fail fast**: `process.platform !== 'linux'` なら storage 隔離を保証できない旨で throw（wdio scenario は Linux のみ正式サポート）。tauri-driver port（`:4444`）が占有済みなら残留 tauri-driver の可能性と `pkill tauri-driver` を案内して throw（kill はしない。ori-oan.10）。**throw は `SevereServiceError`（`webdriverio`）を使う** — 普通の `Error` は wdio launcher がログに出すだけで実行を続行する
+     - `runtime.test_env` の各 env を `process.env` に設定（固定文字列。app 固有 env）
+     - **storage 隔離（G4、ori-oan.8）**: `mkdtempSync` で per-run temp root を採番し、`XDG_CONFIG_HOME` / `XDG_DATA_HOME` / `XDG_CACHE_HOME` / `XDG_STATE_HOME` を root 配下に設定する（app 側 override 不要）。root は `ORI_SCENARIO_TMP` として公開する。test_env の **後** に設定し、test_env による上書きを許さない。`TAURI_TEST_STORAGE_DIR` は注入しない（ori 標準ではない）
+     - **`maxInstances: 1` 固定**: `@wdio/tauri-service` は `maxInstances > 1` / multiremote で `XDG_DATA_HOME` を `<tmpdir>/tauri-worker-<cid>` に上書きし、per-run 隔離と seed が崩れる
      - 既存データ前提の scenario は fixture を seed（G6。`.md` frontmatter 形式は app / domain の SSoT に従う）
      - compose-service 系参加時は `docker compose up -d --wait`、`onComplete` で `down -v`
      - `onComplete` で temp dir を削除
@@ -163,17 +168,32 @@ WDIO v9 の型が TS 7 の lib.dom `URLPattern` と衝突するため。ori-bc9.
 ```typescript
 // .ori/scenarios/<id>/wdio.conf.ts — @ori-generated
 import { execSync } from 'node:child_process'; // compose-service 参加時のみ使用
-import { existsSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { createConnection } from 'node:net';
 import { tmpdir } from 'node:os';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+// onPrepare で普通の Error を throw しても wdio launcher はログに出すだけで続行する。停止には SevereServiceError
+import { SevereServiceError } from 'webdriverio';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_DIR = resolve(__dirname, '../../../apps/<app>');
 // runtime.binary (build-then-test) を絶対パスで解決
 const BINARY = resolve(APP_DIR, 'src-tauri/target/debug/<app>');
 
+// tauri-driver の待受 port（@wdio/tauri-service の既定値。tauriDriverPort を指定する場合は揃える）
+const DRIVER_PORT = 4444;
+
 let tmpDir = '';
+
+// tauri-driver の待受 port が既に使われているか（残留 tauri-driver 検出用）
+const isPortInUse = (port: number) =>
+  new Promise<boolean>((done) => {
+    const socket = createConnection({ port, host: '127.0.0.1' });
+    socket.setTimeout(1000, () => { socket.destroy(); done(false); });
+    socket.once('connect', () => { socket.destroy(); done(true); });
+    socket.once('error', () => done(false));
+  });
 
 // 'tauri:options' は WebdriverIO.Capabilities の型に無い。`config: WebdriverIO.Config` 注釈下で
 // capability を直書きすると tsc --noEmit が TS2353 ("'tauri:options' does not exist in type
@@ -187,6 +207,7 @@ const tauriCapability: WebdriverIO.Capabilities & { 'tauri:options': { applicati
 export const config: WebdriverIO.Config = {
   runner: 'local',
   specs: ['./tests/**/*.spec.ts'],
+  // 1 固定: >1 / multiremote では tauri-service が XDG_DATA_HOME を tauri-worker-<cid> に上書きし隔離が崩れる
   maxInstances: 1,
   // external = tauri-driver (intermediary) + WebKitWebDriver (native)。v1.4.0 の default は
   // 'embedded' で、これは tauri-plugin-wdio-webdriver を app に必要とするため external を明示。
@@ -197,15 +218,34 @@ export const config: WebdriverIO.Config = {
   reporters: ['spec'],
 
   onPrepare: async () => {
+    // XDG 隔離は Linux でしか効かない。他 platform では実ユーザ領域を汚すため実行しない
+    if (process.platform !== 'linux') {
+      throw new SevereServiceError(`ori wdio scenario は Linux のみサポート (storage 隔離を保証できない: ${process.platform})`);
+    }
+    // 失敗した実行の tauri-driver が残っていないか（残留 driver は黙って別 port に逃げられると気付けない）
+    if (await isPortInUse(DRIVER_PORT)) {
+      throw new SevereServiceError(`:${DRIVER_PORT} が使用中です。残留 tauri-driver の可能性があります (pkill tauri-driver で解放)`);
+    }
     // G3: scenario から app の node_modules を ESM 解決できるようにする
     // symlink は .ori/scenarios/ 直下（全 scenario 共有）に置く
     const link = resolve(__dirname, '..', 'node_modules');
     if (!existsSync(link)) symlinkSync(resolve(APP_DIR, 'node_modules'), link, 'dir');
-    // G4: 標準 storage 隔離 env を temp dir で設定（app 側 override が前提）
-    tmpDir = mkdtempSync(tmpdir() + '/ori-scenario-<id>-');
-    process.env.TAURI_TEST_STORAGE_DIR = tmpDir;
-    // runtime.test_env がある場合はここで追加設定（例: process.env.FOO = 'bar'）
-    // G6: 既存データ前提ならここで fixture seed（frontmatter 形式は app/domain SSoT に従う）
+    // runtime.test_env がある場合はここで設定（例: process.env.FOO = 'bar'）。XDG_* より先に置き、上書きさせない
+    // G4: XDG を per-run temp に向けて storage / settings / WebView data を隔離（app 側 override 不要）
+    tmpDir = mkdtempSync(join(tmpdir(), 'ori-scenario-<id>-'));
+    for (const [env, sub] of [
+      ['XDG_CONFIG_HOME', 'config'],
+      ['XDG_DATA_HOME', 'data'],
+      ['XDG_CACHE_HOME', 'cache'],
+      ['XDG_STATE_HOME', 'state'],
+    ]) {
+      process.env[env] = resolve(tmpDir, sub);
+      mkdirSync(process.env[env]!, { recursive: true });
+    }
+    // test code / seed から temp root を参照できるよう公開（worker は onPrepare 後に起動され env を継承）
+    process.env.ORI_SCENARIO_TMP = tmpDir;
+    // G6: 既存データ前提ならここで fixture seed（frontmatter 形式は app/domain SSoT に従う。
+    //     保存先は XDG 配下: 例 resolve(tmpDir, 'data', '<tauri identifier>', ...)）
     // compose-service 系参加時のみ:
     // execSync('docker compose -f docker-compose.yml up -d --wait', { cwd: __dirname, stdio: 'inherit' });
   },
@@ -229,7 +269,7 @@ export const config: WebdriverIO.Config = {
    - **test build script**: `runtime.build` が参照する command は `VITE_WDIO_TEST=1` を伴う debug build（例: package.json に `"build:test": "VITE_WDIO_TEST=1 bun run tauri build --debug --no-bundle"`）であること
    - **production 非混入**: Rust は `debug_assertions`、frontend は `VITE_WDIO_TEST` gate。release build に plugin 参照 0 を検証する
 
-**冪等性**: 各 patch は該当文字列/キーの存在チェックで skip する。再実行で重複追加しない。**検証**: `npx tsc --noEmit` に加え、可能なら `build:test` 後に app log の `Failed to get window states` / `Tauri plugin not available` が 0 であることを確認する。
+**冪等性**: 各 patch は該当文字列/キーの存在チェックで skip する。再実行で重複追加しない。**検証**: `npx tsc --noEmit` に加え、可能なら `build:test` 後に app log の `Failed to get window states` / `Tauri plugin not available` が **app 起動〜最初の reload / 再起動まで 0** であることを確認する（reload / 再起動直後の一過性警告は許容。基準の SSoT は `scenario-test.instructions.md#plugin-warnings`。ori-oan.11）。
 
 ### docker-compose.yml
 
