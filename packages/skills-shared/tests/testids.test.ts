@@ -433,3 +433,142 @@ describe("testids.js check-collisions", () => {
     });
   });
 });
+
+describe("testids.js — review 指摘の回帰 (ori-oan.7)", () => {
+  it("M2: derives_from の ui-field:screen-N / page-groups.md#<grouping> を screen として解決する", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        ".ori/domain/ui-fields/page-groups.md":
+          "# Page Groups {#page-groups}\n\n## settings {#settings}\n\n- depends_on:\n  - ui-field:screen-2\n",
+        ".ori/pages/page-main/manifest.yaml": "type: page\nderives_from:\n  - ui-field:screen-1\n",
+        ".ori/pages/settings/manifest.yaml": "type: widget\nderives_from:\n  - domain/ui-fields/page-groups.md#settings\n",
+      },
+      async (root) => {
+        expect((await run(["sync", "--all"], root)).code).toBe(0);
+        expect((await contract(root, "page-main")).derived).toHaveLength(2);
+        expect((await contract(root, "settings")).derived).toHaveLength(2);
+      },
+    );
+  });
+
+  it("M2: screen を解決できない page は check で違反 (空契約で素通りさせない)", async () => {
+    await withFixture(
+      { ...BASE, ".ori/pages/page-main/manifest.yaml": "type: page\nderives_from:\n  - domain/workflows/x.md#x\n" },
+      async (root) => {
+        await run(["sync", "page-main"], root);
+        const r = await run(["check", "page-main", "--no-impl"], root);
+        expect(r.code).toBe(1);
+        expect(r.stdout).toContain("ui-fields screen を解決できません");
+      },
+    );
+  });
+
+  it("M3: Open Questions や anchor なし見出し配下の言及を grouping にしない", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        ".ori/domain/ui-fields/screen-3.md": screen(3, ["save"]),
+        ".ori/domain/ui-fields/page-groups.md":
+          "# Page Groups {#page-groups}\n\n## capture {#capture}\n\n- depends_on:\n  - ui-field:screen-1\n  - workflow:capture\n" +
+          "- 対応 workflow: capture\n\n### Notes\n\n- ui-field:screen-2 と ui-field:screen-3 は別\n\n" +
+          "## settings {#settings}\n\n- depends_on:\n  - ui-field:screen-2\n\n" +
+          "## Open Questions {#open-questions}\n\n- ui-field:screen-2 と ui-field:screen-3 を同 page にするか\n",
+      },
+      async (root) => {
+        const r = await run(["check-collisions"], root);
+        expect(r.code).toBe(0);
+        expect(r.stdout).toContain("2 grouping");
+      },
+    );
+  });
+
+  it("M4: sync は extra のコメントを保持し、壊れた構造は書き換えずに停止する", async () => {
+    await withFixture(BASE, async (root) => {
+      const p = join(root, ".ori/pages/page-main/testids.yaml");
+      await writeFile(
+        p,
+        "derived: []\nextra: # human note: keep root first\n  - testid: page.page-main # root\n    purpose: root\n    source: derive\n",
+        "utf8",
+      );
+      expect((await run(["sync", "page-main"], root)).code).toBe(0);
+      await run(["add-extra", "page-main", "--testid", "page.page-main.x", "--purpose", "x", "--source", "derive"], root);
+      const body = await readFile(p, "utf8");
+      expect(body).toContain("# human note: keep root first");
+      expect(body).toContain("# root");
+      expect((await contract(root, "page-main")).extra.map((r) => r.testid)).toEqual(["page.page-main", "page.page-main.x"]);
+
+      const broken = "derived: []\nextra:\n  testid: page.page-main\n  purpose: root\n  source: derive\n";
+      await writeFile(p, broken, "utf8");
+      const r = await run(["sync", "page-main"], root);
+      expect(r.code).toBe(1);
+      expect(r.stderr).toContain("extra が配列ではありません");
+      expect(await readFile(p, "utf8")).toBe(broken);
+    });
+  });
+
+  it("M1: 壊れた YAML は ERROR で exit 1 (stack trace で落ちない)", async () => {
+    await withFixture({ ...BASE, ".ori/config.yaml": "ori:\n  workspace: [unclosed\n" }, async (root) => {
+      await run(["sync", "page-main"], root);
+      const r = await run(["check", "page-main"], root);
+      expect(r.code).toBe(1);
+      expect(r.stderr).toContain("ERROR: YAML を parse できません");
+    });
+  });
+
+  it("L1: 衝突の詳細は 1 行の VIOLATION に field まで含める", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        ".ori/domain/ui-fields/screen-3.md": screen(3, ["save"]),
+        ".ori/pages/settings/manifest.yaml": manifest("settings", "widget", [2, 3]),
+      },
+      async (root) => {
+        const r = await run(["check", "settings", "--no-impl"], root);
+        expect(r.stdout).toMatch(/^VIOLATION settings: page 内で <elem> が衝突しています \(<elem> "save": screen-2-save, screen-3-save\)/m);
+      },
+    );
+  });
+
+  it("L3/L4/L5: route 名 test/ は探索し、改行をまたぐ属性と Vue の静的 bind を literal として扱う", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        "apps/app/src/routes/test/+page.svelte": '<textarea data-testid="page.page-main.draft-body"></textarea>',
+        "apps/app/src/Sort.tsx": '<select\n  data-testid={\n    "page.page-main.toolbar-sort-field"\n  }\n/>',
+        "apps/app/src/S.vue": "<b :data-testid=\"'widget.settings.save'\"/><b v-bind:data-testid=\"'widget.settings.theme'\"/>",
+      },
+      async (root) => {
+        await run(["sync", "--all"], root);
+        const r = await run(["check", "--all"], root);
+        expect(r.stdout).toContain("OK");
+        expect(r.code).toBe(0);
+      },
+    );
+  });
+
+  it("build 成果物 (build/ gen/) は探索せず、そこにある testid で契約を満たしたことにしない", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        "apps/app/build/_app/x.js": '<b data-testid="page.page-main.draft-body"/><b data-testid="bad_id"/>',
+        "apps/app/src-tauri/gen/y.js": '<b data-testid="page.page-main.toolbar-sort-field"/>',
+      },
+      async (root) => {
+        await run(["sync", "page-main"], root);
+        const r = await run(["check", "page-main"], root);
+        expect(r.stdout).toContain('実装に存在しません: "page.page-main.draft-body"');
+        expect(r.stdout).toContain('実装に存在しません: "page.page-main.toolbar-sort-field"');
+        expect(r.stdout).not.toContain("bad_id");
+      },
+    );
+  });
+
+  it("L8: 値を取るフラグの値が欠けたら usage (exit 2)", async () => {
+    await withFixture(BASE, async (root) => {
+      expect((await run(["sync", "page-main", "--root"], root)).code).toBe(2);
+      const r = await run(["add-extra", "settings", "--testid", "widget.settings.x", "--purpose", "--source", "derive"], root);
+      expect(r.code).toBe(2);
+    });
+  });
+});

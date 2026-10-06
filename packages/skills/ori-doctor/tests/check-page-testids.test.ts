@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -70,5 +70,46 @@ describe("check-page-testids.sh", () => {
     expect(r.code).toBe(2);
     expect(r.out).toContain('実装に存在しません: "page.main.save"');
     expect(r.out).toContain("動的 testid は禁止");
+  });
+});
+
+describe("check-page-testids.sh — review 指摘の回帰 (ori-oan.7)", () => {
+  it("M1: testids.js が完走しない (壊れた config.yaml) 場合は green にしない", async () => {
+    const r = await run({
+      ...PAGE,
+      ".ori/config.yaml": "ori:\n  workspace: [unclosed\n",
+      ".ori/pages/main/testids.yaml":
+        "derived:\n  - testid: page.main.save\n    field: screen-1-save\nextra: []\n",
+    });
+    expect(r.out).toContain("ERROR page testids");
+    expect(r.code).not.toBe(0);
+  });
+
+  it("L2: --emit-issues は page 単位で起票し、kebab-case でない page id でも完走する", async () => {
+    const bin = await mkdtemp(join(tmpdir(), "ori-fake-bd-"));
+    tmpDirs.push(bin);
+    const log = join(bin, "calls.log");
+    await writeFile(join(bin, "bd"), `#!/usr/bin/env bash\necho "$*" >> "${log}"\n`, { mode: 0o755 });
+    const root = await mkdtemp(join(tmpdir(), "ori-page-testids-"));
+    tmpDirs.push(root);
+    const files: Record<string, string> = {
+      ...PAGE,
+      ".ori/pages/Bad_Page/manifest.yaml": "type: page\nderives_from:\n  - domain/ui-fields/screen-1.md#screen-1\n",
+    };
+    for (const [rel, body] of Object.entries(files)) {
+      const p = join(root, rel);
+      await mkdir(dirname(p), { recursive: true });
+      await writeFile(p, body);
+    }
+    const r = spawnSync("bash", [SCRIPT, "--emit-issues"], {
+      cwd: root,
+      encoding: "utf8",
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+    });
+    const out = r.stdout + r.stderr;
+    expect(out).toContain("page testids: 2 issue(s)");
+    const calls = await readFile(log, "utf8");
+    expect(calls).toContain("--labels=testid-violation,page:main");
+    expect(calls).toContain("--labels=testid-violation,page:Bad_Page");
   });
 });

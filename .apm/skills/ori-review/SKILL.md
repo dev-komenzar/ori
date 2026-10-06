@@ -13,7 +13,7 @@ description: /ori-flow phase 6 (slice/page) または phase 3 (scenario)。slice
 
 - **structural gate ランナー**（slice/page のみ）：boundary test / arch lint / public_entry の 3 check (page / widget は + testid 契約 gate (d)) を Bash で実行
 - **scenario reviewer**（scenario のみ）：scenario spec とテストコードの整合性を review し、全 `Then` 句 ↔ assertion のカバレッジを gate する
-- **semantic reviewer ディスパッチャー**：3 gate pass 後に reviewer agent を fresh context で spawn (spec ↔ impl 乖離のみ意味的判定)
+- **semantic reviewer ディスパッチャー**：structural gate pass 後に reviewer agent を fresh context で spawn (spec ↔ impl 乖離のみ意味的判定)
 - **single-pass 強制装置**：往復は **最大 1 回**。無限ループに陥らないためのガード
 - **patch ディスパッチャー**：指摘内容に応じて適切な phase（test-red / impl-green / refactor / propose / generate）に差し戻す
 

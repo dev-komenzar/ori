@@ -41,17 +41,22 @@ if ! command -v node >/dev/null 2>&1; then
   exit 0
 fi
 
-out="$(node "$SCRIPT_DIR/testids.js" check --all --root "$PROJECT_ROOT" 2>&1 || true)"
+rc=0
+out="$(node "$SCRIPT_DIR/testids.js" check --all --root "$PROJECT_ROOT" 2>&1)" || rc=$?
 violations="$(grep '^VIOLATION ' <<<"$out" || true)"
 ISSUES=0
 [[ -n "$violations" ]] && ISSUES=$(wc -l <<<"$violations")
+# testids.js が検査を完走しなかった (crash / 入力 YAML 破損 / 想定外 exit) 場合は green にしない
+if [[ $rc -gt 1 ]] || ! grep -qE '^(OK: testid 契約違反なし|testid 契約違反: [0-9]+ 件)$' <<<"$out"; then
+  echo "  ERROR page testids: testids.js check が完走しませんでした (exit $rc)"
+  grep -v '^VIOLATION ' <<<"$out" | head -n 5 | sed 's/^/        /'
+  ISSUES=$((ISSUES + 1))
+fi
 
 while IFS= read -r line; do
   [[ -n "$line" ]] || continue
   echo "  WARN  ${line#VIOLATION }"
 done <<<"$violations"
-# testids.js 自体のエラー (VIOLATION 以外の ERROR 行) は握り潰さない
-grep '^ERROR' <<<"$out" | sed 's/^/  /' || true
 
 if [[ $ISSUES -gt 0 ]]; then
   echo "        fix: /ori-flow <page-id> (実装を契約に追従) / derived stale は testids.js sync <page-id>"
@@ -62,14 +67,15 @@ if [[ "$EMIT_ISSUES" == true && $ISSUES -gt 0 ]]; then
     echo "    WARN: bd not on PATH; cannot auto-file issue" >&2
   else
     # page 単位に集約して起票 (impl lint は page に紐付かないため page:_impl)
-    for key in $(sed -E 's/^VIOLATION (impl|[a-z0-9-]+):.*/\1/' <<<"$violations" | sort -u); do
+    while IFS= read -r key; do
+      [[ -n "$key" ]] || continue
       page="$key"; [[ "$key" == impl ]] && page="_impl"
       existing="$(bd list --label=testid-violation --label="page:${page}" --status=open 2>/dev/null | grep -E '^○|^◐' | head -n1 || true)"
       if [[ -n "$existing" ]]; then
         echo "    INFO: page:${page} の open issue あり — re-file しない (idempotent)"
         continue
       fi
-      detail="$(grep -E "^VIOLATION ${key}:" <<<"$violations" | sed 's/^VIOLATION /- /')"
+      detail="$(awk -v p="VIOLATION ${key}: " 'index($0, p) == 1 { sub(/^VIOLATION /, "- "); print }' <<<"$violations")"
       bd create \
         --title="[testid] ${page}: page testid 契約違反" \
         --description="${detail}
@@ -82,7 +88,7 @@ Reference:
         --labels="testid-violation,page:${page}" >/dev/null \
         && echo "    ✓ filed bd issue (testid-violation, page:${page})" \
         || echo "    WARN: bd create failed — issue not filed" >&2
-    done
+    done < <(sed -nE 's/^VIOLATION ([^:]+):.*/\1/p' <<<"$violations" | sort -u)
   fi
 fi
 

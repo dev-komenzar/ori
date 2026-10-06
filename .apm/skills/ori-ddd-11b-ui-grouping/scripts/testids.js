@@ -46,10 +46,10 @@ var require_identity = __commonJS({
     var NODE_TYPE = /* @__PURE__ */ Symbol.for("yaml.node.type");
     var isAlias = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === ALIAS;
     var isDocument = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === DOC;
-    var isMap = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === MAP;
+    var isMap2 = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === MAP;
     var isPair = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === PAIR;
     var isScalar = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === SCALAR;
-    var isSeq = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === SEQ;
+    var isSeq2 = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === SEQ;
     function isCollection(node) {
       if (node && typeof node === "object")
         switch (node[NODE_TYPE]) {
@@ -82,11 +82,11 @@ var require_identity = __commonJS({
     exports.isAlias = isAlias;
     exports.isCollection = isCollection;
     exports.isDocument = isDocument;
-    exports.isMap = isMap;
+    exports.isMap = isMap2;
     exports.isNode = isNode;
     exports.isPair = isPair;
     exports.isScalar = isScalar;
-    exports.isSeq = isSeq;
+    exports.isSeq = isSeq2;
   }
 });
 
@@ -4192,9 +4192,9 @@ var require_resolve_flow_collection = __commonJS({
     var blockMsg = "Block collections are not allowed within flow collections";
     var isBlock = (token) => token && (token.type === "block-map" || token.type === "block-seq");
     function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onError, tag) {
-      const isMap = fc.start.source === "{";
-      const fcName = isMap ? "flow map" : "flow sequence";
-      const NodeClass = tag?.nodeClass ?? (isMap ? YAMLMap.YAMLMap : YAMLSeq.YAMLSeq);
+      const isMap2 = fc.start.source === "{";
+      const fcName = isMap2 ? "flow map" : "flow sequence";
+      const NodeClass = tag?.nodeClass ?? (isMap2 ? YAMLMap.YAMLMap : YAMLSeq.YAMLSeq);
       const coll = new NodeClass(ctx.schema);
       coll.flow = true;
       const atRoot = ctx.atRoot;
@@ -4230,7 +4230,7 @@ var require_resolve_flow_collection = __commonJS({
             offset = props.end;
             continue;
           }
-          if (!isMap && ctx.options.strict && utilContainsNewline.containsNewline(key))
+          if (!isMap2 && ctx.options.strict && utilContainsNewline.containsNewline(key))
             onError(
               key,
               // checked by containsNewline()
@@ -4270,7 +4270,7 @@ var require_resolve_flow_collection = __commonJS({
             }
           }
         }
-        if (!isMap && !sep && !props.found) {
+        if (!isMap2 && !sep && !props.found) {
           const valueNode = value ? composeNode(ctx, value, props, onError) : composeEmptyNode(ctx, props.end, sep, null, props, onError);
           coll.items.push(valueNode);
           offset = valueNode.range[2];
@@ -4293,7 +4293,7 @@ var require_resolve_flow_collection = __commonJS({
             startOnNewline: false
           });
           if (valueProps.found) {
-            if (!isMap && !props.found && ctx.options.strict) {
+            if (!isMap2 && !props.found && ctx.options.strict) {
               if (sep)
                 for (const st of sep) {
                   if (st === valueProps.found)
@@ -4325,7 +4325,7 @@ var require_resolve_flow_collection = __commonJS({
           const pair = new Pair.Pair(keyNode, valueNode);
           if (ctx.options.keepSourceTokens)
             pair.srcToken = collItem;
-          if (isMap) {
+          if (isMap2) {
             const map = coll;
             if (utilMapIncludes.mapIncludes(ctx, map.items, keyNode))
               onError(keyStart, "DUPLICATE_KEY", "Map keys must be unique");
@@ -4341,7 +4341,7 @@ var require_resolve_flow_collection = __commonJS({
           offset = valueNode ? valueNode.range[2] : valueProps.end;
         }
       }
-      const expectedEnd = isMap ? "}" : "]";
+      const expectedEnd = isMap2 ? "}" : "]";
       const [ce, ...ee] = fc.end;
       let cePos = offset;
       if (ce?.source === expectedEnd)
@@ -7241,7 +7241,7 @@ var require_public_api = __commonJS({
         return docs;
       return Object.assign([], { empty: true }, composer$1.streamInfo());
     }
-    function parseDocument(source, options = {}) {
+    function parseDocument2(source, options = {}) {
       const { lineCounter: lineCounter2, prettyErrors } = parseOptions(options);
       const parser$1 = new parser.Parser(lineCounter2?.addNewLine);
       const composer$1 = new composer.Composer(options);
@@ -7267,7 +7267,7 @@ var require_public_api = __commonJS({
       } else if (options === void 0 && reviver && typeof reviver === "object") {
         options = reviver;
       }
-      const doc = parseDocument(src, options);
+      const doc = parseDocument2(src, options);
       if (!doc)
         return null;
       doc.warnings.forEach((warning) => log.warn(doc.options.logLevel, warning));
@@ -7303,7 +7303,7 @@ var require_public_api = __commonJS({
     }
     exports.parse = parse;
     exports.parseAllDocuments = parseAllDocuments;
-    exports.parseDocument = parseDocument;
+    exports.parseDocument = parseDocument2;
     exports.stringify = stringify;
   }
 });
@@ -7371,7 +7371,8 @@ var TESTID_CHARSET = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*$/
 var SOURCE_RE = /^(derive|scenario:[a-z0-9][a-z0-9-]*)$/;
 var SRC_EXT = /\.(svelte|vue|tsx|jsx|ts|js|mjs|html|astro)$/;
 var SKIP_DIRS = /* @__PURE__ */ new Set(["node_modules", "target", "dist", "build", ".svelte-kit", ".git", "gen", "coverage"]);
-var TEST_FILE = /(^|\/)(tests?|__tests__|e2e)\/|\.(test|spec)\.[a-z]+$/;
+var TEST_FILE = /(^|\/)(tests|__tests__|e2e)\/|\.(test|spec)\.[a-z]+$/;
+var VALUE_FLAGS = ["root", "testid", "purpose", "source", "dynamic"];
 async function exists(path) {
   try {
     await access(path);
@@ -7396,8 +7397,9 @@ function parseArgs(argv) {
       continue;
     }
     const key = a.slice(2);
-    const next = argv[i + 1];
-    if (["root", "testid", "purpose", "source", "dynamic"].includes(key) && next !== void 0) {
+    if (VALUE_FLAGS.includes(key)) {
+      const next = argv[i + 1];
+      if (next === void 0 || next.startsWith("--")) usage();
       flags.set(key, next);
       i++;
     } else {
@@ -7405,6 +7407,13 @@ function parseArgs(argv) {
     }
   }
   return { positional, flags };
+}
+async function readYaml(path) {
+  try {
+    return (0, import_yaml.parse)(await readFile(path, "utf8"));
+  } catch (e) {
+    throw new InputError(`YAML \u3092 parse \u3067\u304D\u307E\u305B\u3093: ${path} (${e.message.split("\n")[0]})`);
+  }
 }
 async function resolveRoot(explicit) {
   if (typeof explicit === "string") {
@@ -7422,20 +7431,67 @@ async function resolveRoot(explicit) {
   console.error("ERROR: project root (.ori/) \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002--root \u3067\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044");
   process.exit(2);
 }
+async function parsePageGroups(root) {
+  const path = join(root, ".ori/domain/ui-fields/page-groups.md");
+  if (!await exists(path)) return null;
+  const groups = /* @__PURE__ */ new Map();
+  let current = null;
+  let inDependsOn = false;
+  const add = (s) => {
+    if (current) groups.set(current, (groups.get(current) ?? /* @__PURE__ */ new Set()).add(s));
+  };
+  for (const line of (await readFile(path, "utf8")).split("\n")) {
+    if (/^#{1,6}\s/.test(line)) {
+      current = /\{#([a-z0-9-]+)\}\s*$/.exec(line)?.[1] ?? null;
+      inDependsOn = false;
+      continue;
+    }
+    if (!current) continue;
+    const dep = /^\s*(?:-\s*)?(?:\*\*)?depends_on(?:\*\*)?\s*:(.*)$/.exec(line);
+    if (dep) {
+      inDependsOn = true;
+      for (const m of dep[1].matchAll(/ui-field:(screen-\d+)(?![\w-])/g)) add(m[1]);
+      continue;
+    }
+    if (inDependsOn) {
+      const item = /^\s+-\s*ui-field:(screen-\d+)\s*$/.exec(line);
+      if (item) {
+        add(item[1]);
+        continue;
+      }
+      if (/^\s+-\s/.test(line)) continue;
+      inDependsOn = false;
+    }
+    if (/^\s*(?:-\s*)?(?:\*\*)?screens(?:\*\*)?\s*:/.test(line)) {
+      for (const m of line.matchAll(/\b(screen-\d+)\.md/g)) add(m[1]);
+    }
+  }
+  return groups;
+}
 async function loadPage(root, id) {
   const manifestPath = join(root, ".ori/pages", id, "manifest.yaml");
   if (!await exists(manifestPath)) {
     throw new InputError(`page \u672A scaffold: .ori/pages/${id}/manifest.yaml \u304C\u3042\u308A\u307E\u305B\u3093 (new-page.js \u3067 scaffold \u3057\u3066\u304F\u3060\u3055\u3044)`);
   }
-  const m = (0, import_yaml.parse)(await readFile(manifestPath, "utf8")) ?? {};
+  const m = await readYaml(manifestPath) ?? {};
   const kind = m.type;
   if (kind !== "page" && kind !== "widget") {
     throw new InputError(`.ori/pages/${id}/manifest.yaml \u306E type \u304C page / widget \u3067\u306F\u3042\u308A\u307E\u305B\u3093: ${String(kind)}`);
   }
   const screens = /* @__PURE__ */ new Set();
-  for (const d of Array.isArray(m.derives_from) ? m.derives_from : []) {
-    const hit = /(?:^|\/)ui-fields\/(screen-\d+)\.md(?:#|$)/.exec(String(d));
-    if (hit) screens.add(hit[1]);
+  let groups;
+  for (const raw of Array.isArray(m.derives_from) ? m.derives_from : []) {
+    const d = String(raw);
+    const file = /(?:^|\/)ui-fields\/(screen-\d+)\.md(?:#|$)/.exec(d) ?? /^ui-field:(screen-\d+)$/.exec(d);
+    if (file) {
+      screens.add(file[1]);
+      continue;
+    }
+    const grp = /(?:^|\/)ui-fields\/page-groups\.md#([a-z0-9-]+)$/.exec(d) ?? /^page-grouping:([a-z0-9-]+)$/.exec(d);
+    if (grp) {
+      if (groups === void 0) groups = await parsePageGroups(root);
+      for (const s of groups?.get(grp[1]) ?? []) screens.add(s);
+    }
   }
   return { id, kind, screens: [...screens].sort() };
 }
@@ -7478,24 +7534,20 @@ function findCollisions(fields) {
   }
   return new Map([...byElem].filter(([, fs]) => fs.length > 1));
 }
+var NO_SCREEN = "manifest derives_from \u304B\u3089 ui-fields screen \u3092\u89E3\u6C7A\u3067\u304D\u307E\u305B\u3093 (ui-fields/screen-N.md / ui-field:screen-N / page-groups.md#<grouping> \u3067\u53C2\u7167\u3057\u3066\u304F\u3060\u3055\u3044)";
 async function deriveRows(root, page) {
   const warnings = [];
-  if (page.screens.length === 0) {
-    warnings.push(`${page.id}: manifest derives_from \u306B ui-fields screen \u304C\u3042\u308A\u307E\u305B\u3093 (derived \u306F\u7A7A)`);
-  }
+  if (page.screens.length === 0) warnings.push(NO_SCREEN);
   const fields = [];
   for (const s of page.screens) {
     const fs = await loadFields(root, s);
-    if (fs.length === 0) warnings.push(`${page.id}: ${s}.md \u306E ## Fields {#fields} \u306B field anchor \u304C\u3042\u308A\u307E\u305B\u3093`);
+    if (fs.length === 0) warnings.push(`${s}.md \u306E ## Fields {#fields} \u306B field anchor \u304C\u3042\u308A\u307E\u305B\u3093`);
     fields.push(...fs);
   }
   const collisions = findCollisions(fields);
   if (collisions.size > 0) {
-    const detail = [...collisions].map(([e, fs]) => `  <elem> "${e}": ${fs.join(", ")}`).join("\n");
-    throw new InputError(
-      `${page.id}: page \u5185\u3067 <elem> \u304C\u885D\u7A81\u3057\u3066\u3044\u307E\u3059\u3002field id \u306E\u6539\u540D\u304B page grouping \u306E\u898B\u76F4\u3057\u304C\u5FC5\u8981\u3067\u3059
-${detail}`
-    );
+    const detail = [...collisions].map(([e, fs]) => `<elem> "${e}": ${fs.join(", ")}`).join("; ");
+    throw new InputError(`page \u5185\u3067 <elem> \u304C\u885D\u7A81\u3057\u3066\u3044\u307E\u3059 (${detail})\u3002field id \u306E\u6539\u540D\u304B page grouping \u306E\u898B\u76F4\u3057\u304C\u5FC5\u8981\u3067\u3059`);
   }
   const rows = fields.map((f) => ({ testid: `${page.kind}.${page.id}.${elemOf(f)}`, field: f })).sort((a, b) => a.testid < b.testid ? -1 : a.testid > b.testid ? 1 : 0);
   return { rows, warnings };
@@ -7507,18 +7559,40 @@ function contractPath(root, id) {
 async function readContract(root, id) {
   const p = contractPath(root, id);
   if (!await exists(p)) return null;
-  const raw = (0, import_yaml.parse)(await readFile(p, "utf8")) ?? {};
-  const derived = Array.isArray(raw.derived) ? raw.derived : [];
-  const extra = Array.isArray(raw.extra) ? raw.extra : [];
-  return { derived, extra };
-}
-function renderContract(c) {
-  return HEADER + (0, import_yaml.stringify)({ derived: c.derived, extra: c.extra });
+  const raw = await readYaml(p) ?? {};
+  const where = `.ori/pages/${id}/testids.yaml`;
+  if (typeof raw !== "object" || Array.isArray(raw)) throw new InputError(`${where} \u304C mapping \u3067\u306F\u3042\u308A\u307E\u305B\u3093`);
+  const rows = (key) => {
+    const v = raw[key];
+    if (v === void 0 || v === null) return [];
+    if (!Array.isArray(v)) throw new InputError(`${where} \u306E ${key} \u304C\u914D\u5217\u3067\u306F\u3042\u308A\u307E\u305B\u3093 (- testid: ... \u306E list \u3067\u66F8\u304F)`);
+    v.forEach((r, i) => {
+      if (!r || typeof r !== "object" || Array.isArray(r) || typeof r.testid !== "string") {
+        throw new InputError(`${where} \u306E ${key}[${i}] \u304C testid \u3092\u6301\u3064 mapping \u3067\u306F\u3042\u308A\u307E\u305B\u3093`);
+      }
+    });
+    return v;
+  };
+  return { derived: rows("derived"), extra: rows("extra") };
 }
 async function writeContract(root, id, c) {
   const p = contractPath(root, id);
-  const body = renderContract(c);
   const prev = await exists(p) ? await readFile(p, "utf8") : null;
+  let body;
+  if (prev === null) {
+    body = HEADER + (0, import_yaml.stringify)({ derived: c.derived, extra: c.extra });
+  } else {
+    const doc = (0, import_yaml.parseDocument)(prev);
+    if (!(0, import_yaml.isMap)(doc.contents)) throw new InputError(`.ori/pages/${id}/testids.yaml \u304C mapping \u3067\u306F\u3042\u308A\u307E\u305B\u3093`);
+    doc.set("derived", doc.createNode(c.derived));
+    const extra = doc.get("extra", true);
+    if ((0, import_yaml.isSeq)(extra)) {
+      for (const r of c.extra.slice(extra.items.length)) extra.items.push(doc.createNode(r));
+    } else {
+      doc.set("extra", doc.createNode(c.extra));
+    }
+    body = doc.toString();
+  }
   if (prev === body) return false;
   await writeFile(p, body, "utf8");
   return true;
@@ -7526,24 +7600,26 @@ async function writeContract(root, id, c) {
 async function syncPage(root, id) {
   const page = await loadPage(root, id);
   const { rows, warnings } = await deriveRows(root, page);
-  for (const w of warnings) console.error(`WARN: ${w}`);
+  for (const w of warnings) console.error(`WARN: ${id}: ${w}`);
   const prev = await readContract(root, id);
   const next = { derived: rows, extra: prev?.extra ?? [] };
   const changed = await writeContract(root, id, next);
   console.log(`${changed ? "synced" : "up-to-date"}: .ori/pages/${id}/testids.yaml (derived ${rows.length}, extra ${next.extra.length})`);
   return next;
 }
-function extraViolations(page, c) {
+function rowViolations(page, r) {
   const v = [];
   const prefix = `${page.kind}.${page.id}`;
   const elemRe = new RegExp(`^${prefix.replace(/\./g, "\\.")}(?:\\.${ELEM_SEGMENT})*$`);
-  for (const r of c.extra) {
-    const t = String(r.testid ?? "");
-    if (!elemRe.test(t)) v.push(`extra \u5F62\u5F0F\u9055\u53CD: "${t}" \u306F "${prefix}" \u307E\u305F\u306F "${prefix}.<elem>" (kebab-case) \u3067\u3042\u308B\u3053\u3068`);
-    if (!r.purpose) v.push(`extra purpose \u6B20\u843D: "${t}"`);
-    if (!SOURCE_RE.test(String(r.source ?? ""))) v.push(`extra source \u4E0D\u6B63: "${t}" (derive | scenario:<id>)`);
-    if (r.dynamic !== void 0 && r.dynamic !== "data-key") v.push(`extra dynamic \u4E0D\u6B63: "${t}" (data-key \u306E\u307F)`);
-  }
+  const t = String(r.testid ?? "");
+  if (!elemRe.test(t)) v.push(`extra \u5F62\u5F0F\u9055\u53CD: "${t}" \u306F "${prefix}" \u307E\u305F\u306F "${prefix}.<elem>" (kebab-case) \u3067\u3042\u308B\u3053\u3068`);
+  if (!r.purpose) v.push(`extra purpose \u6B20\u843D: "${t}"`);
+  if (!SOURCE_RE.test(String(r.source ?? ""))) v.push(`extra source \u4E0D\u6B63: "${t}" (derive | scenario:<id>)`);
+  if (r.dynamic !== void 0 && r.dynamic !== "data-key") v.push(`extra dynamic \u4E0D\u6B63: "${t}" (data-key \u306E\u307F)`);
+  return v;
+}
+function extraViolations(page, c) {
+  const v = c.extra.flatMap((r) => rowViolations(page, r));
   const seen = /* @__PURE__ */ new Map();
   for (const t of [...c.derived.map((r) => r.testid), ...c.extra.map((r) => r.testid)]) {
     seen.set(t, (seen.get(t) ?? 0) + 1);
@@ -7556,10 +7632,10 @@ async function appSourceDirs(root) {
   let appsRoot = "apps";
   const paths = [];
   if (await exists(cfgPath)) {
-    const cfg = (0, import_yaml.parse)(await readFile(cfgPath, "utf8")) ?? {};
+    const cfg = await readYaml(cfgPath) ?? {};
     const ws = cfg.ori?.workspace;
     if (ws?.apps_root) appsRoot = ws.apps_root;
-    for (const a of ws?.apps ?? []) if (a.path) paths.push(a.path);
+    for (const a of Array.isArray(ws?.apps) ? ws.apps : []) if (a?.path) paths.push(a.path);
   }
   const dirs = paths.length > 0 ? paths : [appsRoot];
   const out = [];
@@ -7576,41 +7652,41 @@ async function walk(dir, acc) {
   }
   return acc;
 }
+var ATTR_RE = /(v-bind:|:)?data-testid\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*(?:"([^"]*)"|'([^']*)'|`([^`$]*)`)\s*\}|(\{[^}]*\}))/g;
 async function indexImpl(root, pageIds) {
   const literals = /* @__PURE__ */ new Set();
   const violations = [];
   const files = [];
   for (const d of await appSourceDirs(root)) await walk(d, files);
-  const attrRe = /(:?)data-testid\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*(?:"([^"]*)"|'([^']*)'|`([^`$]*)`)\s*\}|(\{[^}]*\}))/g;
   for (const f of files) {
     const rel = relative(root, f);
     if (TEST_FILE.test(rel)) continue;
     if ((await stat(f)).size > 2e6) continue;
-    const lines = (await readFile(f, "utf8")).split("\n");
-    lines.forEach((line, i) => {
-      for (const m of line.matchAll(attrRe)) {
-        if (m.index !== void 0 && line[m.index - 1] === "[") continue;
-        const loc = `${rel}:${i + 1}`;
-        const value = m[2] ?? m[3] ?? m[4] ?? m[5] ?? m[6];
-        if (m[1] === ":" || m[7] !== void 0 || value === void 0) {
-          violations.push(`${loc}: \u52D5\u7684 testid \u306F\u7981\u6B62 (\u56FA\u5B9A testid + data-key \u3092\u4F7F\u3046): ${m[0]}`);
-          continue;
-        }
-        if (/[${}]/.test(value)) {
-          violations.push(`${loc}: \u52D5\u7684 testid \u306F\u7981\u6B62 (\u56FA\u5B9A testid + data-key \u3092\u4F7F\u3046): ${m[0]}`);
-          continue;
-        }
-        literals.add(value);
-        if (!TESTID_CHARSET.test(value)) {
-          violations.push(`${loc}: testid \u5F62\u5F0F\u9055\u53CD (kebab-case \u3092 . \u3067\u9023\u7D50): "${value}"`);
-          continue;
-        }
-        const ns = /^(page|widget)\.([^.]+)/.exec(value);
-        if (ns && !pageIds.has(ns[2])) {
-          violations.push(`${loc}: testid \u304C\u5B58\u5728\u3057\u306A\u3044 page / widget \u3092\u6307\u3057\u3066\u3044\u307E\u3059: "${value}"`);
-        }
+    const text = await readFile(f, "utf8");
+    for (const m of text.matchAll(ATTR_RE)) {
+      const at = m.index ?? 0;
+      if (text[at - 1] === "[") continue;
+      const loc = `${rel}:${text.slice(0, at).split("\n").length}`;
+      const shown = m[0].replace(/\s+/g, " ");
+      let value = m[2] ?? m[3] ?? m[4] ?? m[5] ?? m[6];
+      if (m[1] !== void 0) {
+        const lit = value === void 0 ? null : /^\s*'([^']*)'\s*$/.exec(value);
+        value = lit ? lit[1] : void 0;
       }
-    });
+      if (m[7] !== void 0 || value === void 0 || /[${}]/.test(value)) {
+        violations.push(`${loc}: \u52D5\u7684 testid \u306F\u7981\u6B62 (literal \u3067\u66F8\u304D\u3001\u52D5\u7684\u8981\u7D20\u306F\u56FA\u5B9A testid + data-key \u3092\u4F7F\u3046): ${shown}`);
+        continue;
+      }
+      literals.add(value);
+      if (!TESTID_CHARSET.test(value)) {
+        violations.push(`${loc}: testid \u5F62\u5F0F\u9055\u53CD (kebab-case \u3092 . \u3067\u9023\u7D50): "${value}"`);
+        continue;
+      }
+      const ns = /^(page|widget)\.([^.]+)/.exec(value);
+      if (ns && !pageIds.has(ns[2])) {
+        violations.push(`${loc}: testid \u304C\u5B58\u5728\u3057\u306A\u3044 page / widget \u3092\u6307\u3057\u3066\u3044\u307E\u3059: "${value}"`);
+      }
+    }
   }
   return { literals, violations };
 }
@@ -7625,15 +7701,17 @@ async function checkPages(root, ids, withImpl) {
   for (const id of ids) {
     let page;
     let expected;
+    let c;
     try {
       page = await loadPage(root, id);
       expected = (await deriveRows(root, page)).rows;
+      c = await readContract(root, id);
     } catch (e) {
       if (!(e instanceof InputError)) throw e;
       report(`${id}: ${e.message}`);
       continue;
     }
-    const c = await readContract(root, id);
+    if (page.screens.length === 0) report(`${id}: ${NO_SCREEN}`);
     if (!c) {
       report(`${id}: testids.yaml \u304C\u3042\u308A\u307E\u305B\u3093 (testids.js sync ${id})`);
       continue;
@@ -7653,23 +7731,10 @@ async function checkPages(root, ids, withImpl) {
   return count;
 }
 async function checkCollisions(root) {
-  const path = join(root, ".ori/domain/ui-fields/page-groups.md");
-  if (!await exists(path)) throw new InputError(".ori/domain/ui-fields/page-groups.md \u304C\u3042\u308A\u307E\u305B\u3093");
-  const groups = /* @__PURE__ */ new Map();
-  let current = null;
-  for (const line of (await readFile(path, "utf8")).split("\n")) {
-    const h = /^#{2,3}\s.*\{#([a-z0-9-]+)\}\s*$/.exec(line);
-    if (h) {
-      current = h[1];
-      continue;
-    }
-    if (!current) continue;
-    const refs = [...line.matchAll(/ui-field:(screen-\d+)(?![\w-])/g)].map((m) => m[1]);
-    if (/screens\**\s*:/.test(line)) refs.push(...[...line.matchAll(/\b(screen-\d+)\.md/g)].map((m) => m[1]));
-    for (const s of refs) groups.set(current, (groups.get(current) ?? /* @__PURE__ */ new Set()).add(s));
-  }
+  const groups = await parsePageGroups(root);
+  if (groups === null) throw new InputError(".ori/domain/ui-fields/page-groups.md \u304C\u3042\u308A\u307E\u305B\u3093");
   if (groups.size === 0) {
-    console.error("WARN: page-groups.md \u304B\u3089 grouping \u21D4 screen \u306E\u5BFE\u5FDC\u3092 1 \u4EF6\u3082\u89E3\u6790\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F (ui-field:screen-N \u304B screen-N.md \u3067\u53C2\u7167\u3057\u3066\u304F\u3060\u3055\u3044)");
+    console.error("WARN: page-groups.md \u304B\u3089 grouping \u21D4 screen \u306E\u5BFE\u5FDC\u3092 1 \u4EF6\u3082\u89E3\u6790\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F (depends_on: \u306E - ui-field:screen-N \u3067\u53C2\u7167\u3057\u3066\u304F\u3060\u3055\u3044)");
     return 0;
   }
   let count = 0;
@@ -7697,14 +7762,12 @@ async function addExtra(root, id, flags) {
   }
   const row = { testid, purpose, source };
   if (typeof dynamic === "string") row.dynamic = dynamic;
-  const next = { derived: c.derived, extra: [...c.extra, row] };
-  const page = await loadPage(root, id);
-  const v = extraViolations(page, next);
+  const v = rowViolations(await loadPage(root, id), row);
   if (v.length > 0) {
     for (const m of v) console.log(`VIOLATION ${id}: ${m}`);
     return 1;
   }
-  await writeContract(root, id, next);
+  await writeContract(root, id, { derived: c.derived, extra: [...c.extra, row] });
   console.log(`added: "${testid}" \u2192 .ori/pages/${id}/testids.yaml extra`);
   return 0;
 }

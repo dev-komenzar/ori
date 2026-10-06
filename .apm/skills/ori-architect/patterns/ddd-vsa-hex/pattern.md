@@ -328,6 +328,7 @@ extra:     # ori-derive / ori-generate が scripts/testids.js add-extra で追�
   ④ 契約 testid が実装 source に literal で存在する (契約 ⊆ 実装。契約外の実装 testid は許容)
   ⑤ 実装 testid の lint (動的組み立て禁止・形式・存在しない page 参照)。
   `/ori-impl-green` の完了条件 / `/ori-review` structural gate / `/ori-doctor` が実行する。
+- `testids.js` は cwd から上方へ `.ori/` を探して project root を決める。project root 外 (user スコープに install された skill dir 等) から実行する場合は `--root <project-root>` を渡す。
 - slice presentation (`<slice-id>.<elem>`) は本契約の対象外 (ori-oan.12)。
 
 ### 責務分離 (正典と stack-specific)

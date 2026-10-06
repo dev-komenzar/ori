@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { build, context } from "esbuild"
-import { readdirSync, mkdirSync } from "fs"
+import { readdirSync, mkdirSync, existsSync } from "fs"
 import { join, dirname, basename } from "path"
 import { fileURLToPath } from "url"
 
@@ -28,7 +28,14 @@ const SHARED_ENTRIES = [
   },
 ]
 
+// 出力先の重複 (skill 固有 entry と共有 entry が同名) は黙って上書きせず止める
+const outputs = new Map()
+
 async function buildEntry(entry, outFile, label) {
+  if (outputs.has(outFile)) {
+    throw new Error(`build-skills: ${outFile} is produced by both ${outputs.get(outFile)} and ${entry}`)
+  }
+  outputs.set(outFile, entry)
   const opts = {
     entryPoints: [entry],
     outfile: outFile,
@@ -103,6 +110,9 @@ for (const skillName of skillDirs) {
 for (const { entry, skills } of SHARED_ENTRIES) {
   const outName = basename(entry, ".ts")
   for (const skillName of skills) {
+    if (!existsSync(join(SKILLS_OUT, skillName, "SKILL.md"))) {
+      throw new Error(`build-skills: SHARED_ENTRIES target skill not found: .apm/skills/${skillName}/SKILL.md`)
+    }
     const outDir = join(SKILLS_OUT, skillName, "scripts")
     mkdirSync(outDir, { recursive: true })
     await buildEntry(
