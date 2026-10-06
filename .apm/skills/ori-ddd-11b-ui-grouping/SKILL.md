@@ -47,6 +47,14 @@ description: ori 独自 Phase 11b（Page Grouping）。ui-fields の依存関係
     - 確定した `depends_on` (page-groups.md) から `.ori/architecture.md` の `## Page Map` section を自動生成
     - マーカー（`<!-- BEGIN ori-distill phase-11b auto-generated; do not edit between markers -->` ～ `<!-- END ori-distill phase-11b auto-generated -->`）の外側は保持される
 8. `for f in .ori/domain/ui-fields/*.md; do bash ./scripts/lint-domain.sh "$f"; done` を実行して自己検証
+   - **testid `<elem>` 衝突検査** (ori-oan.7): `node scripts/testids.js check-collisions` を実行する。
+     page の testid は field id から `screen-<N>-` を除いた `<elem>` で導出されるため、
+     1 page に複数 screen を束ねると `screen-2-save` / `screen-3-save` が同じ testid に衝突する
+     (規範: `ddd-vsa-hex/pattern.md` "page / widget の testid 契約")。exit 1 なら衝突した
+     grouping と field を提示し、**field id の改名 (11a へ戻る) か grouping の見直し**をユーザに選ばせる。
+     自動で prefix を残す等の回避はしない
+   - grouping ⇔ screen の対応は `depends_on` の `ui-field:screen-N` から読まれる。WARN「解析できません」が出たら
+     出力テンプレートどおり `ui-field:screen-N` で書いているか確認する
 9. lint 失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
 
 ### Phase 完了時：page の一括 scaffold 提案

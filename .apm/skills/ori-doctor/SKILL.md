@@ -134,6 +134,16 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 - fix は該当 spec の `#test-points` への項目追加 → `/ori-flow <id>` 再生成を案内する
 - **ERROR にしない**：文字列一致のため false positive がありうる。ori-arch adapter（page spec への構造的な写像）との連携は未実装（R4/R5 安定後の将来課題）
 
+### 14. page testid 契約 (testids.yaml ⟷ ui-fields ⟷ 実装) {#page-testids}
+
+`.ori/pages/<id>/testids.yaml` (page / widget の testid 契約。規範は `ddd-vsa-hex/pattern.md` "page / widget の testid 契約") を全 page 横断で検査する（`check-page-testids.sh` = 同 bundle の `scripts/testids.js check --all`、ori-oan.7）。
+
+- 検出: testids.yaml 不在 / derived が ui-fields と不一致 (stale) / extra 形式違反・重複 / **契約 testid が実装 source に literal で不在** (契約 ⊆ 実装) / 実装 testid の動的組み立て・形式違反・存在しない page 参照
+- scenario-first で `/ori-generate` が後から `extra:` に追記した行 (`source: scenario:<id>`) の実装追従漏れもここで拾う
+- 実装探索は `.ori/config.yaml` `workspace.apps[].path` 配下 (node_modules / target / dist / テストファイルを除外)
+- fix: 実装の追従は `/ori-flow <page-id>` (impl-green が契約検査を完了条件に持つ)、stale は `node scripts/testids.js sync <page-id>`
+- `--testid-sweep` 指定時は page ごとに bd issue を起票 (手順 3b)
+
 ## 手順
 
 1. **`.ori/` 存在確認**：なければ「`/ori-init` で初期化してください」と返す
@@ -153,6 +163,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
    - `check-proposals.sh` — pending proposal カウント
    - `check-scenario-coverage.sh` — validation.md の未 scaffold scenario section を WARN（live 計算、`new-scenario.js --list-validation` 再利用）
    - `check-dod-sweep.sh` — Slice DoD 4 rule の sweep (read-only mode、report のみ)
+   - `check-page-testids.sh` — page / widget の testid 契約 (testids.yaml) の stale・形式・実装追従・実装 testid lint を WARN（§14）
    - `lint.js` — `.ori/` の Markdown anchor / id 規約検証 + architecture.md guardrails 検証（JS）：
      ```bash
      node ./scripts/lint.js [<path>] [--strict]
@@ -167,6 +178,12 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
    ```
    - 違反ごとに bd issue を起票 (label 規約 SSoT は `task-management.instructions.md`)
    - idempotent: `bd list --label=dod-violation --label=slice:<id> --label=rule:<rule-id> --status=open` が hit するなら re-file しない
+3b. **`/ori-doctor --testid-sweep` 指定時**: testid 契約違反を **issue auto-emit mode** で再実行：
+   ```bash
+   bash ./scripts/check-page-testids.sh --emit-issues
+   ```
+   - page ごとに 1 issue (label `testid-violation` + `page:<id>`、実装 testid lint は `page:_impl`。label 規約 SSoT は `task-management.instructions.md`)
+   - idempotent: `bd list --label=testid-violation --label=page:<id> --status=open` が hit するなら re-file しない
 4. **結果を集約**してレポートを生成
 5. **報告 only**：自動修復は行わない (DoD sweep の auto-emit は例外として bd issue を作るが、code は触らない)
 

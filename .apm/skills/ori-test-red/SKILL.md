@@ -24,6 +24,7 @@ description: /ori-flow phase 3。spec.md のテスト観点から failing test �
 - 入力：
   - `.ori/slices/<id>/spec.md`（phase 1 で生成済み。`## 境界契約 {#boundary-contract}` section を含む — `feature-spec.instructions.md` 参照）
   - `.ori/slices/<id>/manifest.yaml`（`bc:` `app:` と `expected_deliverables` の解決に必要）
+  - `.ori/pages/<id>/testids.yaml`（type: page / widget のみ。testid 契約 — `scripts/testids.js sync <id>` で最新化してから読む）
   - `.ori/config.yaml`（`workspace.apps:` から `app:` 解決、fallback として `apps[].path`/src を `<source_root>` に使う）
   - `.ori/architecture.md`（あれば `root.path` / `roots[<id>].path` を canonical な `<source_root>` として優先採用。`stack:` field から typescript-tauri 判定）
   - `.apm/instructions/ddd-test.instructions.md`（test 共通メタルール; concretion の正典は下記 test.md）
@@ -159,6 +160,11 @@ skill 起動時に以下の順序で resolve:
 9. **domain / application 層の vitest テストを emit**:
    - 既存ルール (sibling import / fast-check VO test) で `<slice-id>.test.ts` / `<slice-id>-vo.property.test.ts` を書く
    - impl 不在の段階では module-not-found / type error で fail。`// @ts-expect-error` は不要、失敗をそのまま観測
+9b. **page / widget の presentation test** (manifest `type: page` / `type: widget` のみ。ori-oan.7):
+   - `node scripts/testids.js sync <id>` を実行してから `.ori/pages/<id>/testids.yaml` を読む
+   - component test は `getByRole` / `getByLabelText` を第一推奨。testid が要る場合は**契約の値だけ**を使う
+     (`derived:` / `extra:` の `testid`)。ui-fields の field id (`screen-<N>-*`) や規則からの自前導出を書かない
+   - 契約に無い testid が必要なら test に直書きせず、`/ori-derive` の extra 登録漏れとしてユーザに報告する
 10. **`pnpm test --filter <slice-id>` 相当を Bash で実行**して RED を確認：
     ```bash
     pnpm -F <app> test <source_root>/<bc>/slices/<slice-id>/tests

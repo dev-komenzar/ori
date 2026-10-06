@@ -151,6 +151,12 @@ bd create \
   --labels=dod-violation,slice:create-note,rule:dod-2,bc:note-taking
 ```
 
+### testid 契約違反 (`/ori-doctor --testid-sweep`)
+
+page / widget の testid 契約 (`.ori/pages/<id>/testids.yaml`) 違反は DoD violation と別系統で、
+`testid-violation` + `page:<page-id>` を付与する (page 単位で 1 issue。実装 testid の lint 違反は `page:_impl`)。
+dedupe は同 label set の open issue の有無で行う。
+
 ## 公式 BOUNDARIES.md の core question {#core-question}
 
 > **"Could I resume this work after 2 weeks away?"**
