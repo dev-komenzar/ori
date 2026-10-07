@@ -90,8 +90,22 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
      - "production fixture (`apps/<app>/src/<bc>/shared/test-fixtures/`) を構築 (未設置なら追加)" — DoD rule 3
      - "全 sub_layers (`domain`/`application`/`infrastructure`/`presentation`/`tests`) 埋め込み" — DoD rule 1
      - "`cross_root_contracts` を持つ slice では phase_hooks (architecture.md `phase_hooks.flow-impl-{red-pre,green-post}`) で specta 再生成 — DoD rule 4"
+6b. **page / widget の testid 契約** (manifest `type: page` / `type: widget` のみ。ori-oan.7):
+   - `node scripts/testids.js sync <id>` で `.ori/pages/<id>/testids.yaml` の `derived:` (ui-field 由来) を最新化する。
+     exit 1 (page 未 scaffold / screen 不在 / `<elem>` 衝突) なら停止しメッセージをユーザに提示する (推測で埋めない)
+   - ui-field 以外で testid が要る要素 (page/widget root、region、エラー表示、部品、動的要素) を spec の
+     入出力・不変条件から洗い出し、1 件ずつ `extra:` に登録する:
+     ```bash
+     node scripts/testids.js add-extra <id> --testid <kind>.<id>[.<elem>] --purpose "<役割>" --source derive [--dynamic data-key]
+     ```
+     root は `<kind>.<id>` (`<elem>` なし)。動的要素は固定 testid + `--dynamic data-key`。命名規範は `ddd-vsa-hex/pattern.md` "UI selector / testid 規約"
+   - spec.md には testid の具体値や写像規則を**書かない**。`## 実装ノート` に
+     「testid は `.ori/pages/<id>/testids.yaml` の契約値を literal で付与する (`/ori-impl-green` 完了条件で検査)」と
+     リンクを置くだけにする (`feature-spec.instructions.md` "page / widget の testid")。
+     特に「ui-fields の field id をそのまま data-testid に写す」と書いてはならない (実装と E2E が乖離した G5 の原因)
 7. **spec.md の自己検証**：
    - 必須 H2 6 種が揃っているか（`## 概要`、`## 入出力`、`## 不変条件`、`## 境界契約`、`## テスト観点`、`## 実装ノート`）
+   - page / widget: `node scripts/testids.js check <id> --no-impl` が exit 0 か、spec.md に `screen-<N>-` 形式の testid 記述が無いか
    - 境界契約に boundary kind / contact point が宣言済か
    - テスト観点に boundary test と production fixture の項目が両方あるか
    - 実装ノートに stub commands / production fixture / sub_layers / phase_hooks のいずれかへの言及があるか (slice_kind が `command` で `cross_root` を持つ場合は **全部必須**、それ以外は該当する rule だけ必須)

@@ -23,6 +23,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
   - `.ori/scenarios/<id>/spec.md`（必須。runner 解決済み — derive が記録した `runner:` を確認）
   - `.ori/scenarios/<id>/spec.md#scenario-steps`（Gherkin 形式のシナリオ。原典は `.ori/domain/validation.md#<id>`）
   - `.ori/architecture.md`（必須。`workspace.apps[].runtime` blocks + `scenario_test_runner`）
+  - `.ori/pages/<page-id>/testids.yaml`（UI 駆動 scenario のみ。testid 契約 — step 7 で `scripts/testids.js sync` してから読む）
 - 出力：
   - `.ori/scenarios/<id>/tests/<scenario-id>.spec.ts`（テストコード、`@ori-generated`）
   - `.ori/scenarios/<id>/playwright.config.ts` + `teardown.mjs` + `tsconfig.json`、または `wdio.conf.ts`（runner 別。vitest は config なし）
@@ -67,8 +68,15 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
    - テストコード内に **service の起動・停止・healthcheck 待機を書かない**（lifecycle は runner config が所有 — `scenario-test.instructions.md` 参照）
    - **wdio: `browser.execute` の戻り値は `!= null` で判定する**（WebDriver は `undefined` を `null` で返すため、`!== undefined` の poll は即成立する。ori-oan.9）。例: `await browser.waitUntil(async () => (await browser.execute(() => (window as unknown as { __result?: unknown }).__result)) != null)`
    - **wdio: temp path は `process.env.ORI_SCENARIO_TMP` 配下を使う**（例: 保存先変更 scenario の新 dir。runner config が per-run temp root を公開する）
-   - **selector は pattern.md 規約で導出（G5）**: `domain/ui-fields/*.md`（field id の正典）+ page 構成（`page-groups.md` / architecture Page Map）を読み、field → testid を写像する。ui-field は `page.<page-id>.<elem>`（`<elem>` は field purpose。field id の `screen-<N>-` prefix を除いた部分）。E2E は `data-testid` を第一推奨（`ddd-vsa-hex/pattern.md` §UI selector / testid 規約）。`<page-id>` が解決できない場合は testid を推測せず `TBD`
-   - 実装側 testid が pattern.md 準拠かを確認し、乖離があれば **impl-notes に記録**する（実装の testid に合わせてテストを捏造しない）
+   - **selector は testid 契約の値だけを使う（G5 / ori-oan.7）**: E2E は `data-testid` を第一推奨（SSoT: `ddd-vsa-hex/pattern.md` "page / widget の testid 契約"、手順の詳細は `scenario-test.instructions.md#selectors`）。scenario が操作・検証する page / widget ごとに:
+     1. `node scripts/testids.js sync <page-id>` で `.ori/pages/<page-id>/testids.yaml` を最新化して読む（exit 1 = page 未 scaffold / `<elem>` 衝突。推測で埋めず停止し、上流 (11b / page scaffold) の未完了としてユーザに提示）
+     2. ui-field 由来の要素は `derived:`、それ以外は `extra:` の `testid` をそのまま使う。ui-fields の field id（`screen-<N>-*`）や規則から testid を自前で導出しない
+     3. 契約に無い要素（エラー表示等）が必要なら、テストに直書きせず先に追記する:
+        ```bash
+        node scripts/testids.js add-extra <page-id> --testid <kind>.<page-id>.<elem> --purpose "<役割>" --source scenario:<scenario-id>
+        ```
+        追記のみ（既存行の変更・削除はしない）。実装が後から追従する（`/ori-impl-green` / `/ori-doctor` が検出）
+   - **実装との乖離は生成時に記録する（非停止）**: 実装が既にあれば `node scripts/testids.js check <page-id>` を実行し、「契約 testid が実装に存在しません」があれば spec.md `#impl-notes` に testid 一覧と「実装が契約に追従するまで RED」を記録する。実装の testid に合わせてテストを捏造しない
    - テストファイルは `.ori/scenarios/<id>/tests/<scenario-id>.spec.ts` に出力、先頭に `// @ori-generated scenario:<scenario-id>` マーカー
    - **test-points 網羅対応表を生成する（R5）**: `spec.md#test-points` の全項目（項目の数え方は `scenario-test.instructions.md#test-points-map` の awk が SSoT。インデントなしの `- ` 行のみが項目で、sub-bullet は項目に含めず親項目の説明として扱う）を `.ori/scenarios/<id>/test-points-map.md` に写す。形式・規則の SSoT は `scenario-test.instructions.md#test-points-map`。項目を省略・統合しない。E2E で原理的に検証不能な項目は `N/A(代替担保)` とし、代替担保（unit test の file:line）を必ず併記する。代替が無ければ `UNCOVERED` のまま残す（推測で COVERED にしない）
 

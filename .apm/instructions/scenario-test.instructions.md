@@ -142,7 +142,12 @@ scenario テストは以下の組み合わせで検証する:
 
 ### セレクタ / testid {#selectors}
 
-E2E は `data-testid` を第一推奨とする（SSoT: `ddd-vsa-hex/pattern.md` §UI selector / testid 規約）。ui-field 由来の入力要素は `domain/ui-fields/screen-<N>.md` の field id をそのまま testid にせず、pattern 規約で `page.<page-id>.<elem>`（または slice-local は `<slice-id>.<elem>`）へ写像する。`<elem>` は field purpose（field id の `screen-<N>-` prefix を除いた部分）、`<page-id>` は page 構成（`page-groups.md` / architecture Page Map）から解決する。解決不能なら推測せず `TBD`。**実装側 testid も同規約に準拠させる**（乖離は要素解決失敗の原因）。
+E2E は `data-testid` を第一推奨とする（SSoT: `ddd-vsa-hex/pattern.md` §UI selector / testid 規約 → page / widget の testid 契約）。page / widget 上の要素の testid は **`.ori/pages/<id>/testids.yaml` の契約値だけ**を使い、規則から自前で導出しない。
+
+- 参加 page ごとに `scripts/testids.js sync <page-id>`（`/ori-generate` skill bundle の script） で契約を最新化してから読む（ui-field 由来は `derived:`、それ以外は `extra:`）
+- ui-fields の field id（`screen-<N>-*`）をそのまま testid にしない
+- 契約に無い要素が必要なら `scripts/testids.js add-extra <page-id> --testid <kind>.<page-id>.<elem> --purpose <...> --source scenario:<scenario-id>` で追記してから使う（推測した testid をテストに直書きしない）
+- 実装が既にあれば `scripts/testids.js check <page-id>` の「実装に存在しません」を spec.md 実装ノートに記録する（生成は止めない。実装が契約に追いつくまで RED になる旨を明示）
 
 ### API 呼び出し {#api-calls}
 

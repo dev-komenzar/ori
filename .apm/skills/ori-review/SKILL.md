@@ -11,9 +11,9 @@ description: /ori-flow phase 6 (slice/page) または phase 3 (scenario)。slice
 
 ## 役割
 
-- **3 gate ランナー**（slice/page のみ）：boundary test / arch lint / public_entry の 3 check を Bash で実行
+- **structural gate ランナー**（slice/page のみ）：boundary test / arch lint / public_entry の 3 check (page / widget は + testid 契約 gate (d)) を Bash で実行
 - **scenario reviewer**（scenario のみ）：scenario spec とテストコードの整合性を review し、全 `Then` 句 ↔ assertion のカバレッジを gate する
-- **semantic reviewer ディスパッチャー**：3 gate pass 後に reviewer agent を fresh context で spawn (spec ↔ impl 乖離のみ意味的判定)
+- **semantic reviewer ディスパッチャー**：structural gate pass 後に reviewer agent を fresh context で spawn (spec ↔ impl 乖離のみ意味的判定)
 - **single-pass 強制装置**：往復は **最大 1 回**。無限ループに陥らないためのガード
 - **patch ディスパッチャー**：指摘内容に応じて適切な phase（test-red / impl-green / refactor / propose / generate）に差し戻す
 
@@ -54,8 +54,9 @@ description: /ori-flow phase 6 (slice/page) または phase 3 (scenario)。slice
 | **(a) boundary test green** | `<source_root>/<bc>/slices/<slice-id>/tests/` 配下 (`dod.test.ts` を含む) が GREEN | `pnpm -F <app> test <source_root>/<bc>/slices/<slice-id>/tests` |
 | **(b) arch lint pass** | `/ori-architect` が生成した architecture adapter (eslint-plugin-boundaries / Rust `tests/arch.rs`) が pass | `pnpm -F <app> lint && (cd apps/<app>/src-tauri && cargo test --test arch)` (stack=typescript-tauri) / `pnpm -F <app> lint` (stack=typescript) |
 | **(c) public_entry 整合性** | slice 外から slice 内部 (`domain/` `application/` `infrastructure/`) への直 import が無い (= `index.ts` / `mod.rs` 経由のみ)。大部分は (b) でカバーされるが spot grep で二重に確認 | `rg -n "slices/<slice-id>/(domain\|application\|infrastructure)/" <source_root> --glob='!**/slices/<slice-id>/**'` がヒット 0 件 |
+| **(d) testid 契約** (type: page / widget のみ。ori-oan.7) | `.ori/pages/<id>/testids.yaml` の契約 testid が実装に literal で存在し、derived が stale でなく、実装 testid に動的組み立て・形式違反が無い (規範: `ddd-vsa-hex/pattern.md` "page / widget の testid 契約") | `node scripts/testids.js check <id>` が exit 0 |
 
-3 gate のいずれかが fail なら **reviewer agent は spawn しない**。即 verdict を NEEDS_FIX or REJECT として該当 phase に差し戻す (詳細は手順 4)。
+gate のいずれかが fail なら **reviewer agent は spawn しない**。即 verdict を NEEDS_FIX or REJECT として該当 phase に差し戻す (詳細は手順 4)。
 
 ### なぜ DoD 個別 rules を review checklist にしないか {#why-no-dod-checklist}
 
@@ -107,7 +108,13 @@ Slice DoD (`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` "Slice De
    rg -n "slices/<slice-id>/(domain|application|infrastructure)/" "<source_root>" --glob='!**/slices/<slice-id>/**'
    ```
    - ヒットあり → `/ori-refactor` に差し戻し (verdict=NEEDS_FIX、reason="public_entry bypass")。手順 7 へ
-   - ヒット 0 → gate 全 pass、reviewer spawn へ進む
+   - ヒット 0 → slice は gate 全 pass、reviewer spawn へ進む。page / widget は gate (d) へ
+4b. **gate (d) testid 契約** (manifest `type: page` / `type: widget` のみ):
+   ```bash
+   node scripts/testids.js check <id>
+   ```
+   - exit 1 → `/ori-impl-green` に差し戻し (verdict=NEEDS_FIX、reason="testid contract violation"、`VIOLATION` 行を review.md に貼る)。手順 7 へ
+   - exit 0 → gate 全 pass、reviewer spawn へ進む
 5. **`ori-reviewer` agent を fresh context で spawn**：
    - `ori-reviewer` の agent 指示を Read し、その全指示を Task agent のプロンプトに含める
    - reviewer に渡す入力: `.ori/slices/<id>/{spec.md,manifest.yaml}`、`<source_root>/<bc>/slices/<slice-id>/{tests,domain,application,infrastructure,presentation}/`、manifest.derives_from の domain docs
