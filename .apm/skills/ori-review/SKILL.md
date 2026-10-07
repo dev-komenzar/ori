@@ -206,9 +206,11 @@ Slice DoD (`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` "Slice De
      - local app が docker-compose.yml に**含まれていない**こと
      - wdio.conf.ts の `tauri:options.application` が runtime block の `binary` と一致するか（build-then-test）
      - `@wdio/tauri-service` が services に含まれるか
-     - **前提条件（G1〜G6）の検証**: `spec.md` の実装ノートに前提条件（build 契約 / plugin / storage env / symlink / fixture seed）が記録されているか
+     - **前提条件（G1〜G6）の検証**: `spec.md` の実装ノートに前提条件（build 契約 / plugin / storage 隔離（XDG）/ symlink / fixture seed）が記録されているか
      - `runtime.build` が `runtime.binary` を生成する契約か（Tauri の `cargo build` 単体は devUrl 参照の dev binary なので不可 — G2）
-     - `wdio.conf.ts` の `onPrepare` が次のいずれも所有しているか: node_modules symlink（G3）/ `runtime.test_env` と `TAURI_TEST_STORAGE_DIR` の設定（G4）/ fixture seed（G6）
+     - `wdio.conf.ts` の `onPrepare` が次のいずれも所有しているか: 非 Linux / `:4444` 占有時の fail fast（`SevereServiceError` で throw。普通の `Error` は wdio に握りつぶされ続行する）/ node_modules symlink（G3）/ `XDG_CONFIG_HOME`・`XDG_DATA_HOME`・`XDG_CACHE_HOME`・`XDG_STATE_HOME` の per-run temp 設定と `ORI_SCENARIO_TMP` 公開、`runtime.test_env` の設定（G4）/ fixture seed（G6）。XDG 設定が test_env の後にあり上書きされないか。`maxInstances: 1` か。`TAURI_TEST_STORAGE_DIR` を test_env 宣言なしに注入していないか
+     - テストコードが `browser.execute` の結果を `=== undefined` / `!== undefined` で判定していないか（WebDriver は `undefined` を `null` で返す。`!= null` が正。`scenario-test.instructions.md#browser-operations`）
+     - plugin 警告の判定が `scenario-test.instructions.md#plugin-warnings` に従っているか（起動〜最初の reload まで 0、reload 直後の一過性警告は許容）
      - app 側に `tauri-plugin-wdio` の Rust 配線（Cargo dep / capabilities `wdio:default` / lib.rs `#[cfg(debug_assertions)]`）が施されているか（G1。未配線は `/ori-generate` へ差し戻し）
      - frontend の `@wdio/tauri-plugin` 動的 import と test build script が impl-notes の要求として記録されているか（G1）
    - **infra 参加時**:

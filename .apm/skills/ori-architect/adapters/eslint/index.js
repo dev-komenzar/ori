@@ -7660,7 +7660,7 @@ var LocalRuntimeSchema = external_exports.object({
   target: RunTargetSchema.describe("\u5B9F\u884C\u57FA\u76E4"),
   runner: external_exports.string().describe("UI \u99C6\u52D5 runner (\u4F8B: wdio)\u3002derive \u306E runner chain \u512A\u5148\u30C1\u30A7\u30FC\u30F3 2 \u3067\u4F7F\u7528"),
   test_env: external_exports.record(external_exports.string()).optional().describe(
-    "scenario \u5B9F\u884C\u6642\u306B runner config \u304C inject \u3059\u308B test-only env\u3002ori \u6A19\u6E96\u306E storage \u9694\u96E2 env (\u4F8B TAURI_TEST_STORAGE_DIR) \u306F generate \u304C\u5E38\u6642\u6CE8\u5165\u3059\u308B"
+    "scenario \u5B9F\u884C\u6642\u306B runner config \u304C inject \u3059\u308B app \u56FA\u6709\u306E test-only env (\u56FA\u5B9A\u6587\u5B57\u5217)\u3002ori \u6A19\u6E96\u306E storage \u9694\u96E2 (XDG_*_HOME \u306E per-run temp \u5316) \u306F generate \u304C\u5E38\u6642\u6CE8\u5165\u3059\u308B\u305F\u3081\u5BA3\u8A00\u4E0D\u8981\u3002XDG_*_HOME / ORI_SCENARIO_TMP \u306F\u4E88\u7D04 (\u5BA3\u8A00\u3057\u3066\u3082 ori \u6A19\u6E96\u304C\u512A\u5148)"
   )
 }).passthrough();
 var AppRuntimeSchema = external_exports.discriminatedUnion("mode", [

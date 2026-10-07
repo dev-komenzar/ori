@@ -54,7 +54,9 @@ scenario の generate は、生成物だけで E2E が走るよう app 側の前
 
 - **build-then-test の binary 契約**: `runtime.build` は `runtime.binary` を生成する command でなければならない。Tauri の `cargo build` 単体は devUrl 参照の dev binary になるため不可。`tauri build --debug --no-bundle`(例: `bun run build:test`)を使う
 - **plugin 前提**: `@wdio/tauri-service` は `driverProvider` に関係なく `tauri-plugin-wdio` を必須とする。未導入時は focus 系コマンド(`$` / `$$` / `findElement(s)` / `elementClick` / `getTitle`)ごとに 5 秒待機する。配線は Cargo dep + capabilities `wdio:default` + `lib.rs` の `#[cfg(debug_assertions)]` 登録 + frontend 動的 import(`VITE_WDIO_TEST` gate)。production 非混入
-- **storage 隔離**: ori 標準 env **`TAURI_TEST_STORAGE_DIR`** を runner config の `onPrepare` が temp dir に設定し、app は settings 解決時にこの env を最優先する。app 側 override が無いと実ユーザデータを読む
+- **storage 隔離（XDG temp）**: runner config の `onPrepare` が per-run temp root を `mkdtemp` し、`XDG_CONFIG_HOME` / `XDG_DATA_HOME` / `XDG_CACHE_HOME` / `XDG_STATE_HOME` を root 配下に向ける。Tauri の `app_config_dir` / `app_data_dir`、WebKitGTK の storage、window-state 等はすべて XDG で解決されるため、app 側 override 無しで settings / preferences を含め隔離される。`HOME` は差し替えない（XDG を経由せず `$HOME` を直接読む app 処理は隔離対象外）。temp root は `ORI_SCENARIO_TMP` として test code / seed に公開する
+  - app 固有の storage override env（例: 旧 ori 標準の `TAURI_TEST_STORAGE_DIR`）は ori 標準ではなく、generate は注入しない。app は保存先を `app_config_dir` / `app_data_dir` 等の XDG 解決に任せる。`runtime.test_env` は固定文字列のみで per-run temp を指せない（per-run の path が必要な test は `ORI_SCENARIO_TMP` を使う）
+- **platform**: wdio scenario は **Linux のみ正式サポート**（XDG 隔離が効くのは Linux のみ。macOS は tauri-driver 非対応）。非 Linux では runner config が隔離を保証できない旨を明示して fail fast する（`SevereServiceError`。普通の `Error` は wdio launcher に握りつぶされる）。runner config は `maxInstances: 1` 固定（>1 / multiremote では `@wdio/tauri-service` が `XDG_DATA_HOME` を上書きする）
 - **node_modules 解決**: `.ori/scenarios/node_modules` → `apps/<app>/node_modules` の symlink
 - **fixture seed**: 既存データ前提の scenario は `onPrepare` で seed する。frontmatter 形式の SSoT は domain / app 側
 
