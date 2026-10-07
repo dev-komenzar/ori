@@ -578,12 +578,13 @@ async function migrateMap(root: string, id: string): Promise<number> {
       for (const m of text.matchAll(re)) {
         const before = text.slice(0, m.index ?? 0);
         const where = `${TEST_FILE.test(rel) ? "test" : "impl"} ${rel}:${before.split("\n").length}`;
-        (TESTID_CONTEXT.test(before.slice(before.lastIndexOf("\n") + 1)) ? hits : refs).push(where);
+        // 直前 120 文字を見る (Prettier が改行した getByTestId(\n  "x") も拾う)
+        (TESTID_CONTEXT.test(before.slice(-120)) ? hits : refs).push(where);
       }
     }
     console.log(`${r.field} → ${r.testid}${hits.length === 0 ? " (使用箇所なし)" : ""}`);
     for (const h of hits) console.log(`  ${h}`);
-    for (const h of refs) console.log(`  参考 (testid 以外の文脈。置換しない): ${h}`);
+    for (const h of refs) console.log(`  参考 (testid 以外の文脈の可能性が高い。要確認): ${h}`);
     remaining += hits.length;
   }
   for (const r of c?.extra ?? []) {

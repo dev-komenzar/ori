@@ -496,15 +496,17 @@ describe("testids.js migrate-map (ori-oan.13)", () => {
         "apps/app/src/PageMain.svelte":
           '<label for="screen-1-draft-body">本文</label>\n<textarea id="screen-1-draft-body" data-testid="page.page-main.draft-body"></textarea>\n' +
           '<select data-testid="page.page-main.toolbar-sort-field"></select>',
-        "apps/app/src/tests/PageMain.test.ts": "screen.getByTestId('screen-1-draft-body')",
+        "apps/app/src/tests/PageMain.test.ts": "screen.getByTestId('screen-1-draft-body')\nscreen.getAllByTestId(\n  \"screen-1-draft-body\",\n);",
       },
       async (root) => {
         await run(["sync", "page-main"], root);
         const r = await run(["migrate-map", "page-main"], root);
-        expect(r.stdout).toContain("screen-1-draft-body → page.page-main.draft-body\n  test apps/app/src/tests/PageMain.test.ts:1\n");
-        expect(r.stdout).toContain("参考 (testid 以外の文脈。置換しない): impl apps/app/src/PageMain.svelte:1");
-        expect(r.stdout).toContain("参考 (testid 以外の文脈。置換しない): impl apps/app/src/PageMain.svelte:2");
-        expect(r.stdout).toContain("旧 testid の使用: 1 件");
+        expect(r.stdout).toContain(
+          "screen-1-draft-body → page.page-main.draft-body\n  test apps/app/src/tests/PageMain.test.ts:1\n  test apps/app/src/tests/PageMain.test.ts:3\n",
+        );
+        expect(r.stdout).toContain("参考 (testid 以外の文脈の可能性が高い。要確認): impl apps/app/src/PageMain.svelte:1");
+        expect(r.stdout).toContain("参考 (testid 以外の文脈の可能性が高い。要確認): impl apps/app/src/PageMain.svelte:2");
+        expect(r.stdout).toContain("旧 testid の使用: 2 件");
       },
     );
   });

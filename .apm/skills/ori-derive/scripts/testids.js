@@ -7820,12 +7820,12 @@ async function migrateMap(root, id) {
       for (const m of text.matchAll(re)) {
         const before = text.slice(0, m.index ?? 0);
         const where = `${TEST_FILE.test(rel) ? "test" : "impl"} ${rel}:${before.split("\n").length}`;
-        (TESTID_CONTEXT.test(before.slice(before.lastIndexOf("\n") + 1)) ? hits : refs).push(where);
+        (TESTID_CONTEXT.test(before.slice(-120)) ? hits : refs).push(where);
       }
     }
     console.log(`${r.field} \u2192 ${r.testid}${hits.length === 0 ? " (\u4F7F\u7528\u7B87\u6240\u306A\u3057)" : ""}`);
     for (const h of hits) console.log(`  ${h}`);
-    for (const h of refs) console.log(`  \u53C2\u8003 (testid \u4EE5\u5916\u306E\u6587\u8108\u3002\u7F6E\u63DB\u3057\u306A\u3044): ${h}`);
+    for (const h of refs) console.log(`  \u53C2\u8003 (testid \u4EE5\u5916\u306E\u6587\u8108\u306E\u53EF\u80FD\u6027\u304C\u9AD8\u3044\u3002\u8981\u78BA\u8A8D): ${h}`);
     remaining += hits.length;
   }
   for (const r of c?.extra ?? []) {

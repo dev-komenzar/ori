@@ -48,8 +48,10 @@ UI コンポーネントの単体テスト (`*.test.tsx`) は `ddd-test`（メ�
    - 判定には `testids.js check <page-id> --no-impl` と `grep -n 'screen-[0-9]*-' .ori/pages/<page-id>/spec.md` を使う
 2. **置換対応表を出す**: `node scripts/testids.js migrate-map <page-id>`。
    derived 行ごとに「旧 testid (field id) → 契約 testid」と、実装・テストでの使用箇所 (`impl` / `test`) を出す。
-   数えるのは testid の値の位置 (`data-testid="…"` / `getByTestId('…')` 等) だけ。`id=` / `for=` 等で同じ field id を
-   使っている箇所は `参考` 行に出る。これは testid ではないので置換しない
+   数えるのは testid の値の位置 (`data-testid="…"` / `getByTestId('…')` 等。改行をまたいでもよい) だけ。
+   それ以外の箇所は `参考` 行に出る。`id=` / `for=` / `name=` などは testid ではないので置換しない。
+   ただし定数経由 (`const TID = { title: "screen-1-title" }` を `data-testid={TID.title}` で使う等) は
+   testid なので置換する。参考行は 1 件ずつ読んで判断する
    `手動:` の行 (extra の testid、その page の動的 testid / 形式違反) は旧値を推定できないので、実装を読んで対応を決める
 3. **実装と unit test を同じ変更で置換する**:
    - 実装は契約の testid を literal で付ける。動的 testid (`` data-testid={`x-${key}`} ``) は、固定 testid + `data-key={key}` に直す
