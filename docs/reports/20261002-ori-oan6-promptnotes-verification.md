@@ -64,3 +64,90 @@ scenario 側は正しい (promptnotes 側の `ori-ry9h`)。
 
 ori-oan.7 / .8 / .9 / .11 を ori-oan.6 の blocker とした。これらを解消した後、
 同じ baseline (`8b25163`) から ori を更新して再生成・再実行し、手修正ゼロで GREEN になることを確認して ori-oan.6 を close する。
+
+## 5. 再検証 (2026-10-07、ori 511333a)
+
+ori-oan.7 (#121、testid を `testids.yaml` 契約に一本化) と ori-oan.8〜.11 (#122、XDG temp 隔離 / `!= null` 判定 /
+`LD_LIBRARY_PATH`・:4444 / plugin 警告の基準) を merge した版で、同じ baseline から再実行した。
+
+| 項目 | 値 |
+|---|---|
+| 日時 | 2026-10-07 15:28〜15:50 JST |
+| ori | `511333a` (`apm.lock.yaml` の resolved_commit で確認。consumer の SKILL.md に `XDG_CONFIG_HOME` / `SevereServiceError` の記述があることも確認) |
+| promptnotes branch | `chore/ori-oan-6-rerun` (未 push) |
+| commit | `8b25163` baseline → `97438f0` ori を 511333a に更新 → `b17027c` `/ori-generate` の生成直後 → `46bccb6` 手修正 |
+| 実行 | Linux / nix devShell / `env -u LD_LIBRARY_PATH npx wdio run wdio.conf.ts`。tauri-driver + WebKitWebDriver (webkitgtk 2.52.6)、wry 0.55.1 |
+
+### 5.1 結果
+
+| scenario | 生成直後 (`b17027c`) | 手修正後 (`46bccb6`) | 実行時間 (wall / mocha) |
+|---|---|---|---|
+| s1-note-created-happy | 0/4 (before all で RED) | 3/4 (step 3 が RED — app 不具合) | 12 秒 / 8.2 秒 |
+| s2-autosave-debounce | 0/3 (before all で RED) | 3/3 pass | 7 秒 / 4.0 秒 |
+| s11-storage-dir-change | 0/7 (before all で RED) | 7/7 pass | 10 秒 / 6.2 秒 |
+
+生成直後の RED は 3 本とも `element ("[data-testid="page.page-main.*"]") still not existing after 20000ms`。
+契約 testid が実装に存在しないことが原因。手修正後の s1 step 3 は前回の step 2 と同じ app 不具合
+(`DraftRegion.svelte` が submit 後に新 Block へ focus を移さない。promptnotes 側の `ori-ry9h`) で、scenario 側は正しい。
+
+**手修正ゼロでの GREEN は今回も未達。** ただし原因は ori の生成ロジックではなく、契約 testid と既存実装の乖離に移った。
+
+### 5.2 判定
+
+| 基準 | 判定 | 根拠 |
+|---|---|---|
+| (a) 3 scenario が生成物の手修正ゼロで GREEN | **未達** | 生成直後は 3 本とも RED (契約 testid が実装に無い)。手修正後も s1 は app 不具合 `ori-ry9h` で RED |
+| (b) s2 の前後で `~/.config/com.komenzar.promptnotes` と `~/.local/share/com.komenzar.promptnotes` の mtime 不変 | **達成** | 生成直後・手修正後の 2 回とも、両 dir と直下の全 entry の `stat` が実行前後で一致 (`diff` が空)。手修正後は AutoSave の書き込みを含む全 step が走った上で不変。seed (`$ORI_SCENARIO_TMP/...`) がアプリに読まれていることは step 1 の表示 assertion で確認。実行後の `/tmp/ori-scenario-s*` の残留も 0 |
+| (c) 起動から最初の reload まで plugin 警告 0 件 | **達成** | 6 回の実行すべてで 0 件。`Tauri plugin not available` は全実行で 0 件。`Failed to get window states` は 2 件で、s1 生成直後の 1 件は `deleteSession()` 後の終了処理中、s1 手修正後の 1 件は step 4 の `window.location.reload()` 直後 (許容範囲) |
+| (d) 前回の手修正 2 種類が再発していない | **一部再発** | s11 の poll 判定: 再発なし (生成コードが最初から `!= null` で、手修正なしで GREEN)。testid: 形を変えて再発 (§5.3) |
+
+ori-oan.8〜.11 の修正はそれぞれ効いている。.8 は (b)、.9 は (d) の poll 判定、.11 は (c) で確認した。
+.10 は文書化どおり `env -u LD_LIBRARY_PATH` で実行し、:4444 の占有は起きなかった。
+
+### 5.3 手修正
+
+`46bccb6` (3 ファイル、+13/−14 行)。`git diff b17027c 46bccb6` が手修正の全量。
+テストの `TID` 定数 (selector) だけを契約値から実装値に置き換えた。assertion / poll / seed / `wdio.conf.ts` は変えていない。
+testid 以外の確認項目 ((b)〜(d)) を見るための修正。
+
+| 契約 testid (生成値) | 実装 testid (置換後) |
+|---|---|
+| `page.page-main.draft-body` / `.block` / `.block-body` / `.toolbar-settings-button` | `screen-1-draft-body` / `screen-1-block` / `screen-1-block-body` / `screen-1-toolbar-settings-button` |
+| `page.page-main.restart-prompt(-restart)` | `restart-prompt(-restart)` |
+| `widget.widget-settings-modal.root` | `widget-settings-modal` |
+| `widget.widget-settings-modal.storage-dir` / `.save` | `screen-2-storage-dir` / `screen-2-save` |
+| `widget.widget-settings-modal.theme-option[data-key=X]` | `screen-2-theme-X` (実装は動的 testid) |
+
+前回は「pattern から導出した testid と実装が違う」問題だった。今回は ori-oan.7 で testid が契約由来に統一され、
+ori の動作としては正しい。ただし契約の値そのものが既存実装と一致していない。`testids.js check` の結果は
+page-main 22/22、widget 5/5 が「契約 testid が実装に存在しません」で、実装側の形式違反も 4 件ある
+(動的 testid `screen-1-toolbar-date-range-${key}` / `screen-2-theme-${value}`、`_` を含む `screen-1-toolbar-sort-field-created_at` など)。
+
+テストコードは本検証の agent が skill の記述どおりに生成した。生成時には前回の手修正 (`75c613a`) を参照していない。
+
+### 5.4 新しく見つかった問題
+
+| 分類 | 内容 | 扱い |
+|---|---|---|
+| ori 側 (高) | testid 契約と既存実装の乖離を埋める移行経路が無い。既存 app では scenario が必ず RED になる。`check` の結果は impl-notes に記録されるだけ。(a) を阻む主因 | ori-oan.13 (ori-oan.6 の blocker) |
+| ori 側 (軽微) | `testids.js add-extra` が `extra:` を崩れた flow style で書き出す (parse は可能) | ori-oan.14 |
+| ori 側 (軽微) | SKILL.md が `node .apm/skills/ori-flow/scripts/scenario-status.js` と `.apm/instructions/scenario*.instructions.md` を参照するが、consumer では `.claude/skills/` / `.claude/rules/` に展開されている | 既存の ori-qh3 に ori-generate と instructions 参照を追記 |
+| app 側 | s1: submit 後に新 Block へ focus が移らない (I-PM9 違反、前回から未修正) | promptnotes `ori-ry9h`。ori には起票しない |
+| app 側 (軽微) | `src/app.html` に `<title>` が無く、tauri-service が `Could not find window with title containing "PromptNotes"` を大量に出す (s1 9 / s2 26 / s11 59 件)。成否と判定基準には影響しないが、ログのノイズになる | 記録のみ |
+| app 側 (移行作業) | 手修正ゼロの GREEN には、app の testid を契約へ移行する作業が要る (app の unit test の `screen-1-*` 参照にも波及) | 記録のみ (ori-oan.7 Q12 の方針どおり promptnotes 側で扱う) |
+| 環境 | promptnotes devShell の `bd` が古く (`database is at v66, binary knows up to v53`)、`bd update ori-generate-<id>` を実行できなかった。`status.yaml` は更新済み | 記録のみ |
+
+### 5.5 test_support.rs (`TAURI_TEST_STORAGE_DIR`) について
+
+検証者の意見は「将来は削除すべきだが、今すぐは消さない」。promptnotes 側の判断事項として記録する。
+
+- 削除してよい根拠: 今回の 3 scenario は `TAURI_TEST_STORAGE_DIR` を使わない XDG 隔離だけで正しく動いた。
+  env を読む test seam が production コードの 4 箇所に残っており、`debug_assertions` で gate されていない
+- 今すぐ消さない根拠: `.ori/scenarios/` の旧世代 `wdio.conf.ts` 18 本がまだこの env を注入している。
+  いま消すと、それらが実ユーザーの領域に書き込む
+- 推奨手順: 残りの scenario を ori 511333a 以降で再生成 → `grep -r TAURI_TEST_STORAGE_DIR .ori/scenarios` が 0 件を確認 → test_support.rs と呼び出し 4 箇所を別 PR で削除
+
+### 5.6 次の手順
+
+ori-oan.6 は close しない。(a) と (d) の testid が未達で、blocker は ori-oan.13 (移行経路) と
+promptnotes 側の testid 移行・`ori-ry9h`。これらの解消後、同じ baseline (`8b25163`) から再実行する。
