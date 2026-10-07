@@ -76,7 +76,14 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
         node scripts/testids.js add-extra <page-id> --testid <kind>.<page-id>.<elem> --purpose "<役割>" --source scenario:<scenario-id>
         ```
         追記のみ（既存行の変更・削除はしない）。実装が後から追従する（`/ori-impl-green` / `/ori-doctor` が検出）
-   - **実装との乖離は生成時に記録する（非停止）**: 実装が既にあれば `node scripts/testids.js check <page-id>` を実行し、「契約 testid が実装に存在しません」があれば spec.md `#impl-notes` に testid 一覧と「実装が契約に追従するまで RED」を記録する。実装の testid に合わせてテストを捏造しない
+   - **実装との乖離は起票して生成を続ける（非停止、ori-oan.13）**: 参加 page / widget の id をすべて渡して実行する:
+     ```bash
+     bash scripts/check-page-testids.sh --emit-issues --implemented-only <page-id>...
+     ```
+     - 実装の無い page は飛ばす（scenario-first では未実装が正常。実装は `/ori-impl-green` が契約どおりに付ける）
+     - 実装のある page に違反（契約 testid の実装不在・その page の動的 testid / 形式違反）があれば、page ごとに `testid-violation` + `page:<id>` の bd issue を起票する。open の issue があれば起票せず、その id を出す
+     - 出力された issue id と違反の要約を spec.md `#impl-notes` に記録し、「実装が契約に追従するまで RED。移行手順は `ui-test.instructions.md#testid-migration`」と書く
+     - 生成は止めない。実装の testid に合わせてテストを捏造しない。契約も書き換えない
    - テストファイルは `.ori/scenarios/<id>/tests/<scenario-id>.spec.ts` に出力、先頭に `// @ori-generated scenario:<scenario-id>` マーカー
    - **test-points 網羅対応表を生成する（R5）**: `spec.md#test-points` の全項目（項目の数え方は `scenario-test.instructions.md#test-points-map` の awk が SSoT。インデントなしの `- ` 行のみが項目で、sub-bullet は項目に含めず親項目の説明として扱う）を `.ori/scenarios/<id>/test-points-map.md` に写す。形式・規則の SSoT は `scenario-test.instructions.md#test-points-map`。項目を省略・統合しない。E2E で原理的に検証不能な項目は `N/A(代替担保)` とし、代替担保（unit test の file:line）を必ず併記する。代替が無ければ `UNCOVERED` のまま残す（推測で COVERED にしない）
 

@@ -20,6 +20,27 @@ description: 既存 slice のバグ報告を 4 ケース（domain / impl / spec 
 | **3** | **spec 自体に欠陥**（domain は正しいが derive が悪い） | 派生時に取りこぼし／曲解 | `--force` で spec 編集 → proposal |
 | **4** | **複数 slice の統合バグ** | 単体は OK だが組み合わせで破綻 | 新規 slice 作成 |
 
+## testid 契約違反の issue（triage の前に判定）
+
+対象が `testid-violation` label の bd issue（`/ori-generate` / `/ori-doctor --testid-sweep` が起票）の場合は、
+4 つの triage 質問を使わない。既存実装の testid を契約へ移行する作業で、手順は
+`ui-test.instructions.md#testid-migration` にある。案内するのは次のとおり:
+
+```
+分類：testid 契約違反（page:<page-id>）。契約 (.ori/pages/<page-id>/testids.yaml) は正しく、実装が追従していない。
+
+推奨動線（ui-test.instructions.md#testid-migration）：
+  1. spec.md に screen-<N>- 形式の testid 記述がある / root・動的要素が extra に無い
+       → `/ori-flow <page-id>`（derive からやり直す。ケース 3 相当）
+     spec.md が正しい
+       → `/ori-impl-green <page-id>` → `/ori-review <page-id>`（ケース 2 相当）
+  2. 置換対応表: `node scripts/testids.js migrate-map <page-id>`（/ori-impl-green 等の skill bundle の scripts/。ori-bug の bundle には無い）
+  3. 実装と unit test の selector を同じ変更で契約値へ置換（動的 testid は固定 testid + data-key）
+  4. 完了: `testids.js check <page-id>` と `testids.js migrate-map <page-id>` が exit 0、unit test 通過 → issue を close
+
+ヒント：契約を実装に合わせて書き換えない。alias も登録しない。
+```
+
 ## triage 質問（順番に問う）
 
 1. **「ドメインモデルが捉え損ねている事象か？」**
@@ -125,4 +146,5 @@ triage 結果に応じて以下を案内（実行はしない）：
 - **ケース 2 と分類された場合**：失敗テスト追加 → `/ori-impl-green <id> --reason "bug fix"` → `/ori-review <id>`
 - **ケース 3 と分類された場合**：`/ori-sync --force <spec>` で proposal 生成 → `/ori-review-proposals`
 - **ケース 4 と分類された場合**：`/ori-ddd-9-workflows` 再走 → 新規 slice 作成 → `/ori-flow`
+- **testid-violation issue の場合**：`ui-test.instructions.md#testid-migration` の手順（`/ori-flow <page-id>` または `/ori-impl-green <page-id>` → `/ori-review <page-id>`）
 - **どれにも分類できないパス**：症状情報が不足。ユーザにヒアリング継続、難しければ `bd human` で人間判断 flag

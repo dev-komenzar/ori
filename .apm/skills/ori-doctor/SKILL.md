@@ -139,9 +139,11 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 `.ori/pages/<id>/testids.yaml` (page / widget の testid 契約。規範は `ddd-vsa-hex/pattern.md` "page / widget の testid 契約") を全 page 横断で検査する（`check-page-testids.sh` = 同 bundle の `scripts/testids.js check --all`、ori-oan.7）。
 
 - 検出: testids.yaml 不在 / derived が ui-fields と不一致 (stale) / extra 形式違反・重複 / **契約 testid が実装 source に literal で不在** (契約 ⊆ 実装) / 実装 testid の動的組み立て・形式違反・存在しない page 参照
+- 実装 testid の違反は page に帰属させる (`page.<id>` / `widget.<id>` はその page、`screen-<N>-*` はその screen を持つ page)。決まらないものは `impl` (起票時は `page:_impl`)
 - scenario-first で `/ori-generate` が後から `extra:` に追記した行 (`source: scenario:<id>`) の実装追従漏れもここで拾う
 - 実装探索は `.ori/config.yaml` `workspace.apps[].path` 配下 (node_modules / target / dist / テストファイルを除外)
-- fix: 実装の追従は `/ori-flow <page-id>` (impl-green が契約検査を完了条件に持つ)、stale は `node scripts/testids.js sync <page-id>`
+- fix: 既存実装の移行は `/ori-bug` から `ui-test.instructions.md#testid-migration` の手順へ (置換対応表は `node scripts/testids.js migrate-map <page-id>`)、stale は `node scripts/testids.js sync <page-id>`
+- `check-page-testids.sh` は `packages/skills-shared/src` から ori-doctor / ori-generate に複製配置される。`/ori-generate` は実装のある参加 page だけを `--implemented-only <page-id>...` で検査・起票する
 - `--testid-sweep` 指定時は page ごとに bd issue を起票 (手順 3b)
 
 ## 手順
@@ -182,7 +184,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
    ```bash
    bash ./scripts/check-page-testids.sh --emit-issues
    ```
-   - page ごとに 1 issue (label `testid-violation` + `page:<id>`、実装 testid lint は `page:_impl`。label 規約 SSoT は `task-management.instructions.md`)
+   - page ごとに 1 issue (label `testid-violation` + `page:<id>`、page に帰属できない実装 testid lint は `page:_impl`。label 規約 SSoT は `task-management.instructions.md`)。issue 本文に移行手順 (`ui-test.instructions.md#testid-migration`) を書く
    - idempotent: `bd list --label=testid-violation --label=page:<id> --status=open` が hit するなら re-file しない
 4. **結果を集約**してレポートを生成
 5. **報告 only**：自動修復は行わない (DoD sweep の auto-emit は例外として bd issue を作るが、code は触らない)

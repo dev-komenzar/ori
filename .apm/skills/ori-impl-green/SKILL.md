@@ -156,6 +156,10 @@ skill 起動時に以下の順序で resolve:
       ```
       exit 0 が完了条件。違反 (契約 testid の実装不在 / 動的 testid / 形式違反) は step 10 の self-fix 対象
     - 契約外の testid を実装に足すのは許容 (検査は 契約 ⊆ 実装)。ただし形式 lint は全 testid にかかる
+      (page を指定した check が数えるのは、その page に帰属する実装違反だけ。他 page の未移行では止まらない)
+    - 既存実装の testid を契約へ移す場合 (`testid-violation` issue) は `ui-test.instructions.md#testid-migration` に従う。
+      `node scripts/testids.js migrate-map <id>` の対応表で実装と app の unit test の selector を同じ変更で置換し、
+      `migrate-map` も exit 0 にする
 
 10. **失敗時のリカバリ**:
     - 型 / lint / clippy エラー → **1 回だけ** 自動修正
