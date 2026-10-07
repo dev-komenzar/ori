@@ -113,3 +113,90 @@ describe("check-page-testids.sh — review 指摘の回帰 (ori-oan.7)", () => {
     expect(calls).toContain("--labels=testid-violation,page:Bad_Page");
   });
 });
+
+describe("check-page-testids.sh — 移行経路 (ori-oan.13)", () => {
+  const SCREEN2 =
+    "# Screen 2 {#screen-2}\n\n## Fields {#fields}\n\n| id | label |\n|--|--|\n| `{#screen-2-theme}` | テーマ |\n";
+  const TWO_PAGES = {
+    ...PAGE,
+    ".ori/domain/ui-fields/screen-2.md": SCREEN2,
+    ".ori/pages/settings/manifest.yaml": "type: widget\nderives_from:\n  - domain/ui-fields/screen-2.md#screen-2\n",
+    ".ori/pages/main/testids.yaml": "derived:\n  - testid: page.main.save\n    field: screen-1-save\nextra: []\n",
+    ".ori/pages/settings/testids.yaml": "derived:\n  - testid: widget.settings.theme\n    field: screen-2-theme\nextra: []\n",
+  };
+
+  // bd の fake: list は open issue を返さず (EXISTING があればそれを返す)、create --silent は id を返す
+  async function runWithBd(files: Record<string, string>, args: string[], existing = "") {
+    const bin = await mkdtemp(join(tmpdir(), "ori-fake-bd-"));
+    tmpDirs.push(bin);
+    const log = join(bin, "calls.log");
+    await writeFile(
+      join(bin, "bd"),
+      `#!/usr/bin/env bash\necho "$*" >> "${log}"\n` +
+        `if [[ "$1" == list ]]; then printf '%s' "${existing}"; fi\n` +
+        `if [[ "$1" == create ]]; then echo "ori-x1"; fi\n`,
+      { mode: 0o755 },
+    );
+    const root = await mkdtemp(join(tmpdir(), "ori-page-testids-"));
+    tmpDirs.push(root);
+    for (const [rel, body] of Object.entries(files)) {
+      const p = join(root, rel);
+      await mkdir(dirname(p), { recursive: true });
+      await writeFile(p, body);
+    }
+    const r = spawnSync("bash", [SCRIPT, ...args], {
+      cwd: root,
+      encoding: "utf8",
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+    });
+    let calls = "";
+    try { calls = await readFile(log, "utf8"); } catch { /* bd 未呼び出し */ }
+    return { out: r.stdout + r.stderr, code: r.status, calls };
+  }
+
+  it("ori-doctor と ori-generate の scripts/ に同一内容で複製される", async () => {
+    const gen = join(SCRIPTS, "..", "..", "ori-generate", "scripts", "check-page-testids.sh");
+    expect(await readFile(gen, "utf8")).toBe(await readFile(SCRIPT, "utf8"));
+  });
+
+  it("page id 指定はその page だけを検査する", async () => {
+    const r = await run(TWO_PAGES, ["settings"]);
+    expect(r.out).toContain('settings: 契約 testid が実装に存在しません: "widget.settings.theme"');
+    expect(r.out).not.toContain("page.main.save");
+    expect(r.out).toContain("1 issue(s)");
+  });
+
+  it("--implemented-only は旧 testid も契約 testid も無い page を飛ばす", async () => {
+    const r = await run(
+      { ...TWO_PAGES, "apps/app/src/Main.svelte": '<button data-testid="screen-1-save"></button>' },
+      ["--implemented-only", "main", "settings"],
+    );
+    expect(r.out).toContain('main: 契約 testid が実装に存在しません: "page.main.save"');
+    expect(r.out).not.toContain("widget.settings.theme");
+    expect(r.out).toContain("1 issue(s)");
+  });
+
+  it("--emit-issues: 形式違反は帰属 page の issue に入り、本文に移行手順を書き、起票した id を出す", async () => {
+    const r = await runWithBd(
+      { ...TWO_PAGES, "apps/app/src/S.svelte": "<b data-testid={`screen-2-theme-${v}`}/>" },
+      ["--emit-issues", "--implemented-only", "settings"],
+    );
+    expect(r.out).toContain("✓ filed bd issue ori-x1 (testid-violation, page:settings)");
+    expect(r.calls).toContain("--labels=testid-violation,page:settings");
+    expect(r.calls).not.toContain("page:_impl");
+    expect(r.calls).toContain("ui-test.instructions.md#testid-migration");
+    expect(r.calls).toContain("testids.js migrate-map settings");
+    expect(r.calls).toContain("- settings: impl: apps/app/src/S.svelte:1: 動的 testid は禁止");
+  });
+
+  it("--emit-issues: open issue があれば re-file せず、その id を出す", async () => {
+    const r = await runWithBd(TWO_PAGES, ["--emit-issues", "settings"], "○ ori-abc ● P2 [testid] settings: page testid 契約違反\n");
+    expect(r.out).toContain("page:settings の open issue ori-abc あり");
+    expect(r.calls).not.toContain("create");
+  });
+
+  it("未知の option は usage error (exit 2)", async () => {
+    const r = await run(PAGE, ["--emit"]);
+    expect(r.code).toBe(2);
+  });
+});
