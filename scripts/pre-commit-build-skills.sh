@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if ! git diff --cached --name-only | grep -q "^packages/skills/.*/src/"; then
+if ! git diff --cached --name-only | grep -qE "^packages/(skills/.*|skills-shared)/src/"; then
   exit 0
 fi
 

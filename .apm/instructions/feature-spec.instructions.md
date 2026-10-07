@@ -48,3 +48,13 @@ Slice DoD (`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` の "Slic
 
 `/ori-doctor` はこの section の宣言と実体 boundary file の存在/参照を突合する。
 section が欠落している spec は `/ori-derive` 段階で reject される。
+
+## page / widget の testid {#page-testids}
+
+page / widget の spec.md は testid の具体値を**持たない**。testid は
+`.ori/pages/<id>/testids.yaml` (契約。規範は `ddd-vsa-hex/pattern.md` "page / widget の testid 契約") が
+唯一の source で、spec.md からはリンクで参照する。
+
+- 禁止: 「ui-fields の field id (`screen-<N>-*`) をそのまま data-testid に写す」等、
+  契約と別の testid 規則を spec に書くこと (実装がそれに従い E2E と乖離する)
+- テスト観点で testid に触れる場合は契約の値 (`page.<id>.<elem>`) を引用する

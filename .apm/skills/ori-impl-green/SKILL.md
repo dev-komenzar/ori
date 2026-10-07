@@ -19,6 +19,7 @@ description: /ori-flow phase 4。failing test を GREEN にする最小実装を
 
 - 入力：
   - `.ori/slices/<id>/spec.md`
+  - `.ori/pages/<id>/testids.yaml`（type: page / widget のみ。testid 契約 — `scripts/testids.js sync <id>` で最新化してから読む）
   - `.ori/slices/<id>/manifest.yaml`（`bc:` と `app:` の解決、`expected_deliverables` (DoD) の取得に必要）
   - `.ori/config.yaml`（`workspace.apps:` から `app:` 解決、fallback として `apps[].path`/src を `<source_root>` に使う）
   - `.ori/architecture.md`（`root.path` / `roots[].path` を canonical な `<source_root>` として優先採用、`cross_root` の有無で Tauri stack 判定、`phase_hooks.flow-impl-green-post` を読み specta 再生成 step を実行）
@@ -143,8 +144,22 @@ skill 起動時に以下の順序で resolve:
    test -f apps/<app>/src/<bc>/shared/ipc/bindings.ts
    ```
 
+9b. **page / widget の testid 契約検査** (manifest `type: page` / `type: widget` のみ。ori-oan.7 — 完了条件):
+    - 実装前に `node scripts/testids.js sync <id>` を実行し、`.ori/pages/<id>/testids.yaml` の
+      `derived:` + `extra:` の testid を **literal で** DOM に付与する
+      (`data-testid="page.<id>.<elem>"`。式・テンプレート埋め込み禁止、動的要素は固定 testid + `data-key`。
+      規範: `ddd-vsa-hex/pattern.md` "page / widget の testid 契約")
+    - spec.md や ui-fields に field id (`screen-<N>-*`) があっても、それを testid にしない
+    - 完了前に検査する:
+      ```bash
+      node scripts/testids.js check <id>
+      ```
+      exit 0 が完了条件。違反 (契約 testid の実装不在 / 動的 testid / 形式違反) は step 10 の self-fix 対象
+    - 契約外の testid を実装に足すのは許容 (検査は 契約 ⊆ 実装)。ただし形式 lint は全 testid にかかる
+
 10. **失敗時のリカバリ**:
     - 型 / lint / clippy エラー → **1 回だけ** 自動修正
+    - testid 契約違反 (step 9b) → **1 回だけ** 実装側を修正 (契約 `testids.yaml` は書き換えない)
     - テスト失敗が想定外 → spec を読み直す。1 回だけ patch して再実行
     - specta build 失敗 → `Cargo.toml` の deps と `lib.rs` の `collect_commands![]` 配線を疑う、1 回だけ修正
     - それでも失敗 → 停止して人間に判断を委ねる

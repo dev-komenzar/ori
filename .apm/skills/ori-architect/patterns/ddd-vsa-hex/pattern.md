@@ -273,24 +273,63 @@ UI framework を採用するプロジェクトに適用する selector 優先順
   | --- | --- | --- |
   | slice presentation 集約要素 | `<slice-id>` | `data-testid="complete-task"` |
   | slice presentation 子要素 | `<slice-id>.<elem>` | `data-testid="complete-task.submit"` |
-  | ui-widget | `widget.<id>.<elem>` | `data-testid="widget.task-list.row"` |
-  | ui-page | `page.<id>.<elem>` | `data-testid="page.tasks.header"` |
+  | ui-widget 集約要素 (root) | `widget.<id>` | `data-testid="widget.task-list"` |
+  | ui-widget 子要素 | `widget.<id>.<elem>` | `data-testid="widget.task-list.row"` |
+  | ui-page 集約要素 (root) | `page.<id>` | `data-testid="page.tasks"` |
+  | ui-page 子要素 | `page.<id>.<elem>` | `data-testid="page.tasks.header"` |
   | shared (BC 共有 UI) | `shared.<area>.<elem>` | `data-testid="shared.toast.message"` |
 
+- `<id>` は `.ori/pages/<id>/` のディレクトリ名を**そのまま**使う。id が kind 接頭辞を
+  含んでいても除去しない (`page-main` → `page.page-main.<elem>`)。変換を持たないことで
+  実装・テスト生成の解釈差を無くす。
 - `<elem>` は機能名 (`submit` / `cancel` / `row`) 。実装詳細名 (`button1`) 禁止。
-  動的要素は固定 testid + `data-key={id}` で絞る。
+  kebab-case、階層が要るときは `.` で連結する。
+- **testid は literal で書く**。式・テンプレート埋め込み (`` data-testid={`x-${v}`} ``) で
+  組み立てない。動的要素は固定 testid + `data-key={id}` で絞る。literal であることが
+  契約検査 (実装 grep) の前提になる。
 - prod ビルドでの testid strip はデフォルト残す (stack-specific / downstream で
   bundler plugin 導入は任意)。
-- **ui-fields 由来の入力要素 (ori-oan.4)**: `domain/ui-fields/screen-<N>.md` の
-  field id (`screen-1-note-body` 等) は **ドメイン側の識別子**であり testid では
-  ない。E2E testid は本節の規約で導出する: その field を配置する page/slice から
-  `<page-id>` / `<slice-id>` を取り、`<elem>` は field purpose
-  (`screen-<N>-` prefix を除いた部分)を使う。
-  例: ui-field `screen-1-note-body` を page `capture` に配置 →
-  `data-testid="page.capture.note-body"`。`<page-id>` は page 構成
-  (`page-groups.md` / `.ori/pages/` / architecture Page Map)から解決し、解決不能なら
-  testid を推測せず `TBD` とする。**E2E セレクタはこの規約から生成されるため、
-  実装側 testid も本規約に準拠させる**(乖離は E2E が実 DOM を見つけられない原因になる)。
+
+#### page / widget の testid 契約 (`testids.yaml`, ori-oan.7) {#page-testid-contract}
+
+page / widget の testid は規則から各自が導出するのではなく、**`.ori/pages/<id>/testids.yaml`
+に具体値として確定した契約**を実装 (`/ori-test-red` / `/ori-impl-green`) と
+E2E 生成 (`/ori-generate`) の双方が読む。規則の解釈を 2 箇所で行うと乖離する
+(promptnotes で ui-field id 直写しと規約形式が並立した G5 の再発) ため、解釈は script 1 箇所に寄せる。
+
+```yaml
+# .ori/pages/widget-settings-modal/testids.yaml
+derived:   # @ori-generated — scripts/testids.js sync が ui-fields から再生成。手編集禁止
+  - testid: widget.widget-settings-modal.save
+    field: screen-2-save
+extra:     # ori-derive / ori-generate が scripts/testids.js add-extra で追記
+  - testid: widget.widget-settings-modal
+    purpose: root
+    source: derive                  # derive | scenario:<scenario-id>
+  - testid: widget.widget-settings-modal.theme-option
+    purpose: テーマ選択肢
+    dynamic: data-key               # 固定 testid + data-key
+    source: derive
+```
+
+- **derived (ui-fields 由来)**: `domain/ui-fields/screen-<N>.md` の field id
+  (`screen-1-note-body` 等) は**ドメイン側の識別子**であり testid ではない。page manifest の
+  `derives_from` が指す screen の `## Fields {#fields}` 全 field について
+  `<kind>.<id>.<elem>` を導出する。`<elem>` は field id から `screen-<N>-` を除いた部分。
+  例: ui-field `screen-1-note-body` を page `capture` に配置 → `page.capture.note-body`。
+  - page 内で `<elem>` が衝突したら (複数 screen の `save` 等) script は停止する。
+    field id の改名か page grouping の見直しで解消する (自動で prefix を残す等の回避はしない)。
+    11b (page grouping) の自己検証で `check-collisions` により前倒し検出する。
+  - page 未 scaffold・screen 不在は推測で埋めず停止する (旧 `TBD` 規則は廃止)。
+- **extra (ui-field 以外)**: root / region / エラー表示 / 部品など。`/ori-derive` が page spec
+  合成時に登録し、scenario が契約外の要素を必要とした場合は `/ori-generate` が
+  `source: scenario:<id>` で追記する。追記のみで、既存行の変更・削除は人間が行う。
+- **検査** (`scripts/testids.js check`): ① derived の stale ② extra 形式 (`<kind>.<id>` 接頭辞) ③ 重複
+  ④ 契約 testid が実装 source に literal で存在する (契約 ⊆ 実装。契約外の実装 testid は許容)
+  ⑤ 実装 testid の lint (動的組み立て禁止・形式・存在しない page 参照)。
+  `/ori-impl-green` の完了条件 / `/ori-review` structural gate / `/ori-doctor` が実行する。
+- `testids.js` は cwd から上方へ `.ori/` を探して project root を決める。project root 外 (user スコープに install された skill dir 等) から実行する場合は `--root <project-root>` を渡す。
+- slice presentation (`<slice-id>.<elem>`) は本契約の対象外 (ori-oan.12)。
 
 ### 責務分離 (正典と stack-specific)
 
