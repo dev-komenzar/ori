@@ -48,6 +48,8 @@ UI コンポーネントの単体テスト (`*.test.tsx`) は `ddd-test`（メ�
    - 判定には `testids.js check <page-id> --no-impl` と `grep -n 'screen-[0-9]*-' .ori/pages/<page-id>/spec.md` を使う
 2. **置換対応表を出す**: `node scripts/testids.js migrate-map <page-id>`。
    derived 行ごとに「旧 testid (field id) → 契約 testid」と、実装・テストでの使用箇所 (`impl` / `test`) を出す。
+   数えるのは testid の値の位置 (`data-testid="…"` / `getByTestId('…')` 等) だけ。`id=` / `for=` 等で同じ field id を
+   使っている箇所は `参考` 行に出る。これは testid ではないので置換しない
    `手動:` の行 (extra の testid、その page の動的 testid / 形式違反) は旧値を推定できないので、実装を読んで対応を決める
 3. **実装と unit test を同じ変更で置換する**:
    - 実装は契約の testid を literal で付ける。動的 testid (`` data-testid={`x-${key}`} ``) は、固定 testid + `data-key={key}` に直す
@@ -61,4 +63,5 @@ UI コンポーネントの単体テスト (`*.test.tsx`) は `ddd-test`（メ�
 
 scenario の GREEN は移行の完了条件に含めない (app 側の不具合が混ざるため、別に検証する)。
 `page:_impl` の issue (どの page に帰属するか決まらない実装違反) は、各 page の移行が済んだあとに
-`testids.js check --all` で残りを確認して直す。
+`testids.js check --all` で残りを確認して直す。帰属の規則を入れる前 (ori-oan.13 以前) に起票された
+`page:_impl` issue には、いまは各 page に帰属する違反も入っている。再 sweep で page 別の issue ができたら close する。

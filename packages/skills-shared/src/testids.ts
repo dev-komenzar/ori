@@ -376,15 +376,21 @@ interface ImplIndex {
   violations: ImplViolation[];
 }
 
+// 帰属判定用の page 情報。keys = その page の契約 testid と derived の field id (移行前の旧 testid)
+interface PageRef {
+  info: PageInfo;
+  keys: Set<string>;
+}
+
 // 実装 testid 違反を page に寄せる (ori-oan.13): page.<id> / widget.<id> はその page、
-// ui-field id 由来の screen-N-* はその screen を持つ page。一意に決まらなければ null (= page:_impl)
-function ownerOf(raw: string, pages: PageInfo[]): string | null {
+// ui-field id 由来の screen-N-* はその screen を持つ page。一意に決まらなければ null
+function ownerOf(raw: string, pages: PageRef[]): string | null {
   const ns = /(?:^|[^\w-])(?:page|widget)\.([^.\s"'`$]+)/.exec(raw);
-  if (ns) return pages.some((p) => p.id === ns[1]) ? ns[1]! : null;
+  if (ns && pages.some((p) => p.info.id === ns[1])) return ns[1]!;
   const sc = /(?:^|[^\w-])(screen-\d+)-/.exec(raw);
   if (!sc) return null;
-  const owners = pages.filter((p) => p.screens.includes(sc[1]!));
-  return owners.length === 1 ? owners[0]!.id : null;
+  const owners = pages.filter((p) => p.info.screens.includes(sc[1]!));
+  return owners.length === 1 ? owners[0]!.info.id : null;
 }
 
 async function sourceFiles(root: string): Promise<string[]> {
@@ -400,13 +406,15 @@ async function sourceFiles(root: string): Promise<string[]> {
 const ATTR_RE =
   /(v-bind:|:)?data-testid\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*(?:"([^"]*)"|'([^']*)'|`([^`$]*)`)\s*\}|(\{[^}]*\}))/g;
 
-async function indexImpl(root: string, pageIds: Set<string>, pages: PageInfo[]): Promise<ImplIndex> {
+async function indexImpl(root: string, pageIds: Set<string>, pages: PageRef[]): Promise<ImplIndex> {
   const literals = new Set<string>();
   const violations: ImplViolation[] = [];
   for (const f of await sourceFiles(root)) {
     const rel = relative(root, f);
     if (TEST_FILE.test(rel)) continue;
     const text = await readFile(f, "utf8");
+    const fileLiterals = new Set<string>();
+    const fileViolations: ImplViolation[] = [];
     for (const m of text.matchAll(ATTR_RE)) {
       const at = m.index ?? 0;
       // `[data-testid="x"]` は selector であって付与ではない
@@ -414,7 +422,7 @@ async function indexImpl(root: string, pageIds: Set<string>, pages: PageInfo[]):
       const loc = `${rel}:${text.slice(0, at).split("\n").length}`;
       const shown = m[0].replace(/\s+/g, " ");
       const push = (raw: string, msg: string): void => {
-        violations.push({ owner: ownerOf(raw, pages), message: `${loc}: ${msg}` });
+        fileViolations.push({ owner: ownerOf(raw, pages), message: `${loc}: ${msg}` });
       };
       let value = m[2] ?? m[3] ?? m[4] ?? m[5] ?? m[6];
       if (m[1] !== undefined) {
@@ -427,6 +435,7 @@ async function indexImpl(root: string, pageIds: Set<string>, pages: PageInfo[]):
         continue;
       }
       literals.add(value);
+      fileLiterals.add(value);
       if (!TESTID_CHARSET.test(value)) {
         push(value, `testid 形式違反 (kebab-case を . で連結): "${value}"`);
         continue;
@@ -436,15 +445,31 @@ async function indexImpl(root: string, pageIds: Set<string>, pages: PageInfo[]):
         push(value, `testid が存在しない page / widget を指しています: "${value}"`);
       }
     }
+    // 値から決まらない違反 (`{name}` / `row-${id}` 等) は、同じファイルが付けている testid から
+    // page が 1 つに決まればその page に寄せる (page 指定の check が素通ししないように)
+    const fileOwners = pages.filter((p) => [...fileLiterals].some((l) => p.keys.has(l)));
+    for (const v of fileViolations) {
+      if (v.owner === null && fileOwners.length === 1) v.owner = fileOwners[0]!.info.id;
+      violations.push(v);
+    }
   }
   return { literals, violations };
 }
 
 // manifest が壊れた page は帰属先候補から外すだけ (違反としては check 本体が報告する)
-async function loadPagesLenient(root: string, ids: string[]): Promise<PageInfo[]> {
-  const pages: PageInfo[] = [];
+async function loadPagesLenient(root: string, ids: string[]): Promise<PageRef[]> {
+  const pages: PageRef[] = [];
   for (const id of ids) {
-    try { pages.push(await loadPage(root, id)); } catch (e) { if (!(e instanceof InputError)) throw e; }
+    let info: PageInfo;
+    try { info = await loadPage(root, id); } catch (e) { if (!(e instanceof InputError)) throw e; continue; }
+    const keys = new Set<string>();
+    try {
+      for (const r of (await deriveRows(root, info)).rows) keys.add(r.testid).add(r.field);
+      for (const r of (await readContract(root, id))?.extra ?? []) keys.add(r.testid);
+    } catch (e) {
+      if (!(e instanceof InputError)) throw e;
+    }
+    pages.push({ info, keys });
   }
   return pages;
 }
@@ -461,7 +486,7 @@ function isImplemented(id: string, expected: DerivedRow[], c: Contract | null, i
 interface CheckOptions {
   withImpl: boolean;
   implementedOnly: boolean;
-  all: boolean; // page に寄せられない実装違反 (impl) は --all のときだけ数える
+  all: boolean; // page に寄せられない実装違反 (impl) は --all のときだけ数える (page 指定時は NOTE で表示のみ)
 }
 
 async function checkPages(root: string, ids: string[], opts: CheckOptions): Promise<number> {
@@ -482,6 +507,11 @@ async function checkPages(root: string, ids: string[], opts: CheckOptions): Prom
       c = await readContract(root, id);
     } catch (e) {
       if (!(e instanceof InputError)) throw e;
+      // --implemented-only (generate) では入力不整合を移行 issue にしない。上流の未完了として扱う
+      if (opts.implementedOnly) {
+        console.log(`skip: ${id} (契約を導出できません: ${e.message})`);
+        continue;
+      }
       report(`${id}: ${e.message}`);
       reportOwned(id);
       continue;
@@ -508,10 +538,18 @@ async function checkPages(root: string, ids: string[], opts: CheckOptions): Prom
     }
     reportOwned(id);
   }
-  if (impl && opts.all) for (const v of impl.violations) if (v.owner === null) report(`${UNOWNED}: ${v.message}`);
+  for (const v of impl?.violations ?? []) {
+    if (v.owner !== null) continue;
+    if (opts.all) report(`${UNOWNED}: ${v.message}`);
+    else console.log(`NOTE ${UNOWNED}: ${v.message} (どの page にも帰属できない。件数に含めない — check --all で数える)`);
+  }
   console.log(count === 0 ? "OK: testid 契約違反なし" : `testid 契約違反: ${count} 件`);
   return count;
 }
+
+// match 直前が testid の値の位置か: data-testid="x" / data-testid={"x"} / :data-testid="'x'" /
+// [data-testid="x"] / getByTestId('x') 等。同じ行の id= / for= は数えない
+const TESTID_CONTEXT = /test-?id\s*(?:=|\()\s*\{?\s*["'`]{0,2}$/i;
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -519,6 +557,8 @@ function escapeRe(s: string): string {
 
 // 既存実装を契約へ移行するための置換対応表 (読み取り専用、ori-oan.13)。
 // 旧 testid = derived 行の ui-field id (field id を testid に直写しした実装)。実装とテストの使用箇所を出す。
+// 数えるのは testid の値の位置 (data-testid="…" / getByTestId('…') 等) だけ。id= / for= / name= など
+// それ以外の field id は置換してはいけないので「参考」として件数に含めない。
 // extra 行と動的 testid は旧値を推定できないので「手動」として並べる。exit 1 = 旧 testid の使用が残っている
 async function migrateMap(root: string, id: string): Promise<number> {
   const page = await loadPage(root, id);
@@ -533,14 +573,17 @@ async function migrateMap(root: string, id: string): Promise<number> {
   for (const r of rows) {
     const re = new RegExp(`(?<![\\w-])${escapeRe(r.field)}(?![\\w-])`, "g");
     const hits: string[] = [];
+    const refs: string[] = [];
     for (const [rel, text] of texts) {
       for (const m of text.matchAll(re)) {
-        const line = text.slice(0, m.index ?? 0).split("\n").length;
-        hits.push(`${TEST_FILE.test(rel) ? "test" : "impl"} ${rel}:${line}`);
+        const before = text.slice(0, m.index ?? 0);
+        const where = `${TEST_FILE.test(rel) ? "test" : "impl"} ${rel}:${before.split("\n").length}`;
+        (TESTID_CONTEXT.test(before.slice(before.lastIndexOf("\n") + 1)) ? hits : refs).push(where);
       }
     }
     console.log(`${r.field} → ${r.testid}${hits.length === 0 ? " (使用箇所なし)" : ""}`);
     for (const h of hits) console.log(`  ${h}`);
+    for (const h of refs) console.log(`  参考 (testid 以外の文脈。置換しない): ${h}`);
     remaining += hits.length;
   }
   for (const r of c?.extra ?? []) {
@@ -617,6 +660,8 @@ async function main(): Promise<number> {
     }
     case "check": {
       const opts = { withImpl: flags.get("no-impl") !== true, implementedOnly: flags.get("implemented-only") === true, all };
+      // 実装有無の判定には実装の探索が要る
+      if (opts.implementedOnly && !opts.withImpl) usage();
       return (await checkPages(root, await ids(), opts)) > 0 ? 1 : 0;
     }
     case "migrate-map":

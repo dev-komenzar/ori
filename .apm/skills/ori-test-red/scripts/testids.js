@@ -7657,11 +7657,11 @@ async function walk(dir, acc) {
 }
 function ownerOf(raw, pages) {
   const ns = /(?:^|[^\w-])(?:page|widget)\.([^.\s"'`$]+)/.exec(raw);
-  if (ns) return pages.some((p) => p.id === ns[1]) ? ns[1] : null;
+  if (ns && pages.some((p) => p.info.id === ns[1])) return ns[1];
   const sc = /(?:^|[^\w-])(screen-\d+)-/.exec(raw);
   if (!sc) return null;
-  const owners = pages.filter((p) => p.screens.includes(sc[1]));
-  return owners.length === 1 ? owners[0].id : null;
+  const owners = pages.filter((p) => p.info.screens.includes(sc[1]));
+  return owners.length === 1 ? owners[0].info.id : null;
 }
 async function sourceFiles(root) {
   const files = [];
@@ -7678,13 +7678,15 @@ async function indexImpl(root, pageIds, pages) {
     const rel = relative(root, f);
     if (TEST_FILE.test(rel)) continue;
     const text = await readFile(f, "utf8");
+    const fileLiterals = /* @__PURE__ */ new Set();
+    const fileViolations = [];
     for (const m of text.matchAll(ATTR_RE)) {
       const at = m.index ?? 0;
       if (text[at - 1] === "[") continue;
       const loc = `${rel}:${text.slice(0, at).split("\n").length}`;
       const shown = m[0].replace(/\s+/g, " ");
       const push = (raw, msg) => {
-        violations.push({ owner: ownerOf(raw, pages), message: `${loc}: ${msg}` });
+        fileViolations.push({ owner: ownerOf(raw, pages), message: `${loc}: ${msg}` });
       };
       let value = m[2] ?? m[3] ?? m[4] ?? m[5] ?? m[6];
       if (m[1] !== void 0) {
@@ -7696,6 +7698,7 @@ async function indexImpl(root, pageIds, pages) {
         continue;
       }
       literals.add(value);
+      fileLiterals.add(value);
       if (!TESTID_CHARSET.test(value)) {
         push(value, `testid \u5F62\u5F0F\u9055\u53CD (kebab-case \u3092 . \u3067\u9023\u7D50): "${value}"`);
         continue;
@@ -7705,17 +7708,32 @@ async function indexImpl(root, pageIds, pages) {
         push(value, `testid \u304C\u5B58\u5728\u3057\u306A\u3044 page / widget \u3092\u6307\u3057\u3066\u3044\u307E\u3059: "${value}"`);
       }
     }
+    const fileOwners = pages.filter((p) => [...fileLiterals].some((l) => p.keys.has(l)));
+    for (const v of fileViolations) {
+      if (v.owner === null && fileOwners.length === 1) v.owner = fileOwners[0].info.id;
+      violations.push(v);
+    }
   }
   return { literals, violations };
 }
 async function loadPagesLenient(root, ids) {
   const pages = [];
   for (const id of ids) {
+    let info;
     try {
-      pages.push(await loadPage(root, id));
+      info = await loadPage(root, id);
+    } catch (e) {
+      if (!(e instanceof InputError)) throw e;
+      continue;
+    }
+    const keys = /* @__PURE__ */ new Set();
+    try {
+      for (const r of (await deriveRows(root, info)).rows) keys.add(r.testid).add(r.field);
+      for (const r of (await readContract(root, id))?.extra ?? []) keys.add(r.testid);
     } catch (e) {
       if (!(e instanceof InputError)) throw e;
     }
+    pages.push({ info, keys });
   }
   return pages;
 }
@@ -7743,6 +7761,10 @@ async function checkPages(root, ids, opts) {
       c = await readContract(root, id);
     } catch (e) {
       if (!(e instanceof InputError)) throw e;
+      if (opts.implementedOnly) {
+        console.log(`skip: ${id} (\u5951\u7D04\u3092\u5C0E\u51FA\u3067\u304D\u307E\u305B\u3093: ${e.message})`);
+        continue;
+      }
       report(`${id}: ${e.message}`);
       reportOwned(id);
       continue;
@@ -7768,12 +7790,15 @@ async function checkPages(root, ids, opts) {
     }
     reportOwned(id);
   }
-  if (impl && opts.all) {
-    for (const v of impl.violations) if (v.owner === null) report(`${UNOWNED}: ${v.message}`);
+  for (const v of impl?.violations ?? []) {
+    if (v.owner !== null) continue;
+    if (opts.all) report(`${UNOWNED}: ${v.message}`);
+    else console.log(`NOTE ${UNOWNED}: ${v.message} (\u3069\u306E page \u306B\u3082\u5E30\u5C5E\u3067\u304D\u306A\u3044\u3002\u4EF6\u6570\u306B\u542B\u3081\u306A\u3044 \u2014 check --all \u3067\u6570\u3048\u308B)`);
   }
   console.log(count === 0 ? "OK: testid \u5951\u7D04\u9055\u53CD\u306A\u3057" : `testid \u5951\u7D04\u9055\u53CD: ${count} \u4EF6`);
   return count;
 }
+var TESTID_CONTEXT = /test-?id\s*(?:=|\()\s*\{?\s*["'`]{0,2}$/i;
 function escapeRe(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -7790,14 +7815,17 @@ async function migrateMap(root, id) {
   for (const r of rows) {
     const re = new RegExp(`(?<![\\w-])${escapeRe(r.field)}(?![\\w-])`, "g");
     const hits = [];
+    const refs = [];
     for (const [rel, text] of texts) {
       for (const m of text.matchAll(re)) {
-        const line = text.slice(0, m.index ?? 0).split("\n").length;
-        hits.push(`${TEST_FILE.test(rel) ? "test" : "impl"} ${rel}:${line}`);
+        const before = text.slice(0, m.index ?? 0);
+        const where = `${TEST_FILE.test(rel) ? "test" : "impl"} ${rel}:${before.split("\n").length}`;
+        (TESTID_CONTEXT.test(before.slice(before.lastIndexOf("\n") + 1)) ? hits : refs).push(where);
       }
     }
     console.log(`${r.field} \u2192 ${r.testid}${hits.length === 0 ? " (\u4F7F\u7528\u7B87\u6240\u306A\u3057)" : ""}`);
     for (const h of hits) console.log(`  ${h}`);
+    for (const h of refs) console.log(`  \u53C2\u8003 (testid \u4EE5\u5916\u306E\u6587\u8108\u3002\u7F6E\u63DB\u3057\u306A\u3044): ${h}`);
     remaining += hits.length;
   }
   for (const r of c?.extra ?? []) {
@@ -7867,6 +7895,7 @@ async function main() {
     }
     case "check": {
       const opts = { withImpl: flags.get("no-impl") !== true, implementedOnly: flags.get("implemented-only") === true, all };
+      if (opts.implementedOnly && !opts.withImpl) usage();
       return await checkPages(root, await ids(), opts) > 0 ? 1 : 0;
     }
     case "migrate-map":

@@ -125,15 +125,17 @@ describe("check-page-testids.sh — 移行経路 (ori-oan.13)", () => {
     ".ori/pages/settings/testids.yaml": "derived:\n  - testid: widget.settings.theme\n    field: screen-2-theme\nextra: []\n",
   };
 
-  // bd の fake: list は open issue を返さず (EXISTING があればそれを返す)、create --silent は id を返す
+  // bd の fake: list は existing (JSON) を返し、create --silent は id を返す
   async function runWithBd(files: Record<string, string>, args: string[], existing = "") {
     const bin = await mkdtemp(join(tmpdir(), "ori-fake-bd-"));
     tmpDirs.push(bin);
     const log = join(bin, "calls.log");
+    const listOut = join(bin, "list.out");
+    await writeFile(listOut, existing);
     await writeFile(
       join(bin, "bd"),
       `#!/usr/bin/env bash\necho "$*" >> "${log}"\n` +
-        `if [[ "$1" == list ]]; then printf '%s' "${existing}"; fi\n` +
+        `if [[ "$1" == list ]]; then cat "${listOut}"; fi\n` +
         `if [[ "$1" == create ]]; then echo "ori-x1"; fi\n`,
       { mode: 0o755 },
     );
@@ -189,10 +191,25 @@ describe("check-page-testids.sh — 移行経路 (ori-oan.13)", () => {
     expect(r.calls).toContain("- settings: impl: apps/app/src/S.svelte:1: 動的 testid は禁止");
   });
 
-  it("--emit-issues: open issue があれば re-file せず、その id を出す", async () => {
-    const r = await runWithBd(TWO_PAGES, ["--emit-issues", "settings"], "○ ori-abc ● P2 [testid] settings: page testid 契約違反\n");
+  it("--emit-issues: open / in_progress / blocked の issue があれば re-file せず、その id を出す", async () => {
+    const r = await runWithBd(TWO_PAGES, ["--emit-issues", "settings"], '[{"id":"ori-abc","status":"in_progress"}]');
     expect(r.out).toContain("page:settings の open issue ori-abc あり");
+    expect(r.calls).toContain("--status=open,in_progress,blocked --json");
     expect(r.calls).not.toContain("create");
+  });
+
+  it("--implemented-only で飛ばした page は SKIP として表示する", async () => {
+    const r = await run(TWO_PAGES, ["--implemented-only", "main", "settings"]);
+    expect(r.out).toContain("SKIP  main (実装なし)");
+    expect(r.out).toContain("SKIP  settings (実装なし)");
+    expect(r.out).toContain("0 issue(s)");
+  });
+
+  it("存在しない page id は起票せず exit 2", async () => {
+    const r = await runWithBd(TWO_PAGES, ["--emit-issues", "mian"]);
+    expect(r.code).toBe(2);
+    expect(r.out).toContain("page が見つかりません");
+    expect(r.calls).toBe("");
   });
 
   it("未知の option は usage error (exit 2)", async () => {

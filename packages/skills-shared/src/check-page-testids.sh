@@ -53,6 +53,15 @@ if ! command -v node >/dev/null 2>&1; then
   echo "  WARN  page testids: node が無いため skip"
   exit 0
 fi
+# 指定 page id の typo を「page 未 scaffold」の違反として起票しない
+if [[ "${PAGES[0]}" != --all ]]; then
+  for p in "${PAGES[@]}"; do
+    if [[ ! -f ".ori/pages/$p/manifest.yaml" ]]; then
+      echo "ERROR: page が見つかりません: .ori/pages/$p/manifest.yaml" >&2
+      exit 2
+    fi
+  done
+fi
 
 rc=0
 out="$(node "$SCRIPT_DIR/testids.js" check "${PAGES[@]}" ${CHECK_FLAGS[@]+"${CHECK_FLAGS[@]}"} --root "$PROJECT_ROOT" 2>&1)" || rc=$?
@@ -70,6 +79,14 @@ while IFS= read -r line; do
   [[ -n "$line" ]] || continue
   echo "  WARN  ${line#VIOLATION }"
 done <<<"$violations"
+# 検査しなかった page (--implemented-only) と、件数に含めない帰属不能の実装違反 (page 指定時) も見せる
+while IFS= read -r line; do
+  [[ -n "$line" ]] || continue
+  case "$line" in
+    skip:*) echo "  SKIP  ${line#skip: }" ;;
+    NOTE*) echo "  NOTE  ${line#NOTE }" ;;
+  esac
+done < <(grep -E '^(skip: |NOTE )' <<<"$out" || true)
 
 if [[ $ISSUES -gt 0 ]]; then
   echo "        fix: /ori-bug で移行手順へ (ui-test.instructions.md#testid-migration) / derived stale は testids.js sync <page-id>"
@@ -83,7 +100,9 @@ if [[ "$EMIT_ISSUES" == true && $ISSUES -gt 0 ]]; then
     while IFS= read -r key; do
       [[ -n "$key" ]] || continue
       page="$key"; [[ "$key" == impl ]] && page="_impl"
-      existing="$(bd list --label=testid-violation --label="page:${page}" --status=open 2>/dev/null | grep -E '^○|^◐' | head -n1 | awk '{print $2}' || true)"
+      # 作業中 (in_progress) / 依存で blocked の issue も既存として扱う。表示記号に依存しないよう JSON で id を取る
+      existing="$(bd list --label=testid-violation --label="page:${page}" --status=open,in_progress,blocked --json 2>/dev/null \
+        | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const a=JSON.parse(s);if(Array.isArray(a)&&a[0]&&a[0].id)process.stdout.write(String(a[0].id))}catch{}})' || true)"
       if [[ -n "$existing" ]]; then
         echo "    INFO: page:${page} の open issue ${existing} あり — re-file しない (idempotent)"
         continue
