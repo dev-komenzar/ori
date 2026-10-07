@@ -207,10 +207,10 @@ scenario は 4 phase で実装する。詳細は各 SKILL.md に委譲。
 ### phase 台帳 (status.yaml) と bd の役割 {#phase-ledger}
 
 - **bd issue** (`ori-scenario-<id>` / `ori-<phase>-<scenario-id>`) が **phase 進行の SSoT**（closed かどうかで次 phase へ進む）
-- **`.ori/scenarios/<id>/status.yaml`** は **機械可読な成果物台帳**（bd と相補的）。各 phase skill が完了時に決定的 writer で必ず更新する:
+- **`.ori/scenarios/<id>/status.yaml`** は **機械可読な成果物台帳**（bd と相補的）。各 phase skill が完了時に決定的 writer で必ず更新する (writer は各 phase skill の `scripts/` に同梱):
   ```bash
-  node .apm/skills/ori-flow/scripts/scenario-status.js set <scenario-id> <phase> done
-  node .apm/skills/ori-flow/scripts/scenario-status.js show <scenario-id>
+  node <phase skill>/scripts/scenario-status.js set <scenario-id> <phase> done
+  node <phase skill>/scripts/scenario-status.js show <scenario-id>
   ```
 - **手で編集しない**: writer が legacy schema を正規化する（`phases` の文字列値、`beads`/`dirty` 欠落を修復）。`phases` / `beads.completion` が phase 完走の記録
 

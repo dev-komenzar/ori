@@ -94,7 +94,7 @@ scenario は **scenario-first が既定**: 参加 slice（`contracts.slices`）�
 
 各ステップ後、対応する `bd show ori-<phase>-<id>` を見て status が closed なら次の phase へ。closed でなければ §「停止条件」へ。
 
-**phase 台帳（status.yaml）**: 各 scenario phase skill は完了時に `scenario-status.js set <id> <phase> done` を呼び、台帳を決定的に更新する（R1）。orchestrator は台帳を直接書かない（責務は phase skill 側）。`node .apm/skills/ori-flow/scripts/scenario-status.js show <id>` で確認できる。
+**phase 台帳（status.yaml）**: 各 scenario phase skill は完了時に `scenario-status.js set <id> <phase> done` を呼び、台帳を決定的に更新する（R1）。orchestrator は台帳を直接書かない（責務は phase skill 側）。`node scripts/scenario-status.js show <id>` で確認できる。
 
 ## 停止条件
 

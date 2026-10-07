@@ -60,7 +60,7 @@ gate のいずれかが fail なら **reviewer agent は spawn しない**。即
 
 ### なぜ DoD 個別 rules を review checklist にしないか {#why-no-dod-checklist}
 
-Slice DoD (`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` "Slice Definition of Done") は **test contract で構造的に強制されている**ため、review が独立 checklist を持つと SSoT 二重化 → drift 源になる。各 DoD rule の検査責務は以下に分散済み:
+Slice DoD ([`ori-architect/patterns/ddd-vsa-hex/pattern.md`](../ori-architect/patterns/ddd-vsa-hex/pattern.md) "Slice Definition of Done") は **test contract で構造的に強制されている**ため、review が独立 checklist を持つと SSoT 二重化 → drift 源になる。各 DoD rule の検査責務は以下に分散済み:
 
 | DoD rule | 強制責務 |
 | --- | --- |
@@ -276,7 +276,7 @@ Slice DoD (`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` "Slice De
 9. **完了**：
    - `.ori/scenarios/<id>/review.md` を commit
    - `bd close ori-review-<scenario-id> --reason="reviewer PASS; <N> findings addressed in <N> patches"`
-   - **phase 台帳の更新（R1）**: `node .apm/skills/ori-flow/scripts/scenario-status.js set <scenario-id> review done`（決定的 writer。冪等）
+   - **phase 台帳の更新（R1）**: `node scripts/scenario-status.js set <scenario-id> review done`（決定的 writer。冪等）
 
 ## single-pass 強制
 

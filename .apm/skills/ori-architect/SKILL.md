@@ -40,7 +40,7 @@ ori-c79 で agent として定義したが ori-8gz でスキルへ書き直し�
 3. **compose** — `invariants:` から layer graph / slice_internal / boundaries を選択・結合して
    frontmatter を組み立てる
 4. **generate** — `.ori/architecture.md` を書く（前回生成物がある場合は上書き可否を先に確認）
-5. **self-check** — guardrails g-1..g-8 を検証する：`node .apm/skills/ori-doctor/scripts/lint.js .ori`
+5. **self-check** — guardrails g-1..g-8 を検証する：`node scripts/lint.js .ori`
    が全 pass すること（fail したら修正して再生成。往復は confirm まで）
 6. **confirm** — 生成物をユーザに提示し確定を得る
 
@@ -292,14 +292,14 @@ generation_procedure:
 - **上書きは確認してから**：既存 `.ori/architecture.md` がある場合は confirm step の前に上書き可否を確認する
 - **.ori/ skeleton は壊さない**：書き出すのは `.ori/architecture.md` 1 ファイルのみ。`/ori-init` が作る `.ori/config.yaml` 等とは衝突しない
 - **`apps/` は生成しない**：upstream framework init は `/ori-bootstrap` の責務
-- **patterns/ 探索順**：skill bundle 隣接 (`.apm/skills/ori-architect/patterns/` — bundle が住む場所がどこであっても `patterns/` は sibling)
+- **patterns/ 探索順**：skill bundle 隣接 (`patterns/` — bundle が住む場所がどこであっても `patterns/` は sibling)
 - **CLI 拡張は禁止** (`ori-execution-model-shift-2026-06-03`)：新機能はこのスキル + scripts/ で実装する
 - **`phase_hooks` block は必須出力** (ori-fzr.11 / 2026-06-26)：生成する `.ori/architecture.md` の
   frontmatter に `phase_hooks:` block を含めること (hook 不要な stack は `phase_hooks: {}`)。
   `/ori-flow` / `/ori-doctor` がこの block を読んで Slice DoD rule 4 (`pattern.md`) の
   bindings 再生成を invoke する。schema 詳細は `architecture-md-schema.md` の "phase_hooks" を参照。
   期待値は golden test の `GOLDEN[*].phase_hooks` に固定されている (ori-c79.6)
-- **example-slice/ は AI 専用の study material** (`.apm/skills/ori-architect/patterns/<pattern>/stacks/<stack>/example-slice/`)：
+- **example-slice/ は AI 専用の study material** (`patterns/<pattern>/stacks/<stack>/example-slice/`)：
   target にはコピーしない。初回 slice 作成時 (`/ori-flow new-slice <id>`) に AI が **読んでから**
   ユーザ固有 domain の slice を生成する。構造規約 / public_entry / cross-slice 禁止のような不変則は
   `architecture.md` 由来、具体的な実装スタイル (Result 型のシグネチャ等) は `example-slice/` 由来
@@ -363,6 +363,6 @@ node ./scripts/sync-page-map.js --dry-run
 
 - **codebase 準備パス (次の step)**：`/ori-bootstrap` — upstream framework init の案内、readiness 検証、runner deps 追加、(typescript-tauri) specta scaffold。apps/ が未初期化でもここで揃う
 - **最初の slice 作成パス**：`/ori-bootstrap` 完了後に `/ori-flow new-slice <id>` で新 slice を scaffold → 7-phase 開発を回す
-- **scenario scaffold パス**: `node .apm/skills/ori-flow/scripts/new-scenario.js --list-validation` で validation.md の未 cover section（scenario 候補）を確認 → ユーザ確認の上 `new-scenario.js <id>` で scaffold → `/ori-flow <id>`（4 phase。scenario id = validation section anchor、1:1）
+- **scenario scaffold パス**: `node scripts/new-scenario.js --list-validation` で validation.md の未 cover section（scenario 候補）を確認 → ユーザ確認の上 `new-scenario.js <id>` で scaffold → `/ori-flow <id>`（4 phase。scenario id = validation section anchor、1:1）
 - **domain が未整備な場合のパス**：`.ori/domain/` が空なら `/ori-distill phase=discovery` で domain を先に立ち上げ、その後 `/ori-architect` をやり直す
 - **既存 domain がある場合のパス**：`/ori-migrate` で `docs/domain/` 等を `.ori/domain/` に昇格

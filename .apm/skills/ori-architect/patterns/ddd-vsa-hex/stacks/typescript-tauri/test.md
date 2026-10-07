@@ -57,7 +57,7 @@ Rust 側の DoD 必須成果物の規約は本節 `#commands-rs-required` に一
 
 ## `commands.rs` 必須成果物 (Tauri stack) {#commands-rs-required}
 
-`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` の "Slice Definition of Done"
+[`pattern.md`](../../pattern.md) の "Slice Definition of Done"
 rule 2「boundary 経由 test」を Tauri stack で具体化する規約。
 
 ### 必須配置

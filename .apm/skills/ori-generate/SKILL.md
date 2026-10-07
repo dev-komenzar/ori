@@ -100,7 +100,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
      - 既存データ前提の scenario は fixture を seed（G6。`.md` frontmatter 形式は app / domain の SSoT に従う）
      - compose-service 系参加時は `docker compose up -d --wait`、`onComplete` で `down -v`
      - `onComplete` で temp dir を削除
-   - **wdio の app 前提（G1/G2）**: 実行前に以下を満たす（SSoT: `.apm/instructions/scenario.instructions.md#test-readiness`）。Rust 配線は §「wdio の app 前提 patch」で **検出して冪等に patch** する:
+   - **wdio の app 前提（G1/G2）**: 実行前に以下を満たす（SSoT: [`scenario.instructions.md#test-readiness`](../../instructions/scenario.instructions.md#test-readiness)）。Rust 配線は §「wdio の app 前提 patch」で **検出して冪等に patch** する:
      - `runtime.build` が `runtime.binary` を生成する（Tauri の `cargo build` 単体は devUrl 参照の dev binary なので不可）
      - `tauri-plugin-wdio` の Rust 配線（Cargo dep / capabilities `wdio:default` / lib.rs の `#[cfg(debug_assertions)]` 登録）
      - frontend の動的 import と test build script は framework / 言語固有のため **生成せず impl-notes の要求として記録** する
@@ -119,7 +119,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
     ```
 11. **phase 台帳の更新（scenario）** — 決定的 writer で記録する（R1）:
     ```bash
-    node .apm/skills/ori-flow/scripts/scenario-status.js set <scenario-id> generate done
+    node scripts/scenario-status.js set <scenario-id> generate done
     ```
     - `phases.generate` と `beads.completion` が更新される（冪等）。実行失敗時は停止しユーザに委ねる
 
@@ -127,7 +127,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
 
 ### テストコード
 
-テストコードは `spec.md#scenario-steps` の Gherkin シナリオに基づき、runner 別の記法（playwright / wdio / vitest）で生成します。構造・命名規約の SSoT は `.apm/instructions/scenario-test.instructions.md`。
+テストコードは `spec.md#scenario-steps` の Gherkin シナリオに基づき、runner 別の記法（playwright / wdio / vitest）で生成します。構造・命名規約の SSoT は [`scenario-test.instructions.md`](../../instructions/scenario-test.instructions.md)。
 
 ### runner config
 
@@ -295,9 +295,9 @@ export const config: WebdriverIO.Config = {
 ## 注意
 
 - **自動 scaffold は禁止**：scenario が存在しなくても勝手に新規作成を呼ばない（ユーザ確認必須）
-- **生成物は派生ファイル**：直接編集は不可（テストコード / runner config / docker-compose.yml すべて）。更新手順は `.apm/instructions/scenario.instructions.md` §caveats に従う
+- **生成物は派生ファイル**：直接編集は不可（テストコード / runner config / docker-compose.yml すべて）。更新手順は [`scenario.instructions.md`](../../instructions/scenario.instructions.md) §caveats に従う
 - **app 前提 patch は派生ファイルではない**：§「wdio の app 前提 patch」の Rust 配線（Cargo.toml / capabilities / lib.rs）と node_modules symlink は **app オリジナルへの冪等 patch**（派生ファイルではないため再生成対象外）。frontend import / test build script は生成せず impl-notes の要求として残す
-- **前提条件を満たす**：`runner=wdio` では `.apm/instructions/scenario.instructions.md#test-readiness` の前提（G1〜G6）を満たす。満たせない場合は `TBD` を残して人間判断に委ねる
+- **前提条件を満たす**：`runner=wdio` では [`scenario.instructions.md#test-readiness`](../../instructions/scenario.instructions.md#test-readiness) の前提（G1〜G6）を満たす。満たせない場合は `TBD` を残して人間判断に委ねる
 - **推測で埋めない**：`TBD` を残し、人間判断に委ねる箇所を明示（app↔infra 接続 env の app 固有値等）
 - **lifecycle は config 所有**：テストコード内に compose up / healthcheck 待機を書かない
 - このスキルは spec を書かない。**phase 2 = 生成のみ**
@@ -308,4 +308,4 @@ export const config: WebdriverIO.Config = {
 phase 2 完了後、`/ori-flow` 内部なら自動的に phase 3 へ。単独呼び出しの場合：
 
 - **メインパス**：`/ori-review <scenario-id>` — phase 3。scenario の adversarial review
-- **生成物を修正するパス**：source（manifest.yaml / architecture.md）を編集 → `/ori-sync` → `/ori-flow`（`.apm/instructions/scenario.instructions.md` §caveats）
+- **生成物を修正するパス**：source（manifest.yaml / architecture.md）を編集 → `/ori-sync` → `/ori-flow`（[`scenario.instructions.md`](../../instructions/scenario.instructions.md) §caveats）

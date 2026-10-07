@@ -34,7 +34,7 @@ description: 既存 slice のバグ報告を 4 ケース（domain / impl / spec 
        → `/ori-flow <page-id>`（derive からやり直す。ケース 3 相当）
      spec.md が正しい
        → `/ori-impl-green <page-id>` → `/ori-review <page-id>`（ケース 2 相当）
-  2. 置換対応表: `node scripts/testids.js migrate-map <page-id>`（/ori-impl-green 等の skill bundle の scripts/。ori-bug の bundle には無い）
+  2. 置換対応表: `node scripts/testids.js migrate-map <page-id>`
   3. 実装と unit test の selector を同じ変更で契約値へ置換（動的 testid は固定 testid + data-key）
   4. 完了: `testids.js check <page-id>` と `testids.js migrate-map <page-id>` が exit 0、unit test 通過 → issue を close
 

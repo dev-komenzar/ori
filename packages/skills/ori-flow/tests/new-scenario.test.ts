@@ -55,9 +55,9 @@ interface RunResult {
   all: string;
 }
 
-async function run(args: string[], cwd: string): Promise<RunResult> {
+async function run(args: string[], cwd: string, script = SCRIPT): Promise<RunResult> {
   try {
-    const r = await execFileAsync("node", [SCRIPT, ...args], { cwd });
+    const r = await execFileAsync("node", [script, ...args], { cwd });
     return { code: 0, stdout: r.stdout, stderr: r.stderr, all: r.stdout + r.stderr };
   } catch (err) {
     const e = err as { code?: number; stdout?: string; stderr?: string };
@@ -197,6 +197,50 @@ describe("new-scenario <id> (1:1 anchor guard)", () => {
         expect(r.all).toContain("Scenario already exists");
       },
     );
+  });
+
+  it("resolves the project root (.ori/) upward when run from a subdirectory", async () => {
+    await withFixture({ ".ori/domain/validation.md": VALIDATION_MD }, async (root) => {
+      const sub = join(root, "apps", "web");
+      await mkdir(sub, { recursive: true });
+      const r = await run(["s1-note-created-happy"], sub);
+      expect(r.code).toBe(0);
+      await expect(
+        readFile(join(root, ".ori/scenarios/s1-note-created-happy/manifest.yaml"), "utf8"),
+      ).resolves.toContain('scenario_id: "s1-note-created-happy"');
+      await expect(
+        readFile(join(sub, ".ori/scenarios/s1-note-created-happy/manifest.yaml"), "utf8"),
+      ).rejects.toThrow();
+    });
+  });
+
+  it("does not pick up an ancestor .ori/ across a git repo boundary", async () => {
+    await withFixture({ ".ori/domain/validation.md": VALIDATION_MD }, async (root) => {
+      const inner = join(root, "other-repo");
+      await mkdir(join(inner, ".git"), { recursive: true });
+      const r = await run(["s1-note-created-happy"], inner);
+      expect(r.code).toBe(1);
+      expect(r.all).toContain(".ori/domain/validation.md not found");
+      await expect(
+        readFile(join(root, ".ori/scenarios/s1-note-created-happy/manifest.yaml"), "utf8"),
+      ).rejects.toThrow();
+    });
+  });
+
+  // 他 skill へ複製された copy (build-skills SHARED_ENTRIES) も template を自分の skill から読めること。
+  // template が無いと空 manifest を黙って書くため、複製漏れをここで検出する
+  it("the copy bundled into another skill renders the manifest template", async () => {
+    const copy = join(REPO_ROOT, ".apm", "skills", "ori-doctor", "scripts", "new-scenario.js");
+    await withFixture({ ".ori/domain/validation.md": VALIDATION_MD }, async (root) => {
+      const r = await run(["s1-note-created-happy"], root, copy);
+      expect(r.code).toBe(0);
+      const manifest = await readFile(
+        join(root, ".ori/scenarios/s1-note-created-happy/manifest.yaml"),
+        "utf8",
+      );
+      expect(manifest).toContain('scenario_id: "s1-note-created-happy"');
+      expect(manifest).not.toContain("{{");
+    });
   });
 
   it("exits 1 on non-kebab ids", async () => {

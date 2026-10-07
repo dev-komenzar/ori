@@ -4,13 +4,16 @@
 
 skill scripts には 2 つの実行環境がある。
 
-| 環境 | `.apm/skills/` の場所 | 更新方法 |
+| 環境 | skill の配置先 | 更新方法 |
 |---|---|---|
-| **APM-install** (`apm install ori`) | `~/.apm/packages/ori/.apm/skills/` | `apm update ori` でパッケージ更新 |
-| **dev 環境** (このリポジトリ) | `<repo-root>/.apm/skills/` | `pnpm build:skills` で手動再ビルド or pre-commit hook が自動実行 |
+| **APM-install** (`apm install dev-komenzar/ori`) | Claude: `.claude/skills/<name>/`、それ以外: `.agents/skills/<name>/` (`.apm/` は存在しない) | `apm update` でパッケージ更新 |
+| **dev 環境** (このリポジトリ) | `<repo-root>/.apm/skills/<name>/` | `pnpm build:skills` で手動再ビルド or pre-commit hook が自動実行 |
 
 dev 環境では `.apm/skills/` はリポジトリ内に存在し git 管理下に置かれる。
-APM-install 環境では APM がスナップショットをグローバルにキャッシュするため、ソース変更後に `apm update` が必要。
+APM-install 環境では APM が skill folder を配置先へ copytree するだけで build はしない。
+そのため SKILL.md から `.apm/` の path は参照できない。script は skill root 相対 (`scripts/x.js`)、
+instructions / 他 skill の asset は相対 markdown link で参照する (規約: `.apm/instructions/ori-conventions.instructions.md`、
+複数 skill で使う script の複製: [skill-scripts-build.md](../skill-scripts-build.md#複数-skill-で使う-script))。
 
 ## 新規 skill の追加手順
 

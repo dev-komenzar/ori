@@ -8073,7 +8073,7 @@ function loadSpec(path) {
       id: "spec.architecture-md",
       level: "fail",
       message: `${path} \u306E parse \u306B\u5931\u6557: ${err.message.split("\n")[0]}`,
-      fix: "/ori-architect \u3067\u518D\u751F\u6210\u3001\u307E\u305F\u306F node .apm/skills/ori-doctor/scripts/lint.js .ori \u3067\u78BA\u8A8D"
+      fix: "/ori-architect \u3067\u518D\u751F\u6210\u3001\u307E\u305F\u306F /ori-doctor (lint.js) \u3067\u78BA\u8A8D"
     };
   }
 }

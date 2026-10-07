@@ -76,7 +76,7 @@ function loadSpec(path: string): ArchitectureSpec | Check {
     return {
       id: "spec.architecture-md", level: "fail",
       message: `${path} の parse に失敗: ${(err as Error).message.split("\n")[0]}`,
-      fix: "/ori-architect で再生成、または node .apm/skills/ori-doctor/scripts/lint.js .ori で確認",
+      fix: "/ori-architect で再生成、または /ori-doctor (lint.js) で確認",
     };
   }
 }

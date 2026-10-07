@@ -15,7 +15,7 @@ applyTo: ".ori/features/*/spec.md"
 ## 境界契約 (Boundary contract) section 必須化 {#boundary-contract-section}
 
 `## 境界契約 {#boundary-contract}` section は **必須**。
-Slice DoD (`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` の "Slice Definition of Done")
+Slice DoD ([`ori-architect/patterns/ddd-vsa-hex/pattern.md`](../skills/ori-architect/patterns/ddd-vsa-hex/pattern.md) の "Slice Definition of Done")
 の rule 2「tests は外部境界経由のみ」を spec レベルで明示するための section。
 
 宣言すべき項目:
