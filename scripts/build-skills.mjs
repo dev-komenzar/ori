@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { build, context } from "esbuild"
-import { readdirSync, mkdirSync, existsSync } from "fs"
+import { readdirSync, mkdirSync, existsSync, copyFileSync, chmodSync } from "fs"
 import { join, dirname, basename } from "path"
 import { fileURLToPath } from "url"
 
@@ -26,6 +26,8 @@ const SHARED_ENTRIES = [
       "ori-test-red",
     ],
   },
+  // bash script は build せずそのまま複製する (実行権限も付ける)
+  { entry: "check-page-testids.sh", skills: ["ori-doctor", "ori-generate"] },
 ]
 
 // 出力先の重複 (skill 固有 entry と共有 entry が同名) は黙って上書きせず止める
@@ -115,6 +117,17 @@ for (const { entry, skills } of SHARED_ENTRIES) {
     }
     const outDir = join(SKILLS_OUT, skillName, "scripts")
     mkdirSync(outDir, { recursive: true })
+    if (entry.endsWith(".sh")) {
+      const outFile = join(outDir, entry)
+      if (outputs.has(outFile)) {
+        throw new Error(`build-skills: ${outFile} is produced by both ${outputs.get(outFile)} and ${entry}`)
+      }
+      outputs.set(outFile, entry)
+      copyFileSync(join(SHARED_SRC, entry), outFile)
+      chmodSync(outFile, 0o755)
+      console.log(`✓ skills-shared/src/${entry} → .apm/skills/${skillName}/scripts/${entry}`)
+      continue
+    }
     await buildEntry(
       join(SHARED_SRC, entry),
       join(outDir, `${outName}.js`),

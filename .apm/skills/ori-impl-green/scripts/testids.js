@@ -7373,6 +7373,7 @@ var SRC_EXT = /\.(svelte|vue|tsx|jsx|ts|js|mjs|html|astro)$/;
 var SKIP_DIRS = /* @__PURE__ */ new Set(["node_modules", "target", "dist", "build", ".svelte-kit", ".git", "gen", "coverage"]);
 var TEST_FILE = /(^|\/)(tests|__tests__|e2e)\/|\.(test|spec)\.[a-z]+$/;
 var VALUE_FLAGS = ["root", "testid", "purpose", "source", "dynamic"];
+var UNOWNED = "impl";
 async function exists(path) {
   try {
     await access(path);
@@ -7383,7 +7384,7 @@ async function exists(path) {
 }
 function usage() {
   console.error(
-    "Usage: testids.js sync <page-id> | --all            [--root <dir>]\n       testids.js check <page-id> | --all [--no-impl] [--root <dir>]\n       testids.js check-collisions                   [--root <dir>]\n       testids.js add-extra <page-id> --testid <id> --purpose <text> --source <derive|scenario:<id>> [--dynamic data-key] [--root <dir>]\n  exit: 0 = ok / 1 = \u9055\u53CD\u30FB\u5165\u529B\u4E0D\u6574\u5408 / 2 = usage\u30FBproject root \u4E0D\u660E"
+    "Usage: testids.js sync <page-id>... | --all            [--root <dir>]\n       testids.js check <page-id>... | --all [--no-impl] [--implemented-only] [--root <dir>]\n       testids.js migrate-map <page-id>                 [--root <dir>]\n       testids.js check-collisions                      [--root <dir>]\n       testids.js add-extra <page-id> --testid <id> --purpose <text> --source <derive|scenario:<id>> [--dynamic data-key] [--root <dir>]\n  exit: 0 = ok / 1 = \u9055\u53CD\u30FB\u5165\u529B\u4E0D\u6574\u5408 / 2 = usage\u30FBproject root \u4E0D\u660E"
   );
   process.exit(2);
 }
@@ -7587,7 +7588,9 @@ async function writeContract(root, id, c) {
     doc.set("derived", doc.createNode(c.derived));
     const extra = doc.get("extra", true);
     if ((0, import_yaml.isSeq)(extra)) {
-      for (const r of c.extra.slice(extra.items.length)) extra.items.push(doc.createNode(r));
+      const added = c.extra.slice(extra.items.length);
+      if (added.length > 0) extra.flow = false;
+      for (const r of added) extra.items.push(doc.createNode(r));
     } else {
       doc.set("extra", doc.createNode(c.extra));
     }
@@ -7652,52 +7655,102 @@ async function walk(dir, acc) {
   }
   return acc;
 }
-var ATTR_RE = /(v-bind:|:)?data-testid\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*(?:"([^"]*)"|'([^']*)'|`([^`$]*)`)\s*\}|(\{[^}]*\}))/g;
-async function indexImpl(root, pageIds) {
-  const literals = /* @__PURE__ */ new Set();
-  const violations = [];
+function ownerOf(raw, pages) {
+  const ns = /(?:^|[^\w-])(?:page|widget)\.([^.\s"'`$]+)/.exec(raw);
+  if (ns && pages.some((p) => p.info.id === ns[1])) return ns[1];
+  const sc = /(?:^|[^\w-])(screen-\d+)-/.exec(raw);
+  if (!sc) return null;
+  const owners = pages.filter((p) => p.info.screens.includes(sc[1]));
+  return owners.length === 1 ? owners[0].info.id : null;
+}
+async function sourceFiles(root) {
   const files = [];
   for (const d of await appSourceDirs(root)) await walk(d, files);
-  for (const f of files) {
+  const out = [];
+  for (const f of files) if ((await stat(f)).size <= 2e6) out.push(f);
+  return out;
+}
+var ATTR_RE = /(v-bind:|:)?data-testid\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*(?:"([^"]*)"|'([^']*)'|`([^`$]*)`)\s*\}|(\{[^}]*\}))/g;
+async function indexImpl(root, pageIds, pages) {
+  const literals = /* @__PURE__ */ new Set();
+  const violations = [];
+  for (const f of await sourceFiles(root)) {
     const rel = relative(root, f);
     if (TEST_FILE.test(rel)) continue;
-    if ((await stat(f)).size > 2e6) continue;
     const text = await readFile(f, "utf8");
+    const fileLiterals = /* @__PURE__ */ new Set();
+    const fileViolations = [];
     for (const m of text.matchAll(ATTR_RE)) {
       const at = m.index ?? 0;
       if (text[at - 1] === "[") continue;
       const loc = `${rel}:${text.slice(0, at).split("\n").length}`;
       const shown = m[0].replace(/\s+/g, " ");
+      const push = (raw, msg) => {
+        fileViolations.push({ owner: ownerOf(raw, pages), message: `${loc}: ${msg}` });
+      };
       let value = m[2] ?? m[3] ?? m[4] ?? m[5] ?? m[6];
       if (m[1] !== void 0) {
         const lit = value === void 0 ? null : /^\s*'([^']*)'\s*$/.exec(value);
         value = lit ? lit[1] : void 0;
       }
       if (m[7] !== void 0 || value === void 0 || /[${}]/.test(value)) {
-        violations.push(`${loc}: \u52D5\u7684 testid \u306F\u7981\u6B62 (literal \u3067\u66F8\u304D\u3001\u52D5\u7684\u8981\u7D20\u306F\u56FA\u5B9A testid + data-key \u3092\u4F7F\u3046): ${shown}`);
+        push(shown, `\u52D5\u7684 testid \u306F\u7981\u6B62 (literal \u3067\u66F8\u304D\u3001\u52D5\u7684\u8981\u7D20\u306F\u56FA\u5B9A testid + data-key \u3092\u4F7F\u3046): ${shown}`);
         continue;
       }
       literals.add(value);
+      fileLiterals.add(value);
       if (!TESTID_CHARSET.test(value)) {
-        violations.push(`${loc}: testid \u5F62\u5F0F\u9055\u53CD (kebab-case \u3092 . \u3067\u9023\u7D50): "${value}"`);
+        push(value, `testid \u5F62\u5F0F\u9055\u53CD (kebab-case \u3092 . \u3067\u9023\u7D50): "${value}"`);
         continue;
       }
       const ns = /^(page|widget)\.([^.]+)/.exec(value);
       if (ns && !pageIds.has(ns[2])) {
-        violations.push(`${loc}: testid \u304C\u5B58\u5728\u3057\u306A\u3044 page / widget \u3092\u6307\u3057\u3066\u3044\u307E\u3059: "${value}"`);
+        push(value, `testid \u304C\u5B58\u5728\u3057\u306A\u3044 page / widget \u3092\u6307\u3057\u3066\u3044\u307E\u3059: "${value}"`);
       }
+    }
+    const fileOwners = pages.filter((p) => [...fileLiterals].some((l) => p.keys.has(l)));
+    for (const v of fileViolations) {
+      if (v.owner === null && fileOwners.length === 1) v.owner = fileOwners[0].info.id;
+      violations.push(v);
     }
   }
   return { literals, violations };
 }
-async function checkPages(root, ids, withImpl) {
+async function loadPagesLenient(root, ids) {
+  const pages = [];
+  for (const id of ids) {
+    let info;
+    try {
+      info = await loadPage(root, id);
+    } catch (e) {
+      if (!(e instanceof InputError)) throw e;
+      continue;
+    }
+    const keys = /* @__PURE__ */ new Set();
+    try {
+      for (const r of (await deriveRows(root, info)).rows) keys.add(r.testid).add(r.field);
+      for (const r of (await readContract(root, id))?.extra ?? []) keys.add(r.testid);
+    } catch (e) {
+      if (!(e instanceof InputError)) throw e;
+    }
+    pages.push({ info, keys });
+  }
+  return pages;
+}
+function isImplemented(id, expected, c, impl) {
+  return [...expected.map((r) => r.testid), ...(c?.extra ?? []).map((r) => r.testid)].some((t) => impl.literals.has(t)) || expected.some((r) => impl.literals.has(r.field)) || impl.violations.some((v) => v.owner === id);
+}
+async function checkPages(root, ids, opts) {
   let count = 0;
   const report = (msg) => {
     console.log(`VIOLATION ${msg}`);
     count++;
   };
-  const allIds = new Set(await listPageIds(root));
-  const impl = withImpl ? await indexImpl(root, allIds) : null;
+  const allIds = await listPageIds(root);
+  const impl = opts.withImpl ? await indexImpl(root, new Set(allIds), await loadPagesLenient(root, allIds)) : null;
+  const reportOwned = (id) => {
+    for (const v of impl?.violations ?? []) if (v.owner === id) report(`${id}: impl: ${v.message}`);
+  };
   for (const id of ids) {
     let page;
     let expected;
@@ -7708,12 +7761,22 @@ async function checkPages(root, ids, withImpl) {
       c = await readContract(root, id);
     } catch (e) {
       if (!(e instanceof InputError)) throw e;
+      if (opts.implementedOnly) {
+        console.log(`skip: ${id} (\u5951\u7D04\u3092\u5C0E\u51FA\u3067\u304D\u307E\u305B\u3093: ${e.message})`);
+        continue;
+      }
       report(`${id}: ${e.message}`);
+      reportOwned(id);
+      continue;
+    }
+    if (opts.implementedOnly && impl && !isImplemented(id, expected, c, impl)) {
+      console.log(`skip: ${id} (\u5B9F\u88C5\u306A\u3057)`);
       continue;
     }
     if (page.screens.length === 0) report(`${id}: ${NO_SCREEN}`);
     if (!c) {
       report(`${id}: testids.yaml \u304C\u3042\u308A\u307E\u305B\u3093 (testids.js sync ${id})`);
+      reportOwned(id);
       continue;
     }
     if (JSON.stringify(c.derived) !== JSON.stringify(expected)) {
@@ -7725,10 +7788,52 @@ async function checkPages(root, ids, withImpl) {
         if (!impl.literals.has(t)) report(`${id}: \u5951\u7D04 testid \u304C\u5B9F\u88C5\u306B\u5B58\u5728\u3057\u307E\u305B\u3093: "${t}"`);
       }
     }
+    reportOwned(id);
   }
-  if (impl) for (const v of impl.violations) report(`impl: ${v}`);
+  for (const v of impl?.violations ?? []) {
+    if (v.owner !== null) continue;
+    if (opts.all) report(`${UNOWNED}: ${v.message}`);
+    else console.log(`NOTE ${UNOWNED}: ${v.message} (\u3069\u306E page \u306B\u3082\u5E30\u5C5E\u3067\u304D\u306A\u3044\u3002\u4EF6\u6570\u306B\u542B\u3081\u306A\u3044 \u2014 check --all \u3067\u6570\u3048\u308B)`);
+  }
   console.log(count === 0 ? "OK: testid \u5951\u7D04\u9055\u53CD\u306A\u3057" : `testid \u5951\u7D04\u9055\u53CD: ${count} \u4EF6`);
   return count;
+}
+var TESTID_CONTEXT = /test-?id\s*(?:=|\()\s*\{?\s*["'`]{0,2}$/i;
+function escapeRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+async function migrateMap(root, id) {
+  const page = await loadPage(root, id);
+  const { rows } = await deriveRows(root, page);
+  const c = await readContract(root, id);
+  const allIds = await listPageIds(root);
+  const impl = await indexImpl(root, new Set(allIds), await loadPagesLenient(root, allIds));
+  const texts = [];
+  for (const f of await sourceFiles(root)) texts.push([relative(root, f), await readFile(f, "utf8")]);
+  let remaining = 0;
+  console.log(`# ${id}: \u65E7 testid (ui-field id) \u2192 \u5951\u7D04 testid`);
+  for (const r of rows) {
+    const re = new RegExp(`(?<![\\w-])${escapeRe(r.field)}(?![\\w-])`, "g");
+    const hits = [];
+    const refs = [];
+    for (const [rel, text] of texts) {
+      for (const m of text.matchAll(re)) {
+        const before = text.slice(0, m.index ?? 0);
+        const where = `${TEST_FILE.test(rel) ? "test" : "impl"} ${rel}:${before.split("\n").length}`;
+        (TESTID_CONTEXT.test(before.slice(-120)) ? hits : refs).push(where);
+      }
+    }
+    console.log(`${r.field} \u2192 ${r.testid}${hits.length === 0 ? " (\u4F7F\u7528\u7B87\u6240\u306A\u3057)" : ""}`);
+    for (const h of hits) console.log(`  ${h}`);
+    for (const h of refs) console.log(`  \u53C2\u8003 (testid \u4EE5\u5916\u306E\u6587\u8108\u306E\u53EF\u80FD\u6027\u304C\u9AD8\u3044\u3002\u8981\u78BA\u8A8D): ${h}`);
+    remaining += hits.length;
+  }
+  for (const r of c?.extra ?? []) {
+    if (!impl.literals.has(r.testid)) console.log(`\u624B\u52D5: ${r.testid} (${r.purpose}) \u2014 extra \u884C\u306F\u65E7 testid \u3092\u63A8\u5B9A\u3067\u304D\u307E\u305B\u3093`);
+  }
+  for (const v of impl.violations) if (v.owner === id) console.log(`\u624B\u52D5: ${v.message}`);
+  console.log(remaining === 0 ? "OK: \u65E7 testid \u306E\u4F7F\u7528 0 \u4EF6" : `\u65E7 testid \u306E\u4F7F\u7528: ${remaining} \u4EF6`);
+  return remaining > 0 ? 1 : 0;
 }
 async function checkCollisions(root) {
   const groups = await parsePageGroups(root);
@@ -7774,21 +7879,28 @@ async function addExtra(root, id, flags) {
 async function main() {
   const { positional, flags } = parseArgs(process.argv.slice(2));
   const [cmd, target] = positional;
+  const targets = positional.slice(1);
   if (!cmd) usage();
   const root = await resolveRoot(flags.get("root"));
   const all = flags.get("all") === true;
   const ids = async () => {
     if (all) return listPageIds(root);
-    if (!target) usage();
-    return [target];
+    if (targets.length === 0) usage();
+    return targets;
   };
   switch (cmd) {
     case "sync": {
       for (const id of await ids()) await syncPage(root, id);
       return 0;
     }
-    case "check":
-      return await checkPages(root, await ids(), flags.get("no-impl") !== true) > 0 ? 1 : 0;
+    case "check": {
+      const opts = { withImpl: flags.get("no-impl") !== true, implementedOnly: flags.get("implemented-only") === true, all };
+      if (opts.implementedOnly && !opts.withImpl) usage();
+      return await checkPages(root, await ids(), opts) > 0 ? 1 : 0;
+    }
+    case "migrate-map":
+      if (!target) usage();
+      return migrateMap(root, target);
     case "check-collisions":
       return await checkCollisions(root) > 0 ? 1 : 0;
     case "add-extra":

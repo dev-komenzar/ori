@@ -47,6 +47,8 @@ const SKIP_DIRS = new Set(["node_modules", "target", "dist", "build", ".svelte-k
 // `test/` は SvelteKit の route 名等で本番コードになりうるため除外しない
 const TEST_FILE = /(^|\/)(tests|__tests__|e2e)\/|\.(test|spec)\.[a-z]+$/;
 const VALUE_FLAGS = ["root", "testid", "purpose", "source", "dynamic"];
+// page に帰属できない実装 testid 違反の出力キー (doctor は page:_impl として起票する)
+const UNOWNED = "impl";
 
 async function exists(path: string): Promise<boolean> {
   try { await access(path); return true; } catch { return false; }
@@ -54,9 +56,10 @@ async function exists(path: string): Promise<boolean> {
 
 function usage(): never {
   console.error(
-    "Usage: testids.js sync <page-id> | --all            [--root <dir>]\n" +
-    "       testids.js check <page-id> | --all [--no-impl] [--root <dir>]\n" +
-    "       testids.js check-collisions                   [--root <dir>]\n" +
+    "Usage: testids.js sync <page-id>... | --all            [--root <dir>]\n" +
+    "       testids.js check <page-id>... | --all [--no-impl] [--implemented-only] [--root <dir>]\n" +
+    "       testids.js migrate-map <page-id>                 [--root <dir>]\n" +
+    "       testids.js check-collisions                      [--root <dir>]\n" +
     "       testids.js add-extra <page-id> --testid <id> --purpose <text> --source <derive|scenario:<id>> [--dynamic data-key] [--root <dir>]\n" +
     "  exit: 0 = ok / 1 = 違反・入力不整合 / 2 = usage・project root 不明",
   );
@@ -286,7 +289,11 @@ async function writeContract(root: string, id: string, c: Contract): Promise<boo
     doc.set("derived", doc.createNode(c.derived));
     const extra = doc.get("extra", true);
     if (isSeq(extra)) {
-      for (const r of c.extra.slice(extra.items.length)) extra.items.push(doc.createNode(r));
+      const added = c.extra.slice(extra.items.length);
+      // 初回 sync は `extra: []` (flow) を書く。flow のまま push すると崩れた flow style になるため、
+      // 人間が編集する section として block style に直す (ori-oan.14)
+      if (added.length > 0) extra.flow = false;
+      for (const r of added) extra.items.push(doc.createNode(r));
     } else {
       doc.set("extra", doc.createNode(c.extra));
     }
@@ -359,9 +366,39 @@ async function walk(dir: string, acc: string[]): Promise<string[]> {
   return acc;
 }
 
+interface ImplViolation {
+  owner: string | null; // 帰属 page id (推定できなければ null)
+  message: string;
+}
+
 interface ImplIndex {
   literals: Set<string>;
-  violations: string[];
+  violations: ImplViolation[];
+}
+
+// 帰属判定用の page 情報。keys = その page の契約 testid と derived の field id (移行前の旧 testid)
+interface PageRef {
+  info: PageInfo;
+  keys: Set<string>;
+}
+
+// 実装 testid 違反を page に寄せる (ori-oan.13): page.<id> / widget.<id> はその page、
+// ui-field id 由来の screen-N-* はその screen を持つ page。一意に決まらなければ null
+function ownerOf(raw: string, pages: PageRef[]): string | null {
+  const ns = /(?:^|[^\w-])(?:page|widget)\.([^.\s"'`$]+)/.exec(raw);
+  if (ns && pages.some((p) => p.info.id === ns[1])) return ns[1]!;
+  const sc = /(?:^|[^\w-])(screen-\d+)-/.exec(raw);
+  if (!sc) return null;
+  const owners = pages.filter((p) => p.info.screens.includes(sc[1]!));
+  return owners.length === 1 ? owners[0]!.info.id : null;
+}
+
+async function sourceFiles(root: string): Promise<string[]> {
+  const files: string[] = [];
+  for (const d of await appSourceDirs(root)) await walk(d, files);
+  const out: string[] = [];
+  for (const f of files) if ((await stat(f)).size <= 2_000_000) out.push(f);
+  return out;
 }
 
 // 実装側の data-testid を収集する。literal 以外 (式・テンプレート埋め込み) は形式違反。
@@ -369,22 +406,24 @@ interface ImplIndex {
 const ATTR_RE =
   /(v-bind:|:)?data-testid\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*(?:"([^"]*)"|'([^']*)'|`([^`$]*)`)\s*\}|(\{[^}]*\}))/g;
 
-async function indexImpl(root: string, pageIds: Set<string>): Promise<ImplIndex> {
+async function indexImpl(root: string, pageIds: Set<string>, pages: PageRef[]): Promise<ImplIndex> {
   const literals = new Set<string>();
-  const violations: string[] = [];
-  const files: string[] = [];
-  for (const d of await appSourceDirs(root)) await walk(d, files);
-  for (const f of files) {
+  const violations: ImplViolation[] = [];
+  for (const f of await sourceFiles(root)) {
     const rel = relative(root, f);
     if (TEST_FILE.test(rel)) continue;
-    if ((await stat(f)).size > 2_000_000) continue;
     const text = await readFile(f, "utf8");
+    const fileLiterals = new Set<string>();
+    const fileViolations: ImplViolation[] = [];
     for (const m of text.matchAll(ATTR_RE)) {
       const at = m.index ?? 0;
       // `[data-testid="x"]` は selector であって付与ではない
       if (text[at - 1] === "[") continue;
       const loc = `${rel}:${text.slice(0, at).split("\n").length}`;
       const shown = m[0].replace(/\s+/g, " ");
+      const push = (raw: string, msg: string): void => {
+        fileViolations.push({ owner: ownerOf(raw, pages), message: `${loc}: ${msg}` });
+      };
       let value = m[2] ?? m[3] ?? m[4] ?? m[5] ?? m[6];
       if (m[1] !== undefined) {
         // Vue の bind は中身が静的な文字列 literal (`:data-testid="'x'"`) のときだけ受け入れる
@@ -392,28 +431,72 @@ async function indexImpl(root: string, pageIds: Set<string>): Promise<ImplIndex>
         value = lit ? lit[1] : undefined;
       }
       if (m[7] !== undefined || value === undefined || /[${}]/.test(value)) {
-        violations.push(`${loc}: 動的 testid は禁止 (literal で書き、動的要素は固定 testid + data-key を使う): ${shown}`);
+        push(shown, `動的 testid は禁止 (literal で書き、動的要素は固定 testid + data-key を使う): ${shown}`);
         continue;
       }
       literals.add(value);
+      fileLiterals.add(value);
       if (!TESTID_CHARSET.test(value)) {
-        violations.push(`${loc}: testid 形式違反 (kebab-case を . で連結): "${value}"`);
+        push(value, `testid 形式違反 (kebab-case を . で連結): "${value}"`);
         continue;
       }
       const ns = /^(page|widget)\.([^.]+)/.exec(value);
       if (ns && !pageIds.has(ns[2]!)) {
-        violations.push(`${loc}: testid が存在しない page / widget を指しています: "${value}"`);
+        push(value, `testid が存在しない page / widget を指しています: "${value}"`);
       }
+    }
+    // 値から決まらない違反 (`{name}` / `row-${id}` 等) は、同じファイルが付けている testid から
+    // page が 1 つに決まればその page に寄せる (page 指定の check が素通ししないように)
+    const fileOwners = pages.filter((p) => [...fileLiterals].some((l) => p.keys.has(l)));
+    for (const v of fileViolations) {
+      if (v.owner === null && fileOwners.length === 1) v.owner = fileOwners[0]!.info.id;
+      violations.push(v);
     }
   }
   return { literals, violations };
 }
 
-async function checkPages(root: string, ids: string[], withImpl: boolean): Promise<number> {
+// manifest が壊れた page は帰属先候補から外すだけ (違反としては check 本体が報告する)
+async function loadPagesLenient(root: string, ids: string[]): Promise<PageRef[]> {
+  const pages: PageRef[] = [];
+  for (const id of ids) {
+    let info: PageInfo;
+    try { info = await loadPage(root, id); } catch (e) { if (!(e instanceof InputError)) throw e; continue; }
+    const keys = new Set<string>();
+    try {
+      for (const r of (await deriveRows(root, info)).rows) keys.add(r.testid).add(r.field);
+      for (const r of (await readContract(root, id))?.extra ?? []) keys.add(r.testid);
+    } catch (e) {
+      if (!(e instanceof InputError)) throw e;
+    }
+    pages.push({ info, keys });
+  }
+  return pages;
+}
+
+// 「実装あり」= 契約 testid・derived の field id (移行前の旧 testid)・その page に寄せた違反のどれかが実装にある
+function isImplemented(id: string, expected: DerivedRow[], c: Contract | null, impl: ImplIndex): boolean {
+  return (
+    [...expected.map((r) => r.testid), ...(c?.extra ?? []).map((r) => r.testid)].some((t) => impl.literals.has(t)) ||
+    expected.some((r) => impl.literals.has(r.field)) ||
+    impl.violations.some((v) => v.owner === id)
+  );
+}
+
+interface CheckOptions {
+  withImpl: boolean;
+  implementedOnly: boolean;
+  all: boolean; // page に寄せられない実装違反 (impl) は --all のときだけ数える (page 指定時は NOTE で表示のみ)
+}
+
+async function checkPages(root: string, ids: string[], opts: CheckOptions): Promise<number> {
   let count = 0;
   const report = (msg: string): void => { console.log(`VIOLATION ${msg}`); count++; };
-  const allIds = new Set(await listPageIds(root));
-  const impl = withImpl ? await indexImpl(root, allIds) : null;
+  const allIds = await listPageIds(root);
+  const impl = opts.withImpl ? await indexImpl(root, new Set(allIds), await loadPagesLenient(root, allIds)) : null;
+  const reportOwned = (id: string): void => {
+    for (const v of impl?.violations ?? []) if (v.owner === id) report(`${id}: impl: ${v.message}`);
+  };
   for (const id of ids) {
     let page: PageInfo;
     let expected: DerivedRow[];
@@ -424,12 +507,26 @@ async function checkPages(root: string, ids: string[], withImpl: boolean): Promi
       c = await readContract(root, id);
     } catch (e) {
       if (!(e instanceof InputError)) throw e;
+      // --implemented-only (generate) では入力不整合を移行 issue にしない。上流の未完了として扱う
+      if (opts.implementedOnly) {
+        console.log(`skip: ${id} (契約を導出できません: ${e.message})`);
+        continue;
+      }
       report(`${id}: ${e.message}`);
+      reportOwned(id);
+      continue;
+    }
+    if (opts.implementedOnly && impl && !isImplemented(id, expected, c, impl)) {
+      console.log(`skip: ${id} (実装なし)`);
       continue;
     }
     // screen を解決できない page は契約が空のまま全検査を素通りするため違反にする
     if (page.screens.length === 0) report(`${id}: ${NO_SCREEN}`);
-    if (!c) { report(`${id}: testids.yaml がありません (testids.js sync ${id})`); continue; }
+    if (!c) {
+      report(`${id}: testids.yaml がありません (testids.js sync ${id})`);
+      reportOwned(id);
+      continue;
+    }
     if (JSON.stringify(c.derived) !== JSON.stringify(expected)) {
       report(`${id}: derived が ui-fields と不一致 (stale)。testids.js sync ${id} で再生成してください`);
     }
@@ -439,10 +536,63 @@ async function checkPages(root: string, ids: string[], withImpl: boolean): Promi
         if (!impl.literals.has(t)) report(`${id}: 契約 testid が実装に存在しません: "${t}"`);
       }
     }
+    reportOwned(id);
   }
-  if (impl) for (const v of impl.violations) report(`impl: ${v}`);
+  for (const v of impl?.violations ?? []) {
+    if (v.owner !== null) continue;
+    if (opts.all) report(`${UNOWNED}: ${v.message}`);
+    else console.log(`NOTE ${UNOWNED}: ${v.message} (どの page にも帰属できない。件数に含めない — check --all で数える)`);
+  }
   console.log(count === 0 ? "OK: testid 契約違反なし" : `testid 契約違反: ${count} 件`);
   return count;
+}
+
+// match 直前が testid の値の位置か: data-testid="x" / data-testid={"x"} / :data-testid="'x'" /
+// [data-testid="x"] / getByTestId('x') 等。同じ行の id= / for= は数えない
+const TESTID_CONTEXT = /test-?id\s*(?:=|\()\s*\{?\s*["'`]{0,2}$/i;
+
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// 既存実装を契約へ移行するための置換対応表 (読み取り専用、ori-oan.13)。
+// 旧 testid = derived 行の ui-field id (field id を testid に直写しした実装)。実装とテストの使用箇所を出す。
+// 数えるのは testid の値の位置 (data-testid="…" / getByTestId('…') 等) だけ。id= / for= / name= など
+// それ以外の field id は置換してはいけないので「参考」として件数に含めない。
+// extra 行と動的 testid は旧値を推定できないので「手動」として並べる。exit 1 = 旧 testid の使用が残っている
+async function migrateMap(root: string, id: string): Promise<number> {
+  const page = await loadPage(root, id);
+  const { rows } = await deriveRows(root, page);
+  const c = await readContract(root, id);
+  const allIds = await listPageIds(root);
+  const impl = await indexImpl(root, new Set(allIds), await loadPagesLenient(root, allIds));
+  const texts: [string, string][] = [];
+  for (const f of await sourceFiles(root)) texts.push([relative(root, f), await readFile(f, "utf8")]);
+  let remaining = 0;
+  console.log(`# ${id}: 旧 testid (ui-field id) → 契約 testid`);
+  for (const r of rows) {
+    const re = new RegExp(`(?<![\\w-])${escapeRe(r.field)}(?![\\w-])`, "g");
+    const hits: string[] = [];
+    const refs: string[] = [];
+    for (const [rel, text] of texts) {
+      for (const m of text.matchAll(re)) {
+        const before = text.slice(0, m.index ?? 0);
+        const where = `${TEST_FILE.test(rel) ? "test" : "impl"} ${rel}:${before.split("\n").length}`;
+        // 直前 120 文字を見る (Prettier が改行した getByTestId(\n  "x") も拾う)
+        (TESTID_CONTEXT.test(before.slice(-120)) ? hits : refs).push(where);
+      }
+    }
+    console.log(`${r.field} → ${r.testid}${hits.length === 0 ? " (使用箇所なし)" : ""}`);
+    for (const h of hits) console.log(`  ${h}`);
+    for (const h of refs) console.log(`  参考 (testid 以外の文脈の可能性が高い。要確認): ${h}`);
+    remaining += hits.length;
+  }
+  for (const r of c?.extra ?? []) {
+    if (!impl.literals.has(r.testid)) console.log(`手動: ${r.testid} (${r.purpose}) — extra 行は旧 testid を推定できません`);
+  }
+  for (const v of impl.violations) if (v.owner === id) console.log(`手動: ${v.message}`);
+  console.log(remaining === 0 ? "OK: 旧 testid の使用 0 件" : `旧 testid の使用: ${remaining} 件`);
+  return remaining > 0 ? 1 : 0;
 }
 
 // page-groups.md の grouping 節ごとに screen 集合を取り、<elem> 衝突を検出する (11b 用、.ori/pages/ 不要)
@@ -495,21 +645,29 @@ async function addExtra(root: string, id: string, flags: Map<string, string | tr
 async function main(): Promise<number> {
   const { positional, flags } = parseArgs(process.argv.slice(2));
   const [cmd, target] = positional;
+  const targets = positional.slice(1);
   if (!cmd) usage();
   const root = await resolveRoot(flags.get("root"));
   const all = flags.get("all") === true;
   const ids = async (): Promise<string[]> => {
     if (all) return listPageIds(root);
-    if (!target) usage();
-    return [target];
+    if (targets.length === 0) usage();
+    return targets;
   };
   switch (cmd) {
     case "sync": {
       for (const id of await ids()) await syncPage(root, id);
       return 0;
     }
-    case "check":
-      return (await checkPages(root, await ids(), flags.get("no-impl") !== true)) > 0 ? 1 : 0;
+    case "check": {
+      const opts = { withImpl: flags.get("no-impl") !== true, implementedOnly: flags.get("implemented-only") === true, all };
+      // 実装有無の判定には実装の探索が要る
+      if (opts.implementedOnly && !opts.withImpl) usage();
+      return (await checkPages(root, await ids(), opts)) > 0 ? 1 : 0;
+    }
+    case "migrate-map":
+      if (!target) usage();
+      return migrateMap(root, target);
     case "check-collisions":
       return (await checkCollisions(root)) > 0 ? 1 : 0;
     case "add-extra":

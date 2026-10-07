@@ -328,6 +328,12 @@ extra:     # ori-derive / ori-generate が scripts/testids.js add-extra で追�
   ④ 契約 testid が実装 source に literal で存在する (契約 ⊆ 実装。契約外の実装 testid は許容)
   ⑤ 実装 testid の lint (動的組み立て禁止・形式・存在しない page 参照)。
   `/ori-impl-green` の完了条件 / `/ori-review` structural gate / `/ori-doctor` が実行する。
+  ⑤ の違反は page に帰属させる (`page.<id>` / `widget.<id>` → その page、`screen-<N>-*` → その screen を持つ page。
+  値から決まらなければ、同じファイルが付けている testid から page が 1 つに決まればその page)。
+  page を指定した check はその page に帰属する違反だけを数え、帰属できない違反は `NOTE` で表示し `--all` だけが数える。
+- **既存実装の移行** (ori-oan.13): 契約より前の実装 (ui-field id を testid にしたもの等) は実装側を契約へ移す。
+  実装 testid を契約の alias にはしない。手順は `ui-test.instructions.md#testid-migration`
+  (置換対応表 `scripts/testids.js migrate-map <id>`)。
 - `testids.js` は cwd から上方へ `.ori/` を探して project root を決める。project root 外 (user スコープに install された skill dir 等) から実行する場合は `--root <project-root>` を渡す。
 - slice presentation (`<slice-id>.<elem>`) は本契約の対象外 (ori-oan.12)。
 

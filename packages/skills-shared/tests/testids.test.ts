@@ -323,7 +323,7 @@ describe("testids.js check", () => {
       },
       async (root) => {
         await run(["sync", "page-main"], root);
-        const r = await run(["check", "page-main"], root);
+        const r = await run(["check", "--all"], root);
         expect(r.code).toBe(1);
         expect(r.stdout.match(/動的 testid は禁止/g)).toHaveLength(3);
         expect(r.stdout).toContain('testid 形式違反 (kebab-case を . で連結): "screen-1-sort_field"');
@@ -342,7 +342,223 @@ describe("testids.js check", () => {
   });
 });
 
+describe("testids.js check — 実装違反の page 帰属 (ori-oan.13)", () => {
+  const IMPL =
+    "<b data-testid={`screen-1-toolbar-date-range-${key}`}/>\n" + // screen-1 → page-main
+    '<b data-testid="screen-1-toolbar-sort-field-created_at"/>\n' + // screen-1 → page-main
+    "<b data-testid={`screen-2-theme-${value}`}/>\n" + // screen-2 → settings
+    "<b data-testid={`page.page-main.opt-${v}`}/>\n" + // page.<id> → page-main
+    "<b data-testid={name}/>\n" + // 推定不能 → impl
+    '<b data-testid="widget.ghost.x"/>\n'; // 存在しない page → impl
+
+  it("--all は帰属先 page のキーで、推定不能なものは impl のキーで出す", async () => {
+    await withFixture({ ...BASE, "apps/app/src/T.svelte": IMPL }, async (root) => {
+      await run(["sync", "--all"], root);
+      const r = await run(["check", "--all"], root);
+      const lines = r.stdout.split("\n").filter((l) => l.includes(": impl: ") || l.startsWith("VIOLATION impl: "));
+      expect(lines.filter((l) => l.startsWith("VIOLATION page-main: impl: "))).toHaveLength(3);
+      expect(lines.filter((l) => l.startsWith("VIOLATION settings: impl: "))).toHaveLength(1);
+      expect(lines.filter((l) => l.startsWith("VIOLATION impl: "))).toHaveLength(2);
+      expect(r.stdout).toContain('VIOLATION settings: impl: apps/app/src/T.svelte:3: 動的 testid は禁止');
+    });
+  });
+
+  it("page 指定はその page に寄せた違反だけを数える (他 page の未移行で止めない)", async () => {
+    await withFixture(
+      { ...BASE, "apps/app/src/T.svelte": IMPL, "apps/app/src/S.svelte": '<b data-testid="widget.settings.save"/><b data-testid="widget.settings.theme"/>' },
+      async (root) => {
+        await run(["sync", "--all"], root);
+        const r = await run(["check", "settings"], root);
+        expect(r.stdout.match(/^VIOLATION /gm)).toHaveLength(1);
+        expect(r.stdout).toContain("VIOLATION settings: impl: ");
+        expect(r.stdout).not.toContain("page-main");
+        expect(r.code).toBe(1);
+      },
+    );
+  });
+
+  it("値から決まらない違反は、同じファイルの testid から page が 1 つに決まればその page に寄せる", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        "apps/app/src/PageMain.svelte": '<textarea data-testid="page.page-main.draft-body"></textarea>\n<li data-testid={`row-${id}`}></li>',
+        "apps/app/src/Other.svelte": "<b data-testid={name}/>",
+      },
+      async (root) => {
+        await run(["sync", "--all"], root);
+        const r = await run(["check", "page-main"], root);
+        expect(r.stdout).toContain("VIOLATION page-main: impl: apps/app/src/PageMain.svelte:2: 動的 testid は禁止");
+        // 帰属できないものは page 指定では数えず NOTE で見せる
+        expect(r.stdout).toContain("NOTE impl: apps/app/src/Other.svelte:1: 動的 testid は禁止");
+        expect(r.stdout).not.toContain("VIOLATION impl:");
+        expect(r.code).toBe(1);
+      },
+    );
+  });
+
+  it("共有 screen の違反は帰属できず、存在しない page.<id> は screen で帰属を試す", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        ".ori/pages/page-sub/manifest.yaml": manifest("page-sub", "page", [1]),
+        "apps/app/src/T.svelte": "<b data-testid={`screen-1-x-${k}`}/>\n<b data-testid={`screen-2-x-${k}`}/>",
+        "apps/app/src/U.svelte": "<b data-testid={`page.ghost.screen-2-y-${k}`}/>",
+      },
+      async (root) => {
+        await run(["sync", "--all"], root);
+        const all = await run(["check", "--all"], root);
+        expect(all.stdout).toContain("VIOLATION impl: apps/app/src/T.svelte:1:");
+        expect(all.stdout).toContain("VIOLATION settings: impl: apps/app/src/T.svelte:2:");
+        expect(all.stdout).toContain("VIOLATION settings: impl: apps/app/src/U.svelte:1:");
+      },
+    );
+  });
+
+  it("--implemented-only は入力不整合の page を違反にせず skip として出す", async () => {
+    await withFixture(
+      { ...BASE, ".ori/pages/page-main/manifest.yaml": "page_id: page-main\ntype: page\nderives_from:\n  - domain/ui-fields/screen-9.md#screen-9\n" },
+      async (root) => {
+        const r = await run(["check", "page-main", "--implemented-only"], root);
+        expect(r.stdout).toContain("skip: page-main (契約を導出できません: ui-fields が見つかりません");
+        expect(r.code).toBe(0);
+      },
+    );
+  });
+
+  it("--implemented-only と --no-impl の併用は usage (exit 2)", async () => {
+    await withFixture(BASE, async (root) => {
+      const r = await run(["check", "--all", "--implemented-only", "--no-impl"], root);
+      expect(r.code).toBe(2);
+    });
+  });
+
+  it("複数の page を指定できる", async () => {
+    await withFixture(BASE, async (root) => {
+      await run(["sync", "page-main", "settings"], root);
+      const r = await run(["check", "page-main", "settings", "--no-impl"], root);
+      expect(r.code).toBe(0);
+      expect(await contract(root, "settings")).toBeTruthy();
+    });
+  });
+
+  it("--implemented-only は実装の無い page を飛ばし、旧 testid (field id) があれば実装ありとする", async () => {
+    await withFixture(
+      { ...BASE, "apps/app/src/PageMain.svelte": '<textarea data-testid="screen-1-draft-body"></textarea>' },
+      async (root) => {
+        await run(["sync", "--all"], root);
+        const r = await run(["check", "--all", "--implemented-only"], root);
+        expect(r.stdout).toContain("skip: settings (実装なし)");
+        expect(r.stdout).not.toContain("skip: page-main");
+        expect(r.stdout).toContain('page-main: 契約 testid が実装に存在しません: "page.page-main.draft-body"');
+        expect(r.stdout).not.toMatch(/VIOLATION settings/);
+      },
+    );
+  });
+
+  it("--implemented-only: その page に寄せた形式違反だけでも実装ありとする", async () => {
+    await withFixture({ ...BASE, "apps/app/src/S.svelte": "<b data-testid={`screen-2-theme-${v}`}/>" }, async (root) => {
+      await run(["sync", "--all"], root);
+      const r = await run(["check", "settings", "--implemented-only"], root);
+      expect(r.stdout).not.toContain("skip: settings");
+      expect(r.stdout).toContain("VIOLATION settings: impl: ");
+    });
+  });
+});
+
+describe("testids.js migrate-map (ori-oan.13)", () => {
+  it("field id → 契約 testid と、実装・テストの使用箇所を出す (前方一致は数えない)", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        ".ori/domain/ui-fields/screen-1.md": screen(1, ["block", "block-body"]),
+        "apps/app/src/PageMain.svelte": '<div data-testid="screen-1-block">\n  <p data-testid="screen-1-block-body"></p>\n</div>',
+        "apps/app/src/tests/PageMain.test.ts": "getByTestId('screen-1-block-body')",
+      },
+      async (root) => {
+        await run(["sync", "page-main"], root);
+        await run(["add-extra", "page-main", "--testid", "page.page-main", "--purpose", "root", "--source", "derive"], root);
+        const r = await run(["migrate-map", "page-main"], root);
+        expect(r.code).toBe(1);
+        expect(r.stdout).toContain("screen-1-block → page.page-main.block\n  impl apps/app/src/PageMain.svelte:1\n");
+        expect(r.stdout).toContain(
+          "screen-1-block-body → page.page-main.block-body\n  impl apps/app/src/PageMain.svelte:2\n  test apps/app/src/tests/PageMain.test.ts:1\n",
+        );
+        expect(r.stdout).toContain("手動: page.page-main (root)");
+        expect(r.stdout).toContain("旧 testid の使用: 3 件");
+      },
+    );
+  });
+
+  it("testid 以外の文脈 (id= / for= 等) の field id は数えず参考として出す", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        "apps/app/src/PageMain.svelte":
+          '<label for="screen-1-draft-body">本文</label>\n<textarea id="screen-1-draft-body" data-testid="page.page-main.draft-body"></textarea>\n' +
+          '<select data-testid="page.page-main.toolbar-sort-field"></select>',
+        "apps/app/src/tests/PageMain.test.ts": "screen.getByTestId('screen-1-draft-body')\nscreen.getAllByTestId(\n  \"screen-1-draft-body\",\n);",
+      },
+      async (root) => {
+        await run(["sync", "page-main"], root);
+        const r = await run(["migrate-map", "page-main"], root);
+        expect(r.stdout).toContain(
+          "screen-1-draft-body → page.page-main.draft-body\n  test apps/app/src/tests/PageMain.test.ts:1\n  test apps/app/src/tests/PageMain.test.ts:3\n",
+        );
+        expect(r.stdout).toContain("参考 (testid 以外の文脈の可能性が高い。要確認): impl apps/app/src/PageMain.svelte:1");
+        expect(r.stdout).toContain("参考 (testid 以外の文脈の可能性が高い。要確認): impl apps/app/src/PageMain.svelte:2");
+        expect(r.stdout).toContain("旧 testid の使用: 2 件");
+      },
+    );
+  });
+
+  it("移行済みなら exit 0 で、page に寄せた形式違反は手動として並べる", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        "apps/app/src/PageMain.svelte":
+          '<textarea data-testid="page.page-main.draft-body"></textarea><select data-testid="page.page-main.toolbar-sort-field"></select>\n' +
+          "<b data-testid={`screen-1-x-${k}`}/>",
+      },
+      async (root) => {
+        await run(["sync", "page-main"], root);
+        const r = await run(["migrate-map", "page-main"], root);
+        expect(r.stdout).toContain("screen-1-draft-body → page.page-main.draft-body (使用箇所なし)");
+        expect(r.stdout).toContain("手動: apps/app/src/PageMain.svelte:2: 動的 testid は禁止");
+        expect(r.stdout).toContain("OK: 旧 testid の使用 0 件");
+        expect(r.code).toBe(0);
+      },
+    );
+  });
+});
+
 describe("testids.js add-extra", () => {
+  it("初回 sync の extra: [] に追記しても block style で書く (ori-oan.14)", async () => {
+    await withFixture(BASE, async (root) => {
+      await run(["sync", "settings"], root);
+      const p = join(root, ".ori/pages/settings/testids.yaml");
+      expect(await readFile(p, "utf8")).toContain("extra: []\n");
+      await run(["add-extra", "settings", "--testid", "widget.settings", "--purpose", "root", "--source", "derive"], root);
+      await run(
+        ["add-extra", "settings", "--testid", "widget.settings.theme-option", "--purpose", "選択肢", "--source", "scenario:s1-x", "--dynamic", "data-key"],
+        root,
+      );
+      const body = await readFile(p, "utf8");
+      expect(body.slice(body.indexOf("\nextra:") + 1)).toBe(
+        "extra:\n" +
+          "  - testid: widget.settings\n" +
+          "    purpose: root\n" +
+          "    source: derive\n" +
+          "  - testid: widget.settings.theme-option\n" +
+          "    purpose: 選択肢\n" +
+          "    source: scenario:s1-x\n" +
+          "    dynamic: data-key\n",
+      );
+      // 追記の無い sync は byte 一致のまま
+      const r = await run(["sync", "settings"], root);
+      expect(r.stdout).toContain("up-to-date");
+    });
+  });
+
   it("testids.yaml が無くても sync してから追記する", async () => {
     await withFixture(BASE, async (root) => {
       const r = await run(

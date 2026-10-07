@@ -147,7 +147,7 @@ E2E は `data-testid` を第一推奨とする（SSoT: `ddd-vsa-hex/pattern.md` 
 - 参加 page ごとに `scripts/testids.js sync <page-id>`（`/ori-generate` skill bundle の script） で契約を最新化してから読む（ui-field 由来は `derived:`、それ以外は `extra:`）
 - ui-fields の field id（`screen-<N>-*`）をそのまま testid にしない
 - 契約に無い要素が必要なら `scripts/testids.js add-extra <page-id> --testid <kind>.<page-id>.<elem> --purpose <...> --source scenario:<scenario-id>` で追記してから使う（推測した testid をテストに直書きしない）
-- 実装が既にあれば `scripts/testids.js check <page-id>` の「実装に存在しません」を spec.md 実装ノートに記録する（生成は止めない。実装が契約に追いつくまで RED になる旨を明示）
+- 実装が既にある page の違反は `scripts/check-page-testids.sh --emit-issues --implemented-only <page-id>...`（`/ori-generate` skill bundle の script）で bd issue (`testid-violation` + `page:<id>`) にし、issue id を spec.md 実装ノートに記録する（生成は止めない。実装が契約に追いつくまで RED になる旨を明示）。実装の移行手順は `ui-test.instructions.md#testid-migration`
 
 ### API 呼び出し {#api-calls}
 
