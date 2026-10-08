@@ -7674,12 +7674,14 @@ var ATTR_RE = /(v-bind:|:)?data-testid\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*(?:"([^
 async function indexImpl(root, pageIds, pages) {
   const literals = /* @__PURE__ */ new Set();
   const violations = [];
+  const occurrences = [];
   for (const f of await sourceFiles(root)) {
     const rel = relative(root, f);
     if (TEST_FILE.test(rel)) continue;
     const text = await readFile(f, "utf8");
     const fileLiterals = /* @__PURE__ */ new Set();
     const fileViolations = [];
+    const fileOccurrences = [];
     for (const m of text.matchAll(ATTR_RE)) {
       const at = m.index ?? 0;
       if (text[at - 1] === "[") continue;
@@ -7706,15 +7708,21 @@ async function indexImpl(root, pageIds, pages) {
       const ns = /^(page|widget)\.([^.]+)/.exec(value);
       if (ns && !pageIds.has(ns[2])) {
         push(value, `testid \u304C\u5B58\u5728\u3057\u306A\u3044 page / widget \u3092\u6307\u3057\u3066\u3044\u307E\u3059: "${value}"`);
+        continue;
       }
+      fileOccurrences.push({ owner: null, value, loc });
     }
     const fileOwners = pages.filter((p) => [...fileLiterals].some((l) => p.keys.has(l)));
     for (const v of fileViolations) {
       if (v.owner === null && fileOwners.length === 1) v.owner = fileOwners[0].info.id;
       violations.push(v);
     }
+    for (const o of fileOccurrences) {
+      o.owner = ownerOf(o.value, pages) ?? pages.find((p) => p.info.id === o.value)?.info.id ?? (fileOwners.length === 1 ? fileOwners[0].info.id : null);
+      occurrences.push(o);
+    }
   }
-  return { literals, violations };
+  return { literals, violations, occurrences };
 }
 async function loadPagesLenient(root, ids) {
   const pages = [];
@@ -7832,6 +7840,21 @@ async function migrateMap(root, id) {
     if (!impl.literals.has(r.testid)) console.log(`\u624B\u52D5: ${r.testid} (${r.purpose}) \u2014 extra \u884C\u306F\u65E7 testid \u3092\u63A8\u5B9A\u3067\u304D\u307E\u305B\u3093`);
   }
   for (const v of impl.violations) if (v.owner === id) console.log(`\u624B\u52D5: ${v.message}`);
+  const known = /* @__PURE__ */ new Set([...rows.flatMap((r) => [r.testid, r.field]), ...(c?.extra ?? []).map((r) => r.testid)]);
+  const uncontracted = /* @__PURE__ */ new Map();
+  for (const o of impl.occurrences) {
+    if (o.owner !== id || known.has(o.value)) continue;
+    uncontracted.set(o.value, [...uncontracted.get(o.value) ?? [], o.loc]);
+  }
+  if (uncontracted.size > 0) {
+    console.log(`
+# ${id}: \u672A\u5951\u7D04\u306E testid (\u5951\u7D04\u306B\u8FFD\u52A0\u3059\u308B\u304B\u524A\u9664\u3059\u308B\u304B\u306F\u4EBA\u9593\u5224\u65AD\u3002\u4EF6\u6570\u30FBexit code \u306B\u306F\u542B\u3081\u306A\u3044)`);
+    for (const [t, locs] of uncontracted) {
+      console.log(t);
+      for (const l of locs) console.log(`  impl ${l}`);
+    }
+    console.log("");
+  }
   console.log(remaining === 0 ? "OK: \u65E7 testid \u306E\u4F7F\u7528 0 \u4EF6" : `\u65E7 testid \u306E\u4F7F\u7528: ${remaining} \u4EF6`);
   return remaining > 0 ? 1 : 0;
 }

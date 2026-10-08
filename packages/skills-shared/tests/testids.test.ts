@@ -531,6 +531,57 @@ describe("testids.js migrate-map (ori-oan.13)", () => {
   });
 });
 
+describe("testids.js migrate-map 未契約の testid (ori-oan.13.5)", () => {
+  it("page に帰属する契約外 testid (旧 root・screen-N-*) を位置付きで出し、件数・exit code に含めない", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        "apps/app/src/Settings.svelte":
+          '<dialog data-testid="settings">\n<input data-testid="widget.settings.save">\n<p data-testid="screen-2-pick"></p>\n' +
+          '<p data-testid="screen-2-theme"></p><p data-testid="widget.settings.err"></p></dialog>',
+        "apps/app/src/Other.svelte": '<p data-testid="unrelated"></p>',
+      },
+      async (root) => {
+        await run(["sync", "settings"], root);
+        const r = await run(["migrate-map", "settings"], root);
+        const section = r.stdout.split("未契約の testid")[1] ?? "";
+        expect(section).toContain("人間判断。件数・exit code には含めない");
+        expect(section).toContain("settings\n  impl apps/app/src/Settings.svelte:1\n");
+        expect(section).toContain("screen-2-pick\n  impl apps/app/src/Settings.svelte:3\n");
+        expect(section).toContain("widget.settings.err\n  impl apps/app/src/Settings.svelte:4\n");
+        // 契約 testid・derived の旧 field id・他ファイルの無関係な testid は出さない
+        expect(section).not.toContain("widget.settings.save");
+        expect(section).not.toContain("screen-2-theme\n");
+        expect(section).not.toContain("unrelated");
+        // 旧 field id (screen-2-theme) の使用 1 件だけが件数になる
+        expect(r.stdout).toContain("旧 testid の使用: 1 件");
+        expect(r.code).toBe(1);
+      },
+    );
+  });
+
+  it("未契約が無ければセクションを出さず、check の出力・件数は変えない", async () => {
+    await withFixture(
+      { ...BASE, "apps/app/src/Settings.svelte": '<b data-testid="widget.settings.save"></b><i data-testid="widget.settings.theme"></i>' },
+      async (root) => {
+        await run(["sync", "settings"], root);
+        const m = await run(["migrate-map", "settings"], root);
+        expect(m.stdout).not.toContain("未契約の testid");
+        expect(m.code).toBe(0);
+      },
+    );
+    await withFixture(
+      { ...BASE, "apps/app/src/Settings.svelte": '<b data-testid="widget.settings.save"></b><i data-testid="screen-2-pick"></i>' },
+      async (root) => {
+        await run(["sync", "settings"], root);
+        const c = await run(["check", "settings"], root);
+        expect(c.stdout).not.toContain("未契約");
+        expect(c.stdout).not.toContain("screen-2-pick");
+      },
+    );
+  });
+});
+
 describe("testids.js add-extra", () => {
   it("初回 sync の extra: [] に追記しても block style で書く (ori-oan.14)", async () => {
     await withFixture(BASE, async (root) => {
