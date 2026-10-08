@@ -76,6 +76,8 @@ warn() { echo "  WARN  scenarios/$1: $2"; echo "        fix: $3"; ((ISSUES++)) |
 for dir in .ori/scenarios/*/; do
   [[ -d "$dir" ]] || continue
   dir="${dir%/}"
+  # scenario は manifest.yaml を持つ dir に限る (wdio の node_modules symlink 等を除外)
+  [[ -f "$dir/manifest.yaml" ]] || continue
   id=$(basename "$dir")
   status="$dir/status.yaml"
 

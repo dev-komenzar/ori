@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,6 +36,7 @@ async function run(scenarios: Record<string, Fixture>, cwdSub = "") {
   for (const [id, f] of Object.entries(scenarios)) {
     const dir = join(root, ".ori", "scenarios", id);
     await mkdir(join(dir, "tests"), { recursive: true });
+    await writeFile(join(dir, "manifest.yaml"), "");
     if (f.status !== undefined) await writeFile(join(dir, "status.yaml"), f.status);
     if (f.tests) await writeFile(join(dir, "tests", "a.test.ts"), "");
     if (f.review !== undefined) await writeFile(join(dir, "review.md"), f.review);
@@ -50,6 +51,19 @@ const ALL = ["derive", "generate", "review", "finalize"];
 const allDone = Object.fromEntries(ALL.map((p) => [p, "done"]));
 
 describe("check-scenario-schema.sh", () => {
+  it("manifest.yaml を持たない dir (node_modules symlink 等) は scenario として扱わない", async () => {
+    const root = await mkdtemp(join(tmpdir(), "ori-scn-schema-"));
+    tmpDirs.push(root);
+    const scenarios = join(root, ".ori", "scenarios");
+    await mkdir(join(root, "app", "node_modules"), { recursive: true });
+    await mkdir(scenarios, { recursive: true });
+    await symlink(join(root, "app", "node_modules"), join(scenarios, "node_modules"));
+    await mkdir(join(scenarios, "_scratch"), { recursive: true });
+    const r = spawnSync("bash", [SCRIPT], { cwd: root, encoding: "utf8" });
+    expect(r.stdout + r.stderr).not.toContain("WARN");
+    expect(r.status).toBe(0);
+  });
+
   it("clean: 全 phase done + 成果物あり", async () => {
     const r = await run({ ok: { status: statusYaml(ALL, allDone), tests: true, review: "verdict: PASS\n" } });
     expect(r.code).toBe(0);
