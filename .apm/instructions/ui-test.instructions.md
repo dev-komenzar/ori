@@ -53,15 +53,24 @@ UI コンポーネントの単体テスト (`*.test.tsx`) は `ddd-test`（メ�
    ただし定数経由 (`const TID = { title: "screen-1-title" }` を `data-testid={TID.title}` で使う等) は
    testid なので置換する。参考行は 1 件ずつ読んで判断する
    `手動:` の行 (extra の testid、その page の動的 testid / 形式違反) は旧値を推定できないので、実装を読んで対応を決める
-3. **実装と unit test を同じ変更で置換する**:
+3. **機能欠落を切り出す**。`migrate-map` の derived 行で `impl` の使用箇所が 0 件の契約 testid は、
+   付け替えではなく実装に UI 要素が無い (機能欠落)。`check` は literal の存在を要求するので、要素を足さない限り exit 0 にならない。
+   推測で要素を足さず、次のように別 issue へ切り出す:
+   - spec に挙動規定 (不変条件 / test-points) がある → 実装の欠陥。`/ori-impl-green` 向けの bd issue を起票する (ケース 2)
+   - spec に挙動規定が無い (ui-fields とレイアウト図にだけ出る等) → spec の欠落。derive からやり直す bd issue を起票する (ケース 3)
+   - 移行 issue は、切り出した issue に `bd dep` で blocked-by にする。完了条件は緩めない (check の許容リストは設けない)。
+     欠落以外の置換は、blocked のまま続けてよい
+4. **実装と unit test を同じ変更で置換する**:
    - 実装は契約の testid を literal で付ける。動的 testid (`` data-testid={`x-${key}`} ``) は、固定 testid + `data-key={key}` に直す
    - app の unit test (component test 等) の selector も契約値に置き換える。動的要素は `[data-testid="<固定 testid>"][data-key="<key>"]` で絞る。
      置き換えるのは selector だけで、assertion は変えない
-4. **完了を判定する**。次の 3 つがそろったら issue を close する:
+5. **完了を判定する**。次の 3 つがそろったら issue を close する:
    - `node scripts/testids.js check <page-id>` が exit 0
      (page を指定した check は、その page に帰属する実装違反だけを数える。他 page の移行が済んでいなくても止まらない)
    - `node scripts/testids.js migrate-map <page-id>` が exit 0 (旧 testid の使用が 0 件)
    - app の unit test が通る
+
+   機能欠落の issue が残っている間、移行 issue は close できない (手順 3 の blocker)。
 
 scenario の GREEN は移行の完了条件に含めない (app 側の不具合が混ざるため、別に検証する)。
 `page:_impl` の issue (どの page に帰属するか決まらない実装違反) は、各 page の移行が済んだあとに
