@@ -35,7 +35,14 @@ async function* walkMarkdown(dir: string): AsyncGenerator<string> {
 
 async function lintFile(path: string): Promise<LintIssue[]> {
   const raw = await readFile(path, "utf8");
-  const { content } = parseFrontmatter(raw);
+  let content: string;
+  try {
+    ({ content } = parseFrontmatter(raw));
+  } catch (err) {
+    // frontmatter の YAML 不正で全体を落とさず、該当ファイルを指す issue にして他の検査を続行する (ori-8ro7)
+    const detail = (err instanceof Error ? err.message : String(err)).split("\n")[0];
+    return [{ file: path, line: 1, message: `frontmatter の YAML が parse できない: ${detail}` }];
+  }
   const sections = extractSections(content);
   const issues: LintIssue[] = [];
 
