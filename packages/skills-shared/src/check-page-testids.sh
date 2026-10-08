@@ -89,7 +89,7 @@ while IFS= read -r line; do
 done < <(grep -E '^(skip: |NOTE )' <<<"$out" || true)
 
 if [[ $ISSUES -gt 0 ]]; then
-  echo "        fix: /ori-bug で移行手順へ (ui-test.instructions.md#testid-migration) / derived stale は testids.js sync <page-id>"
+  echo "        fix: /ori-bug <issue-id> で移行手順へ (置換対応表は testids.js migrate-map <page-id>) / derived stale は testids.js sync <page-id>"
 fi
 
 if [[ "$EMIT_ISSUES" == true && $ISSUES -gt 0 ]]; then
@@ -111,7 +111,7 @@ if [[ "$EMIT_ISSUES" == true && $ISSUES -gt 0 ]]; then
       if [[ "$page" == _impl ]]; then
         howto="page に帰属できない実装 testid の違反。各 page の移行後も残るものを個別に直す (testids.js check --all で確認)"
       else
-        howto="実装 testid を契約へ移行する: ui-test.instructions.md#testid-migration (/ori-bug から案内)。置換対応表は testids.js migrate-map ${page}。完了条件は testids.js check ${page} が exit 0"
+        howto="実装 testid を契約へ移行する: /ori-bug <この issue の id> で移行手順へ案内される。置換対応表は testids.js migrate-map ${page}。完了条件は testids.js check ${page} が exit 0"
       fi
       if id="$(bd create \
         --title="[testid] ${page}: page testid 契約違反" \

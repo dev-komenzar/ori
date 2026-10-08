@@ -82,7 +82,7 @@ description: /ori-flow phase 2。scenario spec からテストコード・runner
      ```
      - 実装の無い page は飛ばす（scenario-first では未実装が正常。実装は `/ori-impl-green` が契約どおりに付ける）
      - 実装のある page に違反（契約 testid の実装不在・その page の動的 testid / 形式違反）があれば、page ごとに `testid-violation` + `page:<id>` の bd issue を起票する。open の issue があれば起票せず、その id を出す
-     - 出力された issue id と違反の要約を spec.md `#impl-notes` に記録し、「実装が契約に追従するまで RED。移行手順は `ui-test.instructions.md#testid-migration`」と書く
+     - 出力された issue id と違反の要約を spec.md `#impl-notes` に記録し、「実装が契約に追従するまで RED。移行手順は [`ui-test.instructions.md#testid-migration`](../../instructions/ui-test.instructions.md#testid-migration)」と書く
      - exit code は違反件数 (非 0 でも失敗ではない)。ただし stderr に `ERROR:` が出たら検査も起票もされていない (page id の誤り・未知 option)。引数を直して再実行する。生成は止めない。実装の testid に合わせてテストを捏造しない。契約も書き換えない
      - `SKIP` 行の page は記録不要 (未実装、または契約を導出できない — 後者は手順 1 の sync で既に停止しているはず)。bd が無く issue id が出ない場合は、違反の要約だけを impl-notes に書き「`/ori-doctor --testid-sweep` で起票」と添える
      - 実装はあるのに契約 testid も field id も使っていない page は「実装なし」に見える。生成した scenario が RED なのに起票が無ければ `/ori-doctor --testid-sweep` を案内する
