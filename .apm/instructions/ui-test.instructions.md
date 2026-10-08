@@ -53,6 +53,9 @@ UI コンポーネントの単体テスト (`*.test.tsx`) は `ddd-test`（メ�
    ただし定数経由 (`const TID = { title: "screen-1-title" }` を `data-testid={TID.title}` で使う等) は
    testid なので置換する。参考行は 1 件ずつ読んで判断する
    `手動:` の行 (extra の testid、その page の動的 testid / 形式違反) は旧値を推定できないので、実装を読んで対応を決める
+   末尾の `未契約の testid` 節は、その page に帰属する実装 testid のうち契約 (derived / extra) にも旧 field id にも無いもの
+   (旧 root の値や `screen-N-*` の残り。位置付き)。契約に足す (`add-extra`) か実装から消すかは人間が決める。
+   件数・exit code には含まれないので、移行後に節が空になっているかを目で確認する
 3. **機能欠落を切り出す**。`migrate-map` の derived 行で `impl` の使用箇所が 0 件の契約 testid は、
    付け替えではなく実装に UI 要素が無い (機能欠落)。`check` は literal の存在を要求するので、要素を足さない限り exit 0 にならない。
    推測で要素を足さず、次のように別 issue へ切り出す:

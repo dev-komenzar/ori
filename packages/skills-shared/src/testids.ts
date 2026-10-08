@@ -371,9 +371,17 @@ interface ImplViolation {
   message: string;
 }
 
+// 形式違反でない literal の付与位置。owner は ImplViolation と同じ規則に page id 完全一致を足して推定する
+interface ImplOccurrence {
+  owner: string | null;
+  value: string;
+  loc: string;
+}
+
 interface ImplIndex {
   literals: Set<string>;
   violations: ImplViolation[];
+  occurrences: ImplOccurrence[];
 }
 
 // 帰属判定用の page 情報。keys = その page の契約 testid と derived の field id (移行前の旧 testid)
@@ -409,12 +417,14 @@ const ATTR_RE =
 async function indexImpl(root: string, pageIds: Set<string>, pages: PageRef[]): Promise<ImplIndex> {
   const literals = new Set<string>();
   const violations: ImplViolation[] = [];
+  const occurrences: ImplOccurrence[] = [];
   for (const f of await sourceFiles(root)) {
     const rel = relative(root, f);
     if (TEST_FILE.test(rel)) continue;
     const text = await readFile(f, "utf8");
     const fileLiterals = new Set<string>();
     const fileViolations: ImplViolation[] = [];
+    const fileOccurrences: ImplOccurrence[] = [];
     for (const m of text.matchAll(ATTR_RE)) {
       const at = m.index ?? 0;
       // `[data-testid="x"]` は selector であって付与ではない
@@ -443,7 +453,9 @@ async function indexImpl(root: string, pageIds: Set<string>, pages: PageRef[]): 
       const ns = /^(page|widget)\.([^.]+)/.exec(value);
       if (ns && !pageIds.has(ns[2]!)) {
         push(value, `testid が存在しない page / widget を指しています: "${value}"`);
+        continue;
       }
+      fileOccurrences.push({ owner: null, value, loc });
     }
     // 値から決まらない違反 (`{name}` / `row-${id}` 等) は、同じファイルが付けている testid から
     // page が 1 つに決まればその page に寄せる (page 指定の check が素通ししないように)
@@ -452,8 +464,13 @@ async function indexImpl(root: string, pageIds: Set<string>, pages: PageRef[]): 
       if (v.owner === null && fileOwners.length === 1) v.owner = fileOwners[0]!.info.id;
       violations.push(v);
     }
+    // 未契約 testid の帰属: 名前空間 / screen-N → page id との完全一致 (旧 root) → 同ファイルのフォールバック
+    for (const o of fileOccurrences) {
+      o.owner = ownerOf(o.value, pages) ?? pages.find((p) => p.info.id === o.value)?.info.id ?? (fileOwners.length === 1 ? fileOwners[0]!.info.id : null);
+      occurrences.push(o);
+    }
   }
-  return { literals, violations };
+  return { literals, violations, occurrences };
 }
 
 // manifest が壊れた page は帰属先候補から外すだけ (違反としては check 本体が報告する)
@@ -591,6 +608,21 @@ async function migrateMap(root: string, id: string): Promise<number> {
     if (!impl.literals.has(r.testid)) console.log(`手動: ${r.testid} (${r.purpose}) — extra 行は旧 testid を推定できません`);
   }
   for (const v of impl.violations) if (v.owner === id) console.log(`手動: ${v.message}`);
+  // 契約にも旧 field id にも無い、この page に帰属する実装 testid。契約に足すか消すかは人間判断なので件数・exit code に含めない
+  const known = new Set<string>([...rows.flatMap((r) => [r.testid, r.field]), ...(c?.extra ?? []).map((r) => r.testid)]);
+  const uncontracted = new Map<string, string[]>();
+  for (const o of impl.occurrences) {
+    if (o.owner !== id || known.has(o.value)) continue;
+    uncontracted.set(o.value, [...(uncontracted.get(o.value) ?? []), o.loc]);
+  }
+  if (uncontracted.size > 0) {
+    console.log(`\n# ${id}: 未契約の testid (契約に追加するか削除するかは人間判断。件数・exit code には含めない)`);
+    for (const [t, locs] of uncontracted) {
+      console.log(t);
+      for (const l of locs) console.log(`  impl ${l}`);
+    }
+    console.log("");
+  }
   console.log(remaining === 0 ? "OK: 旧 testid の使用 0 件" : `旧 testid の使用: ${remaining} 件`);
   return remaining > 0 ? 1 : 0;
 }
