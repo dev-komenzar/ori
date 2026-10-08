@@ -24,12 +24,12 @@ description: 既存 slice のバグ報告を 4 ケース（domain / impl / spec 
 
 対象が `testid-violation` label の bd issue（`/ori-generate` / `/ori-doctor --testid-sweep` が起票）の場合は、
 4 つの triage 質問を使わない。既存実装の testid を契約へ移行する作業で、手順は
-`ui-test.instructions.md#testid-migration` にある。案内するのは次のとおり:
+[`ui-test.instructions.md#testid-migration`](../../instructions/ui-test.instructions.md#testid-migration) にある。案内するのは次のとおり:
 
 ```
 分類：testid 契約違反（page:<page-id>）。契約 (.ori/pages/<page-id>/testids.yaml) は正しく、実装が追従していない。
 
-推奨動線（ui-test.instructions.md#testid-migration）：
+推奨動線（[ui-test.instructions.md#testid-migration](../../instructions/ui-test.instructions.md#testid-migration)）：
   1. spec.md に screen-<N>- 形式の testid 記述がある / root・動的要素が extra に無い
        → `/ori-flow <page-id>`（derive からやり直す。ケース 3 相当）
      spec.md が正しい
@@ -148,5 +148,5 @@ triage 結果に応じて以下を案内（実行はしない）：
 - **ケース 2 と分類された場合**：失敗テスト追加 → `/ori-impl-green <id> --reason "bug fix"` → `/ori-review <id>`
 - **ケース 3 と分類された場合**：`/ori-sync --force <spec>` で proposal 生成 → `/ori-review-proposals`
 - **ケース 4 と分類された場合**：`/ori-ddd-9-workflows` 再走 → 新規 slice 作成 → `/ori-flow`
-- **testid-violation issue の場合**：`ui-test.instructions.md#testid-migration` の手順（`/ori-flow <page-id>` または `/ori-impl-green <page-id>` → `/ori-review <page-id>`）
+- **testid-violation issue の場合**：[`ui-test.instructions.md#testid-migration`](../../instructions/ui-test.instructions.md#testid-migration) の手順（`/ori-flow <page-id>` または `/ori-impl-green <page-id>` → `/ori-review <page-id>`）
 - **どれにも分類できないパス**：症状情報が不足。ユーザにヒアリング継続、難しければ `bd human` で人間判断 flag

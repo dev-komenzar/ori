@@ -156,7 +156,7 @@ bd create \
 page / widget の testid 契約 (`.ori/pages/<id>/testids.yaml`) 違反は DoD violation と別系統で、
 `testid-violation` + `page:<page-id>` を付与する (page 単位で 1 issue。実装 testid の lint 違反はその page に帰属させ、
 帰属できないものだけ `page:_impl`)。dedupe は同 label set の open issue の有無で行う。
-起票元は `/ori-doctor --testid-sweep` (全 page) と `/ori-generate` (実装のある参加 page)。解消手順は `ui-test.instructions.md#testid-migration`。
+起票元は `/ori-doctor --testid-sweep` (全 page) と `/ori-generate` (実装のある参加 page)。解消手順は [`ui-test.instructions.md#testid-migration`](ui-test.instructions.md#testid-migration)。
 
 ## 公式 BOUNDARIES.md の core question {#core-question}
 

@@ -186,7 +186,8 @@ describe("check-page-testids.sh — 移行経路 (ori-oan.13)", () => {
     expect(r.out).toContain("✓ filed bd issue ori-x1 (testid-violation, page:settings)");
     expect(r.calls).toContain("--labels=testid-violation,page:settings");
     expect(r.calls).not.toContain("page:_impl");
-    expect(r.calls).toContain("ui-test.instructions.md#testid-migration");
+    expect(r.calls).toContain("/ori-bug <この issue の id>");
+    expect(r.calls).not.toContain("ui-test.instructions.md");
     expect(r.calls).toContain("testids.js migrate-map settings");
     expect(r.calls).toContain("- settings: impl: apps/app/src/S.svelte:1: 動的 testid は禁止");
   });
