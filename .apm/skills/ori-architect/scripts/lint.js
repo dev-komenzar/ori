@@ -24110,7 +24110,13 @@ async function* walkMarkdown(dir) {
 }
 async function lintFile(path) {
   const raw = await readFile(path, "utf8");
-  const { content: content3 } = parseFrontmatter(raw);
+  let content3;
+  try {
+    ({ content: content3 } = parseFrontmatter(raw));
+  } catch (err) {
+    const detail = (err instanceof Error ? err.message : String(err)).split("\n")[0];
+    return [{ file: path, line: 1, message: `frontmatter \u306E YAML \u304C parse \u3067\u304D\u306A\u3044: ${detail}` }];
+  }
   const sections = extractSections(content3);
   const issues2 = [];
   for (const section of sections.ordered) {
