@@ -48,7 +48,7 @@ description: ori workspace を初期化し distill-ddd phase 1 にユーザを�
    - **アーキテクチャ・スタック決定 (architect-expert agent が要件対話から
      `.ori/architecture.md` を生成)** は `/ori-architect` に委譲。codebase init (upstream framework init / readiness 検証) は後段の `/ori-bootstrap`
    - 既存 docs があれば手動配置 + 検証
-7. **config 確認**：`.apm/agents/` の config を読み、現在の agent / phase 別モデル割当を表示
+7. **config 確認**：deploy 先の agent ファイル（Claude: `.claude/agents/<name>.md`、Codex: `.codex/agents/<name>.toml`。定義は [`ori-reviewer.agent.md`](../../agents/ori-reviewer.agent.md) など）の config を読み、現在の agent / phase 別モデル割当を表示
 
 ## 注意
 
@@ -59,7 +59,7 @@ description: ori workspace を初期化し distill-ddd phase 1 にユーザを�
 
 ## Tauri scaffold extension (specta infra)
 
-Slice DoD (`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` の "Slice Definition of Done" rules 2–4) を typescript-tauri stack で機械的に満たすため、本 skill bundle に specta infra の scaffold templates + install script を同梱する。`/ori-bootstrap` が stack=typescript-tauri を検出した場合、upstream `pnpm tauri init` 完了後にこの script を呼び出す。
+Slice DoD ([`ori-architect/patterns/ddd-vsa-hex/pattern.md`](../ori-architect/patterns/ddd-vsa-hex/pattern.md) の "Slice Definition of Done" rules 2–4) を typescript-tauri stack で機械的に満たすため、本 skill bundle に specta infra の scaffold templates + install script を同梱する。`/ori-bootstrap` が stack=typescript-tauri を検出した場合、upstream `pnpm tauri init` 完了後にこの script を呼び出す。
 
 ```bash
 # /ori-bootstrap から呼ばれる前提

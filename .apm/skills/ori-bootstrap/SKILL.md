@@ -111,14 +111,14 @@ script はすべて project root で実行する (`./scripts/bootstrap.js` は s
 - **Dockerfile / nix devShell は生成しない** (スコープ外)。wdio + tauri の OS 依存 (WebKitGTK / tauri-driver 等) は案内のみ
 - **bootstrap ファイルを生成しない**：`apps/<app>/` の `package.json` / `tsconfig.json` / `Cargo.toml` 等は upstream init の責務
 - **既存ファイルを確認なしに上書きしない**：upstream init の再実行・scaffold の `--force` はユーザ確認必須
-- **G1 / G3 は WARN 止まり**：tauri-plugin-wdio 配線と scenarios symlink は `/ori-generate` が scenario 生成時に冪等 patch する (`.apm/instructions/scenario.instructions.md#test-readiness`)
+- **G1 / G3 は WARN 止まり**：tauri-plugin-wdio 配線と scenarios symlink は `/ori-generate` が scenario 生成時に冪等 patch する ([`scenario.instructions.md#test-readiness`](../../instructions/scenario.instructions.md#test-readiness))
 - **CLI 拡張は禁止** (`ori-execution-model-shift-2026-06-03`)：機能はこの skill + scripts/ で実装する。script の正典は `packages/skills/ori-bootstrap/src/*.ts` (`pnpm build:skills` で bundle)
 
 ## 次のアクション {#next}
 
 `/ori-bootstrap` verify PASS 後、ユーザに以下を提示：
 
-- **scenario-first パス (推奨)**：`node .apm/skills/ori-flow/scripts/new-scenario.js --list-validation` で validation.md の未 cover section を確認 → ユーザ確認の上 `new-scenario.js <id>` で scaffold → `/ori-flow <id>`
+- **scenario-first パス (推奨)**：`node scripts/new-scenario.js --list-validation` で validation.md の未 cover section を確認 → ユーザ確認の上 `new-scenario.js <id>` で scaffold → `/ori-flow <id>`
 - **slice パス**：`/ori-flow new-slice <id>` で slice を scaffold → 7-phase TDD
 - **FAIL が残る場合**：`fix:` に従って修正 → `node ./scripts/bootstrap.js verify` を再実行
 - **architecture を見直すパス**：stack / runtime block を変えたい場合は `/ori-architect` に戻って再生成 → 再度 `/ori-bootstrap`

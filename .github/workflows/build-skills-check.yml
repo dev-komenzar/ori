@@ -18,4 +18,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - name: Fail if bundled scripts are stale
-        run: git diff --exit-code .apm/skills/*/scripts/ .apm/skills/*/adapters/
+        run: |
+          git diff --exit-code .apm/skills/*/scripts/ .apm/skills/*/adapters/ .apm/skills/*/templates/
+          # 新しく複製された生成物の commit 漏れは diff に出ないので untracked も見る
+          untracked=$(git ls-files --others --exclude-standard .apm/skills/)
+          if [ -n "$untracked" ]; then echo "untracked generated files:"; echo "$untracked"; exit 1; fi
+      # SKILL.md / instructions の参照が consumer (.apm/ 無し) でも解決できること (ori-qh3)
+      - name: Check skill references
+        run: pnpm --filter @ori-ori/skills-shared exec vitest run tests/skill-references.test.ts

@@ -3,6 +3,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stringify as yamlStringify } from "yaml";
 import { formatEpicId, SCENARIO_PHASES, type ScenarioPhase, type ScenarioStatus } from "@ori-ori/slice-runner";
+import { findProjectRoot } from "./internal/project-root.js";
 
 async function exists(path: string): Promise<boolean> {
   try { await access(path); return true; } catch { return false; }
@@ -110,7 +111,7 @@ const args = process.argv.slice(2);
 const listValidation = args.includes("--list-validation");
 const id = args.find((a) => !a.startsWith("--")) ?? "";
 
-const cwd = process.cwd();
+const cwd = await findProjectRoot();
 
 if (listValidation) {
   await runListValidation(cwd);

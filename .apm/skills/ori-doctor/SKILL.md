@@ -62,7 +62,7 @@ description: ori プロジェクトの健康診断。.ori/ を歩き schema / st
 
 ### 8. Slice DoD sweep {#dod-sweep}
 
-各 slice について Slice DoD (`.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` の "Slice Definition of Done") 4 rule を sweep する。
+各 slice について Slice DoD ([`ori-architect/patterns/ddd-vsa-hex/pattern.md`](../ori-architect/patterns/ddd-vsa-hex/pattern.md) の "Slice Definition of Done") 4 rule を sweep する。
 
 ### 9. architecture.md guardrails 検証 (ori-c79.3)
 
@@ -80,7 +80,7 @@ g-1..g-8 を適用して適合判定する (lint.js 内で自動実行)。
 - `g-8` — decision_points (platforms / os_integration / ui_native) の回答が `## Decisions` 節
   か frontmatter `decisions:` に記録されている
 
-ori-architect SKILL.md (`.apm/skills/ori-architect/SKILL.md`) が見つからない場合は検証をスキップ
+ori-architect SKILL.md ([`ori-architect/SKILL.md`](../ori-architect/SKILL.md)) が見つからない場合は検証をスキップ
 (旧 doctor 挙動を維持)。報告のみで自動修正はしない。
 
 - `rule:dod-1` — `manifest.yaml` の `expected_deliverables.sub_layers` で宣言した layer が `<source_root>/<bc>/slices/<slice-id>/<layer>/` (TS) or `apps/<app>/src-tauri/src/<bc_rs>/slices/<slice_rs>/<layer>.rs` (Rust) に実体を持つか
@@ -88,7 +88,7 @@ ori-architect SKILL.md (`.apm/skills/ori-architect/SKILL.md`) が見つからな
 - `rule:dod-3` — tests が `setupProductionBuilder` を経由しているか (heuristic、参照無し → 違反疑い)。`--run-tests` 指定時は production fixture 経由で test を実 invoke し fail を rule:dod-3 違反として記録
 - `rule:dod-4` — `commands.rs` の mtime が `bindings.ts` より新しい場合は specta 再生成漏れとして起票 (再生成 path は `apm-scripts/specta-build.sh --app-dir apps/<app>` — `architecture.md` の `phase_hooks.flow-impl-green-post` 由来)
 
-read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--emit-issues`) 指定時のみ bd issue を自動起票する。issue の label / title / description 規約は `.apm/instructions/task-management.instructions.md` の "`/ori-doctor` violation issue の label convention" を SSoT として参照 (このスキル内に hardcoded 化しない)。
+read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--emit-issues`) 指定時のみ bd issue を自動起票する。issue の label / title / description 規約は [`task-management.instructions.md`](../../instructions/task-management.instructions.md) の "`/ori-doctor` violation issue の label convention" を SSoT として参照 (このスキル内に hardcoded 化しない)。
 
 **Idempotency**: 起票前に `bd list --label=dod-violation --label=slice:<id> --label=rule:<rule-id> --status=open` を check し、既存 open issue があれば re-file しない (slice + rule の組で dedupe)。
 
@@ -97,7 +97,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 `.ori/domain/validation.md` の scenario section のうち `.ori/scenarios/<id>/manifest.yaml` が無いもの（= 未 scaffold）を **WARN** として surface する。
 
 - coverage は `validation.md` と `.ori/scenarios/` から**毎回 live 導出**する。新規 registry ファイル（`coverage.yaml` 等）は作らない（drift 源になる）
-- 導出は `node .apm/skills/ori-flow/scripts/new-scenario.js --list-validation` の出力（`candidate (not scaffolded ...)` 行 / `coverage: N/M scaffolded`）を再利用する
+- 導出は `node scripts/new-scenario.js --list-validation` の出力（`candidate (not scaffolded ...)` 行 / `coverage: N/M scaffolded`）を再利用する
 - 各 candidate に fix 案内 `node <ori-flow>/scripts/new-scenario.js <id>`（scaffold 後 `/ori-flow <id>`）を付ける
 - 全 section scaffolded なら clean（WARN なし）
 - **ERROR にしない**：skip（意図的に scenario 化しない）を記録する機構が無く、false positive が恒久化するため。**skip 記録は保留**：WARN が常時出て無視される状態になったら skip 記録の導入を再検討する
@@ -229,7 +229,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 
 ═══ Scenario Coverage ═══
 ⚠ validation.md#s22-storage-dir-change-watcher-restart — scenario 未 scaffold
-  fix: node .apm/skills/ori-flow/scripts/new-scenario.js s22-storage-dir-change-watcher-restart → /ori-flow s22-storage-dir-change-watcher-restart
+  fix: node <ori-flow>/scripts/new-scenario.js s22-storage-dir-change-watcher-restart → /ori-flow s22-storage-dir-change-watcher-restart
   scenario coverage: 21/22 scaffolded, 1 candidate(s)
 
 ═══ Scenario Schema ═══
@@ -297,5 +297,5 @@ dirty: []
 - **beads 不整合パス**：`bd dolt push` / `bd dolt pull` で再同期、`bd orphans` で個別対処
 - **DoD 違反パス**: 該当 slice の missing artifact を `/ori-impl-red` (b3 stub) / `/ori-impl-green` (real impl + production wiring + specta post) で生成。`rule:dod-4` は `bash apm-scripts/specta-build.sh --app-dir apps/<app>` で再同期
 - **architecture.md guardrails 違反パス**: `/ori-architect` で要件対話から再生成させる (self-check → confirm で再検証)。`g-8` だけの場合は `## Decisions` 節か frontmatter `decisions:` への回答記録を追加 (自動修正しない)
-- **scenario 未 scaffold パス**: `node .apm/skills/ori-flow/scripts/new-scenario.js <id>` で scaffold → `/ori-flow <id>`。意図的に scenario 化しない section は現状 skip 記録の機構が無い（WARN のまま。常時 WARN で無視される状態になったら skip 記録を再検討）
+- **scenario 未 scaffold パス**: `node scripts/new-scenario.js <id>` で scaffold → `/ori-flow <id>`。意図的に scenario 化しない section は現状 skip 記録の機構が無い（WARN のまま。常時 WARN で無視される状態になったら skip 記録を再検討）
 - **全部 green パス**：`/ori-feature-status` で次の作業候補を選ぶ

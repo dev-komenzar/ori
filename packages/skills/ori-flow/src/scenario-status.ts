@@ -10,6 +10,7 @@ import {
   type ScenarioPhase,
   type ScenarioStatus,
 } from "@ori-ori/slice-runner";
+import { findProjectRoot } from "./internal/project-root.js";
 
 // ── helpers ──────────────────────────────────────────────────────────
 
@@ -203,7 +204,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const cwd = process.cwd();
+  const cwd = await findProjectRoot();
   const statusPath = join(cwd, ".ori", "scenarios", id, "status.yaml");
 
   if (!(await exists(statusPath))) {

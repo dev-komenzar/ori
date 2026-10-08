@@ -30,13 +30,9 @@ if [[ ! -f .ori/domain/validation.md ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-NEW_SCENARIO=""
-for cand in "$SCRIPT_DIR/../../ori-flow/scripts/new-scenario.js" \
-            ".apm/skills/ori-flow/scripts/new-scenario.js" \
-            ".claude/skills/ori-flow/scripts/new-scenario.js"; do
-  if [[ -f "$cand" ]]; then NEW_SCENARIO="$cand"; break; fi
-done
-if [[ -z "$NEW_SCENARIO" ]] || ! command -v node >/dev/null 2>&1; then
+# new-scenario.js は build-skills が ori-doctor の scripts/ にも複製する (SHARED_ENTRIES)
+NEW_SCENARIO="$SCRIPT_DIR/new-scenario.js"
+if [[ ! -f "$NEW_SCENARIO" ]] || ! command -v node >/dev/null 2>&1; then
   echo "  scenario coverage: new-scenario.js or node unavailable (skipped)"
   exit 0
 fi

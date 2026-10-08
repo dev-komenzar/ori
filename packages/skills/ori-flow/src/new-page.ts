@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { stringify as yamlStringify } from "yaml";
 import { formatEpicId, PHASES, type Phase } from "@ori-ori/slice-runner";
 import { consola } from "consola";
+import { findProjectRoot } from "./internal/project-root.js";
 
 async function exists(path: string): Promise<boolean> {
   try { await access(path); return true; } catch { return false; }
@@ -31,7 +32,7 @@ if (!id || !/^[a-z][a-z0-9-]*$/.test(id)) {
   process.exit(1);
 }
 
-const cwd = process.cwd();
+const cwd = await findProjectRoot();
 const dir = join(cwd, ".ori/pages", id);
 if (await exists(dir)) {
   consola.error(`Page already exists: .ori/pages/${id}`);

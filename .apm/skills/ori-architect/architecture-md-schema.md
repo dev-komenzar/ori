@@ -493,8 +493,8 @@ migration required.
 
 ## Related context files
 
-- `.apm/skills/ori-architect/patterns/ddd-vsa-hex/pattern.md` — pattern definition
-- `.apm/skills/ori-architect/patterns/ddd-vsa-hex/ai-notes.md` — AI behavior guidance
-- `.apm/skills/ori-flow/templates/slice-manifest.yaml.tpl` — `.ori/slices/<id>/manifest.yaml` テンプレート
-- `.apm/skills/ori-flow/templates/page-manifest.yaml.tpl` — `.ori/pages/<id>/manifest.yaml` テンプレート
+- `patterns/ddd-vsa-hex/pattern.md` — pattern definition
+- `patterns/ddd-vsa-hex/ai-notes.md` — AI behavior guidance
+- [`ori-flow/templates/slice-manifest.yaml.tpl`](../ori-flow/templates/slice-manifest.yaml.tpl) — `.ori/slices/<id>/manifest.yaml` テンプレート
+- [`ori-flow/templates/page-manifest.yaml.tpl`](../ori-flow/templates/page-manifest.yaml.tpl) — `.ori/pages/<id>/manifest.yaml` テンプレート
 - `docs/contributing/adding-adapter.md` — adapter implementation guide

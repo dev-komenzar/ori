@@ -368,3 +368,21 @@ describe("scenario-status usage", () => {
     );
   });
 });
+
+describe("scenario-status project root", () => {
+  it("resolves the project root (.ori/) upward when run from a subdirectory", async () => {
+    await withFixture(
+      { ".ori/scenarios/s1/status.yaml": freshStatus("s1") },
+      async (root) => {
+        const sub = join(root, "apps", "web");
+        await mkdir(sub, { recursive: true });
+        const r = await run(["set", "s1", "derive", "done"], sub);
+        expect(r.code).toBe(0);
+
+        const status = await readStatus(root, "s1");
+        const phases = status.phases as Record<string, Record<string, unknown>>;
+        expect(phases.derive?.state).toBe("done");
+      },
+    );
+  });
+});

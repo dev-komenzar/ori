@@ -86,8 +86,8 @@ description: /ori-flow phase 7。当該 slice の dirty 解除・proposal の浮
 1. **前提確認**：`.ori/scenarios/<id>/review.md` が存在し verdict=PASS であることを確認する（slice の review gate に相当）
 2. **phase 台帳の確定（R1）**（決定的 writer。冪等）:
    ```bash
-   node .apm/skills/ori-flow/scripts/scenario-status.js set <scenario-id> finalize done
-   node .apm/skills/ori-flow/scripts/scenario-status.js show <scenario-id>
+   node scripts/scenario-status.js set <scenario-id> finalize done
+   node scripts/scenario-status.js show <scenario-id>
    ```
 3. **beads close**:
    ```bash
