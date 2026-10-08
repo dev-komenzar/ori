@@ -1,6 +1,6 @@
 ---
 name: ori-architect
-description: `/ori-distill` の次のステップ。要件対話 (platforms / os_integration / ui_native 等) から `.ori/architecture.md` を動的生成する。DDD + vsa-hex の核 (invariants) は不変、ビルド/配信/OS 統合の差は decision_points としてメイン session で対話確定する。apps/ 未初期化でも可 (codebase init は後段の `/ori-bootstrap`)。
+description: '`/ori-distill` の次のステップ。要件対話 (platforms / os_integration / ui_native 等) から `.ori/architecture.md` を動的生成する。DDD + vsa-hex の核 (invariants) は不変、ビルド/配信/OS 統合の差は decision_points としてメイン session で対話確定する。apps/ 未初期化でも可 (codebase init は後段の `/ori-bootstrap`)。'
 ---
 
 `/ori-distill` で `.ori/domain/` が作られた後の **次のステップ** (大フロー
