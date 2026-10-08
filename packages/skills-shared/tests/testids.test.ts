@@ -610,6 +610,34 @@ describe("testids.js add-extra", () => {
     });
   });
 
+  it("旧版が書いた flow style の extra は sync で block に正規化され、2 回目は no-op (ori-oan.15)", async () => {
+    await withFixture(BASE, async (root) => {
+      await run(["sync", "settings"], root);
+      const p = join(root, ".ori/pages/settings/testids.yaml");
+      const body0 = await readFile(p, "utf8");
+      const derived = body0.slice(0, body0.indexOf("\nextra:") + 1);
+      await writeFile(
+        p,
+        derived +
+          "extra: [\n  { testid: widget.settings, purpose: root, source: derive },\n  { testid: widget.settings.x, purpose: x, source: derive }\n]\n",
+        "utf8",
+      );
+      expect((await run(["sync", "settings"], root)).stdout).toContain("synced");
+      const body = await readFile(p, "utf8");
+      expect(body.slice(body.indexOf("\nextra:") + 1)).toBe(
+        "extra:\n" +
+          "  - testid: widget.settings\n" +
+          "    purpose: root\n" +
+          "    source: derive\n" +
+          "  - testid: widget.settings.x\n" +
+          "    purpose: x\n" +
+          "    source: derive\n",
+      );
+      expect((await contract(root, "settings")).extra).toHaveLength(2);
+      expect((await run(["sync", "settings"], root)).stdout).toContain("up-to-date");
+    });
+  });
+
   it("testids.yaml が無くても sync してから追記する", async () => {
     await withFixture(BASE, async (root) => {
       const r = await run(

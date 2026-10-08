@@ -7589,8 +7589,11 @@ async function writeContract(root, id, c) {
     const extra = doc.get("extra", true);
     if ((0, import_yaml.isSeq)(extra)) {
       const added = c.extra.slice(extra.items.length);
-      if (added.length > 0) extra.flow = false;
       for (const r of added) extra.items.push(doc.createNode(r));
+      if (extra.items.length > 0) {
+        extra.flow = false;
+        for (const item of extra.items) if ((0, import_yaml.isMap)(item)) item.flow = false;
+      }
     } else {
       doc.set("extra", doc.createNode(c.extra));
     }

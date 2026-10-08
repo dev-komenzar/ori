@@ -291,9 +291,14 @@ async function writeContract(root: string, id: string, c: Contract): Promise<boo
     if (isSeq(extra)) {
       const added = c.extra.slice(extra.items.length);
       // 初回 sync は `extra: []` (flow) を書く。flow のまま push すると崩れた flow style になるため、
-      // 人間が編集する section として block style に直す (ori-oan.14)
-      if (added.length > 0) extra.flow = false;
+      // 人間が編集する section として block style に直す (ori-oan.14)。
+      // 旧版 add-extra が書いた flow style の extra も、item があれば sync で block に正規化する (ori-oan.15)。
+      // 空の `extra: []` はそのまま (正規化は block 済みでは no-op なので冪等)
       for (const r of added) extra.items.push(doc.createNode(r));
+      if (extra.items.length > 0) {
+        extra.flow = false;
+        for (const item of extra.items) if (isMap(item)) item.flow = false;
+      }
     } else {
       doc.set("extra", doc.createNode(c.extra));
     }
