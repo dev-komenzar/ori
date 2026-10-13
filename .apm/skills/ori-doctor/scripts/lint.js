@@ -24394,7 +24394,14 @@ async function runGuardrailsCheck(archPath) {
     );
     return issues2;
   }
-  const architect = extractStructuredSections(skillRaw);
+  let architect;
+  try {
+    architect = extractStructuredSections(skillRaw);
+  } catch (err) {
+    const detail = (err instanceof Error ? err.message : String(err)).split("\n")[0];
+    push2(issues2, skillPath, "g-1", `frontmatter \u306E YAML \u304C parse \u3067\u304D\u306A\u3044: ${detail}`);
+    return issues2;
+  }
   if (!architect.invariants || !architect.guardrails) {
     push2(
       issues2,

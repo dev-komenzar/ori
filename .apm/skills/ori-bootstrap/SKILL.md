@@ -1,6 +1,6 @@
 ---
 name: ori-bootstrap
-description: `/ori-architect` の次のステップ。`.ori/architecture.md` から stack を確定して upstream framework init を案内し、runner deps の追加と tauri specta scaffold の apply を行い、app が build 可能かを readiness verify (静的 + build) で PASS/FAIL 判定する。app の bootstrap ファイルは生成しない。
+description: '`/ori-architect` の次のステップ。`.ori/architecture.md` から stack を確定して upstream framework init を案内し、runner deps の追加と tauri specta scaffold の apply を行い、app が build 可能かを readiness verify (静的 + build) で PASS/FAIL 判定する。app の bootstrap ファイルは生成しない。'
 ---
 
 ori の大フロー **DDD (`/ori-init` → `/ori-distill`) → `/ori-architect` → `/ori-bootstrap` → `/ori-flow`**

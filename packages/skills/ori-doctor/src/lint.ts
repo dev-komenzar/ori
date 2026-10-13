@@ -432,7 +432,15 @@ async function runGuardrailsCheck(archPath: string): Promise<LintIssue[]> {
     return issues;
   }
 
-  const architect = extractStructuredSections(skillRaw);
+  let architect: AgentStructuredSections;
+  try {
+    architect = extractStructuredSections(skillRaw);
+  } catch (err) {
+    // SKILL.md の frontmatter YAML 不正で落とさず、該当ファイルを指す issue にして続行する (ori-w8jg)
+    const detail = (err instanceof Error ? err.message : String(err)).split("\n")[0];
+    push(issues, skillPath, "g-1", `frontmatter の YAML が parse できない: ${detail}`);
+    return issues;
+  }
   if (!architect.invariants || !architect.guardrails) {
     push(
       issues,
