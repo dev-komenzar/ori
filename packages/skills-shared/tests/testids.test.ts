@@ -582,6 +582,27 @@ describe("testids.js migrate-map 未契約の testid (ori-oan.13.5)", () => {
   });
 });
 
+describe("testids.js migrate-map 帰属できない未契約の testid (ori-lm38)", () => {
+  it("page に帰属できない契約外 testid を別節で出し、契約済み・帰属済みは出さず、exit code に含めない", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        "apps/app/src/Feed.svelte": '<section data-testid="region-feed"></section>\n<p data-testid="restart-prompt"></p>',
+        "apps/app/src/Settings.svelte": '<b data-testid="widget.settings.save"></b><i data-testid="widget.settings.theme"></i>',
+      },
+      async (root) => {
+        await run(["sync", "settings"], root);
+        const r = await run(["migrate-map", "settings"], root);
+        const section = r.stdout.split("page に帰属できない未契約の testid")[1] ?? "";
+        expect(section).toContain("region-feed\n  impl apps/app/src/Feed.svelte:1\n");
+        expect(section).toContain("restart-prompt\n  impl apps/app/src/Feed.svelte:2\n");
+        expect(section).not.toContain("widget.settings");
+        expect(r.code).toBe(0);
+      },
+    );
+  });
+});
+
 describe("testids.js add-extra", () => {
   it("初回 sync の extra: [] に追記しても block style で書く (ori-oan.14)", async () => {
     await withFixture(BASE, async (root) => {

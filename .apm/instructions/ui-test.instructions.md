@@ -35,6 +35,14 @@ UI コンポーネントの単体テスト (`*.test.tsx`) は `ddd-test`（メ�
 直すのは実装側で、契約は変えない。実装 testid を契約の alias として登録することもしない
 (契約が唯一の正典。ori-oan.13)。
 
+**前提**: page に `testids.yaml` が無い (契約より前に作った app) 場合は、まず `node scripts/testids.js sync <page-id>` で
+生成する。`check` / `migrate-map` は契約を読むので、手順 1 の前にこれを済ませる。生成されるのは derived 行と空の `extra: []` だけで、
+root・region・動的要素は手順 1 の経路で `extra:` に登録する。
+
+**`extra:` の編集権限**: 追加は `add-extra`。既存 entry の変更・削除は人間のみ。例外として、レビュー指摘に応じた
+**既存 entry の `purpose` 文の誤り修正**に限り AI が直接編集してよい。追加・削除・`testid` / `source` / `dynamic` の変更は人間のみ。
+AI が `extra:` を変更したら PR 説明に明記する (人間が PR で確認する)。
+
 **入口**: `testid-violation` + `page:<id>` の bd issue。issue は `/ori-generate` (実装のある参加 page だけ) と
 `/ori-doctor --testid-sweep` (全 page) が `check-page-testids.sh --emit-issues` で起票する。
 `/ori-bug` は、この issue を本節へ案内する。移行は page ごとに 1 issue 単位で行う。
@@ -56,6 +64,8 @@ UI コンポーネントの単体テスト (`*.test.tsx`) は `ddd-test`（メ�
    末尾の `未契約の testid` 節は、その page に帰属する実装 testid のうち契約 (derived / extra) にも旧 field id にも無いもの
    (旧 root の値や `screen-N-*` の残り。位置付き)。契約に足す (`add-extra`) か実装から消すかは人間が決める。
    件数・exit code には含まれないので、移行後に節が空になっているかを目で確認する
+   その下の `page に帰属できない未契約の testid` 節は、名前空間も `screen-N-` も旧 root も無く、どの page にも寄せられなかった
+   実装 testid (どの page の契約にも無いもの)。他 page のものも混ざるので、この page のものか確認してから扱う
 3. **機能欠落を切り出す**。`migrate-map` の derived 行で `impl` の使用箇所が 0 件の契約 testid は、
    付け替えではなく実装に UI 要素が無い (機能欠落)。`check` は literal の存在を要求するので、要素を足さない限り exit 0 にならない。
    推測で要素を足さず、次のように別 issue へ切り出す:

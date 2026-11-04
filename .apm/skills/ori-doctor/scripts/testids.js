@@ -7553,7 +7553,7 @@ async function deriveRows(root, page) {
   const rows = fields.map((f) => ({ testid: `${page.kind}.${page.id}.${elemOf(f)}`, field: f })).sort((a, b) => a.testid < b.testid ? -1 : a.testid > b.testid ? 1 : 0);
   return { rows, warnings };
 }
-var HEADER = "# page testid \u5951\u7D04 (SSoT: ddd-vsa-hex/pattern.md \xA7UI selector / testid \u898F\u7D04)\n# derived: @ori-generated \u2014 testids.js sync \u304C ui-fields \u304B\u3089\u518D\u751F\u6210\u3059\u308B\u3002\u624B\u3067\u7DE8\u96C6\u3057\u306A\u3044\n# extra:   ori-derive / ori-generate \u304C testids.js add-extra \u3067\u8FFD\u8A18\u3059\u308B (\u5909\u66F4\u30FB\u524A\u9664\u306F\u4EBA\u9593\u306E\u307F)\n";
+var HEADER = "# page testid \u5951\u7D04 (SSoT: ddd-vsa-hex/pattern.md \xA7UI selector / testid \u898F\u7D04)\n# derived: @ori-generated \u2014 testids.js sync \u304C ui-fields \u304B\u3089\u518D\u751F\u6210\u3059\u308B\u3002\u624B\u3067\u7DE8\u96C6\u3057\u306A\u3044\n# extra:   ori-derive / ori-generate \u304C testids.js add-extra \u3067\u8FFD\u8A18\u3059\u308B (\u5909\u66F4\u30FB\u524A\u9664\u306F\u4EBA\u9593\u306E\u307F\u3002\u4F8B\u5916: \u30EC\u30D3\u30E5\u30FC\u6307\u6458\u306B\u5FDC\u3058\u305F\u65E2\u5B58 entry \u306E purpose \u6587\u306E\u8AA4\u308A\u4FEE\u6B63\u306B\u9650\u308A AI \u3082\u76F4\u63A5\u7DE8\u96C6\u3057\u3066\u3088\u3044\u3002\u8FFD\u52A0\u30FB\u524A\u9664\u30FBtestid / source / dynamic \u306E\u5909\u66F4\u306F\u4EBA\u9593\u306E\u307F\u3002AI \u304C\u76F4\u3057\u305F\u3089 PR \u8AAC\u660E\u306B\u660E\u8A18\u3059\u308B)\n";
 function contractPath(root, id) {
   return join(root, ".ori/pages", id, "testids.yaml");
 }
@@ -7818,7 +7818,8 @@ async function migrateMap(root, id) {
   const { rows } = await deriveRows(root, page);
   const c = await readContract(root, id);
   const allIds = await listPageIds(root);
-  const impl = await indexImpl(root, new Set(allIds), await loadPagesLenient(root, allIds));
+  const pageRefs = await loadPagesLenient(root, allIds);
+  const impl = await indexImpl(root, new Set(allIds), pageRefs);
   const texts = [];
   for (const f of await sourceFiles(root)) texts.push([relative(root, f), await readFile(f, "utf8")]);
   let remaining = 0;
@@ -7853,6 +7854,20 @@ async function migrateMap(root, id) {
     console.log(`
 # ${id}: \u672A\u5951\u7D04\u306E testid (\u5951\u7D04\u306B\u8FFD\u52A0\u3059\u308B\u304B\u524A\u9664\u3059\u308B\u304B\u306F\u4EBA\u9593\u5224\u65AD\u3002\u4EF6\u6570\u30FBexit code \u306B\u306F\u542B\u3081\u306A\u3044)`);
     for (const [t, locs] of uncontracted) {
+      console.log(t);
+      for (const l of locs) console.log(`  impl ${l}`);
+    }
+    console.log("");
+  }
+  const allKnown = new Set(pageRefs.flatMap((p) => [...p.keys]));
+  const unattributed = /* @__PURE__ */ new Map();
+  for (const o of impl.occurrences) {
+    if (o.owner !== null || allKnown.has(o.value)) continue;
+    unattributed.set(o.value, [...unattributed.get(o.value) ?? [], o.loc]);
+  }
+  if (unattributed.size > 0) {
+    console.log(`# ${id}: page \u306B\u5E30\u5C5E\u3067\u304D\u306A\u3044\u672A\u5951\u7D04\u306E testid (\u3069\u306E page \u306E\u5951\u7D04\u306B\u3082\u7121\u3044\u3002${id} \u306E\u3082\u306E\u304B\u4ED6 page \u306E\u3082\u306E\u304B\u3092\u78BA\u8A8D\u3057\u3001\u5951\u7D04\u306B\u8DB3\u3059\u304B\u524A\u9664\u3059\u308B\u304B\u306F\u4EBA\u9593\u5224\u65AD\u3002\u4EF6\u6570\u30FBexit code \u306B\u306F\u542B\u3081\u306A\u3044)`);
+    for (const [t, locs] of unattributed) {
       console.log(t);
       for (const l of locs) console.log(`  impl ${l}`);
     }
