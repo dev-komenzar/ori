@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
-import { parse as parseYaml, stringify as yamlStringify } from "yaml";
+import { parse as parseYaml, parseDocument, stringify as yamlStringify } from "yaml";
 import { consola } from "consola";
 import type { NodeRef } from "@ori-ori/coherence";
 import type { DirtyEntry } from "@ori-ori/slice-runner";
@@ -124,14 +124,52 @@ function collectDerivedRefs(manifest: any): string[] {
   return refs;
 }
 
+// status.yaml が YAML として不正なときに、該当ファイルと位置を示して報告するための例外 (ori-6dr5)。
+// 例外のスタックトレースで落ちると、どのファイルが壊れているか利用者に分からない。
+class InvalidStatusYamlError extends Error {
+  constructor(readonly rel: string, readonly details: string[]) {
+    super(`${rel} is not valid YAML`);
+  }
+}
+
+async function readStatus(statusPath: string): Promise<Record<string, any>> {
+  const rel = relative(root, statusPath);
+  const doc = parseDocument(await readFile(statusPath, "utf8"));
+  if (doc.errors.length > 0) {
+    throw new InvalidStatusYamlError(
+      rel,
+      doc.errors.map((e) => {
+        const pos = e.linePos?.[0];
+        return `${pos ? `${rel}:${pos.line}:${pos.col}` : rel}  ${e.message.split("\n")[0]}`;
+      }),
+    );
+  }
+  const data = doc.toJS();
+  if (data == null) return {};
+  if (typeof data !== "object" || Array.isArray(data)) {
+    throw new InvalidStatusYamlError(rel, [`${rel}  top level must be a mapping`]);
+  }
+  return data;
+}
+
+function reportInvalidStatus(invalid: InvalidStatusYamlError[]): void {
+  // 詳細も error に含める (consola.log は test 環境などで level により抑止される)
+  consola.error(
+    [
+      `${invalid.length} status.yaml file(s) are not valid YAML:`,
+      ...invalid.flatMap((e) => e.details.map((d) => `  ${d}`)),
+      "  fix the file(s) by hand (e.g. remove list items left under 'dirty: []', quote values containing ': '), then re-run /ori-sync",
+    ].join("\n"),
+  );
+}
+
 async function appendDirty(
   statusPath: string,
   newEntries: DirtyEntry[],
 ): Promise<number> {
   let status: any = {};
   if (await exists(statusPath)) {
-    const raw = await readFile(statusPath, "utf8");
-    status = parseYaml(raw) ?? {};
+    status = await readStatus(statusPath);
   }
   const existing: DirtyEntry[] = Array.isArray(status.dirty) ? status.dirty : [];
   const key = (e: DirtyEntry) =>
@@ -225,14 +263,8 @@ async function run(): Promise<void> {
 
   if (!changedFiles.length) {
     consola.success(`/ori-sync: no domain changes since ${since}`);
-    if (check) {
-      // also check existing dirty marks
-      const dirtyRemaining = await countRemainingDirty();
-      if (dirtyRemaining > 0) {
-        consola.error(`${dirtyRemaining} dirty mark(s) still pending across slices/pages`);
-        process.exit(1);
-      }
-    }
+    // also check existing dirty marks
+    if (check) await exitIfDirtyRemaining();
     process.exit(0);
   }
 
@@ -244,6 +276,7 @@ async function run(): Promise<void> {
   const now = new Date().toISOString();
   let totalDirty = 0;
   const affectedIds: string[] = [];
+  const invalid: InvalidStatusYamlError[] = [];
 
   for (const m of manifests) {
     const refs = collectDerivedRefs(m.manifest);
@@ -269,7 +302,15 @@ async function run(): Promise<void> {
       reason: force ? "force" : "edit",
     }));
     const statusPath = join(m.dir, "status.yaml");
-    const added = await appendDirty(statusPath, entries);
+    let added: number;
+    try {
+      added = await appendDirty(statusPath, entries);
+    } catch (err) {
+      if (!(err instanceof InvalidStatusYamlError)) throw err;
+      invalid.push(err);
+      consola.log(`  skipped (invalid status.yaml) → ${m.kind}/${m.id}`);
+      continue;
+    }
     if (added > 0) {
       totalDirty += added;
       affectedIds.push(m.id);
@@ -277,34 +318,53 @@ async function run(): Promise<void> {
     }
   }
 
-  if (totalDirty === 0) {
+  if (totalDirty === 0 && invalid.length === 0) {
     consola.success("/ori-sync: no slices/pages affected by these changes");
+  } else if (totalDirty === 0) {
+    consola.warn("/ori-sync: no dirty marks added (some status.yaml could not be read)");
   } else {
     consola.success(`/ori-sync: marked ${totalDirty} dirty entr${totalDirty === 1 ? "y" : "ies"} across ${affectedIds.length} ${affectedIds.length === 1 ? "doc" : "docs"}`);
     consola.info(`affected: ${affectedIds.join(", ")}`);
   }
 
-  if (check) {
-    const dirtyRemaining = await countRemainingDirty();
-    if (dirtyRemaining > 0) {
-      consola.error(`${dirtyRemaining} dirty mark(s) still pending across slices/pages`);
-      process.exit(1);
-    }
+  if (invalid.length > 0) {
+    // dirty を付けられなかった doc があるので成功扱いにしない。修正後の再実行で重複なく付け直せる
+    reportInvalidStatus(invalid);
+    process.exit(1);
+  }
+
+  if (check) await exitIfDirtyRemaining();
+}
+
+async function exitIfDirtyRemaining(): Promise<void> {
+  const { count, invalid } = await countRemainingDirty();
+  if (invalid.length > 0) {
+    reportInvalidStatus(invalid);
+    process.exit(1);
+  }
+  if (count > 0) {
+    consola.error(`${count} dirty mark(s) still pending across slices/pages`);
+    process.exit(1);
   }
 }
 
-async function countRemainingDirty(): Promise<number> {
+async function countRemainingDirty(): Promise<{ count: number; invalid: InvalidStatusYamlError[] }> {
   const manifests = await listManifests();
-  let n = 0;
+  let count = 0;
+  const invalid: InvalidStatusYamlError[] = [];
   for (const m of manifests) {
     const statusPath = join(m.dir, "status.yaml");
     if (!(await exists(statusPath))) continue;
     try {
-      const data = parseYaml(await readFile(statusPath, "utf8")) ?? {};
-      if (Array.isArray(data.dirty)) n += data.dirty.length;
-    } catch {}
+      const data = await readStatus(statusPath);
+      if (Array.isArray(data.dirty)) count += data.dirty.length;
+    } catch (err) {
+      // 以前は黙って 0 件扱いにしていたため、壊れた status.yaml が --check を素通りした
+      if (!(err instanceof InvalidStatusYamlError)) throw err;
+      invalid.push(err);
+    }
   }
-  return n;
+  return { count, invalid };
 }
 
 await run();

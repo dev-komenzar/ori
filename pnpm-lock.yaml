@@ -154,6 +154,16 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@22.19.19)
 
+  packages/skills/ori-finalize:
+    dependencies:
+      yaml:
+        specifier: ^2.4.1
+        version: 2.9.0
+    devDependencies:
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@22.19.19)
+
   packages/skills/ori-flow:
     dependencies:
       '@ori-ori/slice-runner':
@@ -211,6 +221,10 @@ importers:
       yaml:
         specifier: ^2.4.1
         version: 2.9.0
+    devDependencies:
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@22.19.19)
 
   packages/slice-runner:
     dependencies:

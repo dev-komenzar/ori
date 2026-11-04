@@ -33,7 +33,7 @@ description: ori プロジェクトの健康診断。.ori/ を歩き schema / st
 ### 3. Dirty integrity (unauthorized clear detection)
 
 - `.ori/slices/*/status.yaml` で `dirty: []` なのに `review.md` が存在しない / verdict が PASS でない slice を検出
-- `clear-dirty.sh` をバイパスして `sed` 直打ち等で dirty が消された可能性を示唆
+- `clear-dirty.js` をバイパスして `sed` 直打ち等で dirty が消された可能性を示唆
 
 ### 4. status.yaml ⇔ beads の同期
 
@@ -178,7 +178,7 @@ page / widget が持つ ui-field のうち、その page の spec.md に挙動�
    - `check-scenario-coverage.sh` — validation.md の未 scaffold scenario section を WARN（live 計算、`new-scenario.js --list-validation` 再利用）
    - `check-dod-sweep.sh` — Slice DoD 4 rule の sweep (read-only mode、report のみ)
    - `check-page-testids.sh` — page / widget の testid 契約 (testids.yaml) の stale・形式・実装追従・実装 testid lint を WARN（§14）
-   - `lint.js` — `.ori/` の Markdown anchor / id 規約検証 + architecture.md guardrails 検証（JS）：
+   - `lint.js` — `.ori/` の Markdown anchor / id 規約検証 + `{slices,pages,scenarios}/*/status.yaml` の YAML 妥当性 + architecture.md guardrails 検証（JS）：
      ```bash
      node ./scripts/lint.js [<path>] [--strict]
      ```
@@ -275,7 +275,7 @@ recommended action: fix broken cross-ref first (blocks /ori-flow on edit-past-no
 
 ### status.yaml 復元手順（Slice Schema WARN の fix 1 段目）
 
-`new-slice.js` は既存ディレクトリがあると `Slice already exists` で終了するため再実行では復元できない。`/ori-finalize` の `clear-dirty.sh` も status.yaml 不在だと `not found` で停止する。したがって `/ori-flow <id>` の前に `.ori/slices/<id>/status.yaml` を手で作る（`new-slice.js` の初期形）:
+`new-slice.js` は既存ディレクトリがあると `Slice already exists` で終了するため再実行では復元できない。`/ori-finalize` の `clear-dirty.js` も status.yaml 不在だと `not found` で停止する。したがって `/ori-flow <id>` の前に `.ori/slices/<id>/status.yaml` を手で作る（`new-slice.js` の初期形）:
 
 ```yaml
 slice_id: <id>
@@ -302,7 +302,7 @@ dirty: []
 
 - **schema 違反パス**：`vim .ori/domain/<file>.md` で手動修正（自動修正しない）→ 再度 `/ori-doctor`
 - **hash 不一致パス**：`/ori-flow <id>` で該当 slice / page を再 derive
-- **dirty integrity 違反パス**：`/ori-flow <id>` で該当 slice の全 phase（特に review）を再実行。status.yaml を手動編集せず、`/ori-finalize` の `clear-dirty.sh` を経由すること
+- **dirty integrity 違反パス**：`/ori-flow <id>` で該当 slice の全 phase（特に review）を再実行。status.yaml を手動編集せず、`/ori-finalize` の `clear-dirty.js` を経由すること
 - **broken cross-ref パス**：該当 slice / page の `manifest.yaml` を更新 or 旧 anchor を domain 側で復活
 - **proposal 残存パス**：`/ori-review-proposals` で人間判断
 - **orphan domain パス**：意図的なら無視、不要なら削除を検討

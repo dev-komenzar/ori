@@ -79,6 +79,39 @@ async function lintFile(path: string): Promise<LintIssue[]> {
   return issues;
 }
 
+// status.yaml は /ori-sync や finalize script が読み書きする台帳。YAML として壊れていると
+// それらが止まるので、該当ファイルと位置を示す issue にして早めに気付けるようにする (ori-6dr5)。
+async function lintStatusYamls(oriDir: string): Promise<LintIssue[]> {
+  const issues: LintIssue[] = [];
+  for (const kind of ["slices", "pages", "scenarios"]) {
+    let entries;
+    try {
+      entries = await readdir(join(oriDir, kind), { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const path = join(oriDir, kind, entry.name, "status.yaml");
+      let raw: string;
+      try {
+        raw = await readFile(path, "utf8");
+      } catch {
+        continue;
+      }
+      const doc = YAML.parseDocument(raw);
+      for (const err of doc.errors) {
+        issues.push({
+          file: path,
+          line: err.linePos?.[0]?.line ?? 1,
+          message: `status.yaml が YAML として parse できない: ${err.message.split("\n")[0]}`,
+        });
+      }
+    }
+  }
+  return issues;
+}
+
 // ──────────────────────────────────────────────────────────────────────────
 // guardrails 検証 (ori-c79.3)
 //
@@ -512,6 +545,7 @@ if (st.isFile()) {
   for await (const file of walkMarkdown(absTarget)) {
     issues.push(...(await lintFile(file)));
   }
+  issues.push(...(await lintStatusYamls(absTarget)));
   const archPath = join(absTarget, "architecture.md");
   if (await fileExists(archPath)) {
     issues.push(...(await runGuardrailsCheck(archPath)));

@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -11,5 +13,8 @@
     "@ori-ori/slice-runner": "workspace:*",
     "consola": "^3.2.3",
     "yaml": "^2.4.1"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
   }
 }

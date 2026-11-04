@@ -49,3 +49,27 @@ describe("lint.js frontmatter YAML error (ori-8ro7)", () => {
     expect(r.status).toBe(1);
   });
 });
+
+describe("lint.js status.yaml YAML error (ori-6dr5)", () => {
+  // clear-dirty.sh の旧 sed が作っていた形 (GitHub #133)
+  const brokenDirty = "slice_id: a\ndirty: []\n  - source:\n      path: .ori/domain/x.md\nfinalized_at: 2026-06-30\n";
+  const unquotedColon = "page_id: p\nnotes: fixed: quoted later\ndirty: []\n";
+
+  it("reports each broken status.yaml with its path and line, and keeps checking", async () => {
+    const r = await runLint({
+      ".ori/slices/a/status.yaml": brokenDirty,
+      ".ori/pages/p/status.yaml": unquotedColon,
+      ".ori/scenarios/s/status.yaml": "scenario_id: s\ndirty: []\n",
+    });
+    const out = r.stdout + r.stderr;
+    expect(out).toMatch(/\.ori\/slices\/a\/status\.yaml:\d+\s+status\.yaml が YAML として parse できない/);
+    expect(out).toMatch(/\.ori\/pages\/p\/status\.yaml:2\s+status\.yaml が YAML として parse できない/);
+    expect(out).not.toContain(".ori/scenarios/s/status.yaml");
+    expect(r.status).toBe(0);
+  });
+
+  it("exits 1 with --strict", async () => {
+    const r = await runLint({ ".ori/slices/a/status.yaml": brokenDirty }, ["--strict"]);
+    expect(r.status).toBe(1);
+  });
+});

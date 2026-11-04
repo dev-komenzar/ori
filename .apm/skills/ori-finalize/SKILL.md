@@ -11,7 +11,7 @@ description: /ori-flow phase 7。当該 slice の dirty 解除・proposal の浮
 
 ## 役割
 
-- **clean-up 担当**：当該 slice の `status.yaml.dirty[]` をクリア（**review PASS が前提** — `clear-dirty.sh` が強制ゲート）
+- **clean-up 担当**：当該 slice / page / scenario の `status.yaml.dirty[]` をクリア（**review PASS が前提** — `clear-dirty.js` が強制ゲート）
 - **proposal 浮上係**：phase 中に生成された proposal を一覧化しユーザに通知
 - **beads クローザー**：当該 slice の phase issue を全て close。epic の進捗を更新
 - **次手案内**：次の slice 候補 or proposal review を提示
@@ -44,15 +44,15 @@ description: /ori-flow phase 7。当該 slice の dirty 解除・proposal の浮
 
 1. **前提確認**：
    - phase 6（review）が close されているか（`bd show ori-review-<id>`）
-   - `review.md` が存在し verdict=PASS であることを確認（`clear-dirty.sh` が自動検証）
+   - `review.md` が存在し verdict=PASS であることを確認（`clear-dirty.js` が自動検証）
    - `pnpm -F <slice-pkg> test` GREEN を最終確認
-2. **slice の締め処理**：
+2. **slice / page の締め処理**：
    ```bash
-   bash ./scripts/clear-dirty.sh <slice-id>
-   bash ./scripts/update-hash.sh <slice-id>
+   node ./scripts/clear-dirty.js <id>          # slice / page 共通。id が両方にあるときは --kind slice|page
+   bash ./scripts/update-hash.sh <slice-id>    # slice のみ
    ```
-   - `status.yaml.dirty[]` を空に
-   - `spec.md` の `hash:` を最新に更新
+   - `clear-dirty.js`: `.ori/{slices,pages}/<id>/review.md` の verdict=PASS を確認してから `status.yaml.dirty[]` を空にする。status.yaml は YAML ライブラリで書き戻し、書き込み前に parse し直して検証する。status.yaml が既に YAML として不正なら、該当行を示して何も書かずに exit 1 → 手で直してから再実行
+   - `update-hash.sh`: `spec.md` の `hash:` を最新に更新（slice 専用。page / scenario の hash は finalize で書き換えない方針に移行予定のため対応しない — ori-0eh.6）
    - 残り phase issue の close（既に close 済みのものは no-op）
 3. **proposal の浮上**：
    ```bash
@@ -81,9 +81,12 @@ description: /ori-flow phase 7。当該 slice の dirty 解除・proposal の浮
 
 ## scenario の場合（type: scenario）
 
-`/ori-flow` の scenario workflow は phase 4 で `/ori-finalize <scenario-id>` を呼ぶ。scenario では slice 固有の `clear-dirty.sh` / `update-hash.sh`（どちらも `.ori/slices/<id>/` 固定）を使わず、次の順で締める:
+`/ori-flow` の scenario workflow は phase 4 で `/ori-finalize <scenario-id>` を呼ぶ。scenario では slice 専用の `update-hash.sh` は使わず、次の順で締める:
 
-1. **前提確認**：`.ori/scenarios/<id>/review.md` が存在し verdict=PASS であることを確認する（slice の review gate に相当）
+1. **前提確認 + dirty 解除**：`clear-dirty.js` が `.ori/scenarios/<id>/review.md` の verdict=PASS を確認してから `status.yaml.dirty[]` を空にする（slice と同じ review gate）
+   ```bash
+   node scripts/clear-dirty.js <scenario-id>   # id が slice / page にもあるときは --kind scenario
+   ```
 2. **phase 台帳の確定（R1）**（決定的 writer。冪等）:
    ```bash
    node scripts/scenario-status.js set <scenario-id> finalize done
@@ -93,12 +96,13 @@ description: /ori-flow phase 7。当該 slice の dirty 解除・proposal の浮
    ```bash
    bd close ori-finalize-<scenario-id> --reason="scenario complete; phase ledger updated"
    ```
-4. **dirty / spec hash**: scenario の `status.yaml.dirty` と `spec.md` hash 更新は現状未実装（R3 で扱う）。この phase では台帳の確定のみ行う
+4. **spec hash**: scenario の `spec.md` hash は finalize で更新しない（finalize を hash 検証 gate に変える ori-0eh.6 で扱う）
 
 ## 注意
 
 - **scope は 1 slice**：他の slice の dirty には触らない
-- **review PASS 必須**：`clear-dirty.sh` は `review.md` の verdict=PASS がないと dirty 解除を拒否する。バイパスするには `--skip-review-check` が必要（人間判断）
+- **review PASS 必須**：`clear-dirty.js` は `review.md` の verdict=PASS がないと dirty 解除を拒否する。バイパスするには `--skip-review-check` が必要（人間判断）
+- **status.yaml を手で書き換えない**：`sed` 等の行単位置換は `dirty:` 配下のブロック列を残して YAML を壊す（壊れると `/ori-sync` が止まる）。dirty は `clear-dirty.js`、scenario の phase 台帳は `scenario-status.js` で更新する。やむを得ず `notes:` などを手で書くときは、`: ` や `#` を含む値をクォートする。壊れていないかは `/ori-doctor` の lint が status.yaml ごとに検査する
 - **proposal を勝手に accept しない**：人間判断のため `/ori-review-proposals` を案内
 - **review 指摘の未対応で finalize しない**：sloppy finalize はバグの温床
 - **スキルが決定的処理を担当**：このスキルはオーケストレーションと通知
