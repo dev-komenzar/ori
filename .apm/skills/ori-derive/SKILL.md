@@ -80,6 +80,9 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
    - 上記 6 セクションを必須として埋める (記述形式は `feature-spec.instructions.md` を SSoT として参照)
    - 不明な事項は **推測で埋めず** `**TBD**` マーカーを残し、後段で人間に問う
    - 上流 section の文言を引用する際は `> domain/aggregates.md#note-aggregate より:` の出典を残す
+   - page / widget: 持つ ui-field を **1 つ残らず** `## 不変条件` か `## テスト観点` で規定し、field id を「field `screen-N-xxx`」の形で引用する。
+     レイアウト図・入出力だけに置いた要素は規定に数えない。上流から挙動を書けない field は推測で埋めず **TBD** を残す
+     (基準: [`feature-spec.instructions.md#page-field-behavior`](../../instructions/feature-spec.instructions.md#page-field-behavior))
 6. **Slice DoD 由来 item の derive**：`manifest.yaml` の `expected_deliverables` block (SSoT: [`feature-manifest.instructions.md`](../../instructions/feature-manifest.instructions.md)) と `.ori/architecture.md` の stack 情報を読み、以下を spec.md の所定 section に必ず差し込む。**hardcoded sample をスキルに置かず**、各 instructions の記述例を SSoT として参照する:
    - **`## 境界契約 {#boundary-contract}`**: `expected_deliverables.boundary.kind` と `contact_point` を写し、`production_fixture.location` と `cross_root_contracts[].generator` を併記。`feature-spec.instructions.md` の "境界契約 section 必須化" 記述例に揃える
    - **`## テスト観点 {#test-points}`**:
@@ -106,6 +109,8 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
 7. **spec.md の自己検証**：
    - 必須 H2 6 種が揃っているか（`## 概要`、`## 入出力`、`## 不変条件`、`## 境界契約`、`## テスト観点`、`## 実装ノート`）
    - page / widget: `node scripts/testids.js check <id> --no-impl` が exit 0 か、spec.md に `screen-<N>-` 形式の testid 記述が無いか
+   - page / widget: `node scripts/testids.js spec-gaps <id>` が exit 0 か (WARN = 挙動規定の無い ui-field。**TBD** の行だけの引用も WARN になる)。
+     step 8 の自動修正で上流から書けない field が残ったら、その field と TBD をユーザに提示して判断を委ねる (推測で挙動を作らない)
    - 境界契約に boundary kind / contact point が宣言済か
    - テスト観点に boundary test と production fixture の項目が両方あるか
    - 実装ノートに stub commands / production fixture / sub_layers / phase_hooks のいずれかへの言及があるか (slice_kind が `command` で `cross_root` を持つ場合は **全部必須**、それ以外は該当する rule だけ必須)

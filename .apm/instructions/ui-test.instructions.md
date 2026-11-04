@@ -60,7 +60,9 @@ UI コンポーネントの単体テスト (`*.test.tsx`) は `ddd-test`（メ�
    付け替えではなく実装に UI 要素が無い (機能欠落)。`check` は literal の存在を要求するので、要素を足さない限り exit 0 にならない。
    推測で要素を足さず、次のように別 issue へ切り出す:
    - spec に挙動規定 (不変条件 / test-points) がある → 実装の欠陥。`/ori-impl-green` 向けの bd issue を起票する (ケース 2)
-   - spec に挙動規定が無い (ui-fields とレイアウト図にだけ出る等) → spec の欠落。derive からやり直す bd issue を起票する (ケース 3)
+   - spec に挙動規定が無い (ui-fields とレイアウト図にだけ出る等) → spec の欠落。derive からやり直す bd issue を起票する (ケース 3)。
+     規定の有無は `node scripts/testids.js spec-gaps <page-id>` で判定する (WARN が出た field = 規定なし。
+     基準は [`feature-spec.instructions.md#page-field-behavior`](./feature-spec.instructions.md#page-field-behavior))
    - 移行 issue は、切り出した issue に `bd dep` で blocked-by にする。完了条件は緩めない (check の許容リストは設けない)。
      欠落以外の置換は、blocked のまま続けてよい
 4. **実装と unit test を同じ変更で置換する**:
