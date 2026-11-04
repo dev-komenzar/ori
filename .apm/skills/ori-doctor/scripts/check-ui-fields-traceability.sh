@@ -14,6 +14,8 @@ set -euo pipefail
 # Auto-detect project root (PWD-first; SCRIPT_DIR fallback last).
 # Why: when ori is installed inside a user project, SCRIPT_DIR resolves to the
 # ori repo so git toplevel misses the user's .ori/ (ori-fzr.15).
+# cd "$PROJECT_ROOT" の前に解決する (相対 $0 で起動されたとき cd 後には解決できない)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PWD_DIR="$(pwd)"
 PROJECT_ROOT="$(git -C "$PWD_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -n "$PROJECT_ROOT" ] && [ ! -d "$PROJECT_ROOT/.ori" ]; then PROJECT_ROOT=""; fi
@@ -25,7 +27,6 @@ if [ -z "$PROJECT_ROOT" ]; then
   done
 fi
 if [ -z "$PROJECT_ROOT" ]; then
-  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
   PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
 fi
 if [ -z "$PROJECT_ROOT" ] || [ ! -d "$PROJECT_ROOT/.ori" ]; then echo "ERROR: cannot find project root (.ori/ not found)" >&2; exit 1; fi
@@ -62,11 +63,24 @@ corpus_sc="$(norm_sc "$corpus")"
 # 正規表現 meta 文字のエスケープ (field id / key は英数と - + のみ想定だが念のため)
 re_escape() { sed -E 's/[][\.^$*+?(){}|/]/\\&/g' <<<"$1"; }
 
+# spec.md のある page/widget が持つ field は check-spec-gaps.sh (持ち主 page の #invariants / #test-points) が
+# 扱うので数えない (2 重報告で WARN が埋もれるのを防ぐ、ori-oan.13.7)。ここに残るのは page に属さない screen の field
+# (macOS の bash 3.2 でも動くよう連想配列は使わず、改行区切りの文字列で持つ)
+owned=$'\n'
+if [[ -d .ori/pages && -f "$SCRIPT_DIR/testids.js" ]] && command -v node >/dev/null 2>&1; then
+  if owned_out="$(node "$SCRIPT_DIR/testids.js" owned-fields --root "$PROJECT_ROOT" 2>/dev/null)"; then
+    owned+="$owned_out"$'\n'
+  else
+    echo "  NOTE  testids.js owned-fields が失敗したため、page に属する field もここで数える (check-spec-gaps.sh と重複しうる)"
+  fi
+fi
+
 # field contract (screen-*.md の field id): id 自体 or purpose 部分が単語境界つきで出現するか
 for screen in "${screens[@]}"; do
   sid=$(basename "$screen" .md)
   while IFS= read -r fid; do
     [[ -n "$fid" ]] || continue
+    [[ "$owned" != *$'\n'"$fid"$'\n'* ]] || continue
     purpose="${fid#"$sid"-}"
     id_re="$(re_escape "$fid")"
     pu_re="$(re_escape "$purpose" | sed 's/-/[- ]/g')"

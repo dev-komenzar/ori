@@ -60,6 +60,8 @@ function usage(): never {
     "       testids.js check <page-id>... | --all [--no-impl] [--implemented-only] [--root <dir>]\n" +
     "       testids.js migrate-map <page-id>                 [--root <dir>]\n" +
     "       testids.js check-collisions                      [--root <dir>]\n" +
+    "       testids.js spec-gaps <page-id>... | --all        [--root <dir>]\n" +
+    "       testids.js owned-fields                          [--root <dir>]\n" +
     "       testids.js add-extra <page-id> --testid <id> --purpose <text> --source <derive|scenario:<id>> [--dynamic data-key] [--root <dir>]\n" +
     "  exit: 0 = ok / 1 = 違反・入力不整合 / 2 = usage・project root 不明",
   );
@@ -632,6 +634,87 @@ async function migrateMap(root: string, id: string): Promise<number> {
   return remaining > 0 ? 1 : 0;
 }
 
+// ── spec gaps (ori-oan.13.7) ─────────────────────────────────────────
+// ui-fields にあるが持ち主 page の spec.md に挙動規定が無い field を検出する (spec だけの検査。実装は見ない)。
+// 「規定あり」= spec.md の #invariants / #test-points 節 (fenced code 外) に field id が literal で出る。
+// レイアウト図・入出力・実装ノートだけの言及は数えない (storage-dir-reset 型の欠落を見逃すため)。
+// **TBD** を含む行の言及も数えない (TBD を残しただけでは規定にならない)。
+
+const SPEC_SECTIONS = /\{#(invariants|test-points)\}/;
+
+// 検査対象の page: spec.md があり、screen を解決できる page/widget。それ以外は skip 理由を返す。
+// manifest を先に読む (存在しない page id を「spec.md 無し」で素通りさせない)。壊れた入力は InputError
+async function specTarget(root: string, id: string): Promise<{ fields: string[]; spec: string } | { skip: string }> {
+  const page = await loadPage(root, id);
+  const specPath = join(root, ".ori/pages", id, "spec.md");
+  if (!(await exists(specPath))) return { skip: "spec.md がありません (/ori-derive 前)" };
+  if (page.screens.length === 0) return { skip: NO_SCREEN };
+  const fields: string[] = [];
+  for (const s of page.screens) fields.push(...(await loadFields(root, s)));
+  return { fields, spec: await readFile(specPath, "utf8") };
+}
+
+// #invariants / #test-points 節 (H2。次の H1/H2 まで) の本文から、fenced code・HTML コメント・TBD の行を除いたもの
+function specCitations(spec: string): string {
+  const out: string[] = [];
+  let inSection = false;
+  let fence: { ch: string; len: number } | null = null;
+  for (const line of spec.replace(/<!--[\s\S]*?-->/g, "").split("\n")) {
+    const f = /^\s*(`{3,}|~{3,})/.exec(line);
+    if (f) {
+      const ch = f[1]![0]!;
+      const len = f[1]!.length;
+      // 閉じるのは開いた marker と同じ文字・長さ以上の行だけ (中の ``` 例示で状態を反転させない)
+      if (fence === null) fence = { ch, len };
+      else if (ch === fence.ch && len >= fence.len && line.trim() === ch.repeat(len)) fence = null;
+      continue;
+    }
+    if (fence) continue;
+    if (/^#{1,2} /.test(line)) { inSection = /^## /.test(line) && SPEC_SECTIONS.test(line); continue; }
+    if (inSection && !/\bTBD\b/.test(line)) out.push(line);
+  }
+  return out.join("\n");
+}
+
+async function specGaps(root: string, ids: string[]): Promise<number> {
+  let count = 0;
+  let errors = 0;
+  for (const id of ids) {
+    let t: Awaited<ReturnType<typeof specTarget>>;
+    try {
+      t = await specTarget(root, id);
+    } catch (e) {
+      // 1 page の壊れた入力で残りの page の検査を止めない (traceability は既にこの field を数えていない)
+      if (!(e instanceof InputError)) throw e;
+      console.log(`ERROR ${id}: ${e.message}`);
+      errors++;
+      continue;
+    }
+    if ("skip" in t) { console.log(`SKIP ${id}: ${t.skip}`); continue; }
+    const cited = specCitations(t.spec);
+    for (const f of t.fields) {
+      if (new RegExp(`(?<![\\w-])${escapeRe(f)}(?![\\w-])`).test(cited)) continue;
+      console.log(`WARN page/${id}#${f}: 挙動規定なし (.ori/pages/${id}/spec.md の #invariants / #test-points に field \`${f}\` の引用が無い)`);
+      console.log(`      fix: /ori-flow ${id} (derive からやり直し。上流から書けない挙動は推測で埋めず TBD にして人間に問う)`);
+      count++;
+    }
+  }
+  const err = errors > 0 ? ` (検査できなかった page: ${errors})` : "";
+  console.log(count === 0 && errors === 0 ? "OK: 挙動規定の無い field なし" : `挙動規定の無い field: ${count} 件${err}`);
+  return count + errors;
+}
+
+// spec-gaps が検査する field の一覧 (doctor の ui-fields traceability が 2 重報告を避けるために使う)
+async function ownedFields(root: string): Promise<number> {
+  const owned = new Set<string>();
+  for (const id of await listPageIds(root)) {
+    const t = await specTarget(root, id).catch(() => null);
+    if (t && "fields" in t) for (const f of t.fields) owned.add(f);
+  }
+  for (const f of [...owned].sort()) console.log(f);
+  return 0;
+}
+
 // page-groups.md の grouping 節ごとに screen 集合を取り、<elem> 衝突を検出する (11b 用、.ori/pages/ 不要)
 async function checkCollisions(root: string): Promise<number> {
   const groups = await parsePageGroups(root);
@@ -707,6 +790,10 @@ async function main(): Promise<number> {
       return migrateMap(root, target);
     case "check-collisions":
       return (await checkCollisions(root)) > 0 ? 1 : 0;
+    case "spec-gaps":
+      return (await specGaps(root, await ids())) > 0 ? 1 : 0;
+    case "owned-fields":
+      return ownedFields(root);
     case "add-extra":
       if (!target) usage();
       return addExtra(root, target, flags);

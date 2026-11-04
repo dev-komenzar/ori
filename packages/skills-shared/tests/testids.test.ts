@@ -867,3 +867,185 @@ describe("testids.js — review 指摘の回帰 (ori-oan.7)", () => {
     });
   });
 });
+
+describe("testids.js spec-gaps (ori-oan.13.7)", () => {
+  const pageSpec = (sections: Record<string, string>): string =>
+    [
+      "# page-main {#page-main}",
+      "",
+      "## 入出力 {#io}",
+      "",
+      sections.io ?? "",
+      "",
+      "## レイアウト {#layout}",
+      "",
+      sections.layout ?? "",
+      "",
+      "## 不変条件 {#invariants}",
+      "",
+      sections.invariants ?? "",
+      "",
+      "## テスト観点 (vitest) {#test-points}",
+      "",
+      sections.testPoints ?? "",
+      "",
+      "## 実装ノート {#impl-notes}",
+      "",
+      sections.notes ?? "",
+      "",
+    ].join("\n");
+
+  it("持ち主 page の #invariants / #test-points に field id が無い field を WARN する (レイアウト・入出力・fenced code は数えない)", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        ".ori/domain/ui-fields/screen-1.md": screen(1, ["block", "block-body", "draft-body", "toolbar-sort-field", "updated-at"]),
+        ".ori/pages/page-main/spec.md": pageSpec({
+          io: "- field `screen-1-updated-at` を表示する",
+          layout: "```\n[screen-1-toolbar-sort-field]\n```\n- field `screen-1-block` はカード",
+          invariants: "- **I-1**: field `screen-1-draft-body` は空でも保存できる\n```\nscreen-1-block\n```",
+          testPoints: "### tp-1 {#tp-1}\n\n- field `screen-1-block-body` に本文が出る",
+          notes: "- screen-1-toolbar-sort-field は select で実装",
+        }),
+      },
+      async (root) => {
+        const r = await run(["spec-gaps", "page-main"], root);
+        expect(r.code).toBe(1);
+        expect(r.stdout).toContain("WARN page/page-main#screen-1-block: 挙動規定なし");
+        expect(r.stdout).toContain("WARN page/page-main#screen-1-toolbar-sort-field: 挙動規定なし");
+        expect(r.stdout).toContain("WARN page/page-main#screen-1-updated-at: 挙動規定なし");
+        expect(r.stdout).not.toContain("#screen-1-block-body:");
+        expect(r.stdout).not.toContain("#screen-1-draft-body:");
+        expect(r.stdout).toContain("fix: /ori-flow page-main");
+        expect(r.stdout).toContain("挙動規定の無い field: 3 件");
+      },
+    );
+  });
+
+  it("TBD を含む行にしか field id が無ければ規定なしと数える", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        ".ori/pages/page-main/spec.md": pageSpec({
+          invariants: "- field `screen-1-draft-body` の保存条件は **TBD**",
+          testPoints: "- field `screen-1-toolbar-sort-field` で並び替わる",
+        }),
+      },
+      async (root) => {
+        const r = await run(["spec-gaps", "page-main"], root);
+        expect(r.code).toBe(1);
+        expect(r.stdout).toContain("WARN page/page-main#screen-1-draft-body: 挙動規定なし");
+        expect(r.stdout).toContain("挙動規定の無い field: 1 件");
+      },
+    );
+  });
+
+  it("全 field が規定済みなら exit 0", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        ".ori/pages/page-main/spec.md": pageSpec({
+          invariants: "- field `screen-1-draft-body` は空でも保存できる",
+          testPoints: "- field `screen-1-toolbar-sort-field` で並び替わる",
+        }),
+      },
+      async (root) => {
+        const r = await run(["spec-gaps", "page-main"], root);
+        expect(r.code).toBe(0);
+        expect(r.stdout).toContain("OK: 挙動規定の無い field なし");
+      },
+    );
+  });
+
+  it("--all: spec.md 未生成の page と screen を解決できない page は SKIP し件数に含めない", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        ".ori/pages/page-main/spec.md": pageSpec({ testPoints: "- field `screen-1-draft-body` を入力できる" }),
+        ".ori/pages/orphan/manifest.yaml": manifest("orphan", "widget", []),
+        ".ori/pages/orphan/spec.md": pageSpec({}),
+      },
+      async (root) => {
+        const r = await run(["spec-gaps", "--all"], root);
+        expect(r.code).toBe(1);
+        expect(r.stdout).toContain("WARN page/page-main#screen-1-toolbar-sort-field: 挙動規定なし");
+        expect(r.stdout).toContain("SKIP orphan:");
+        expect(r.stdout).toContain("SKIP settings: spec.md がありません");
+        expect(r.stdout).toContain("挙動規定の無い field: 1 件");
+      },
+    );
+  });
+
+  it("owned-fields: spec-gaps が検査する field (spec.md のある page の field) を列挙する", async () => {
+    await withFixture(
+      {
+        ...BASE,
+        ".ori/pages/page-main/spec.md": pageSpec({}),
+      },
+      async (root) => {
+        const r = await run(["owned-fields"], root);
+        expect(r.code).toBe(0);
+        expect(r.stdout.trim().split("\n").sort()).toEqual(["screen-1-draft-body", "screen-1-toolbar-sort-field"]);
+      },
+    );
+  });
+  describe("review 指摘の回帰 (ori-oan.13.7)", () => {
+    it("壊れた page があっても他 page の WARN を出し続け、ERROR を行で出して exit 1", async () => {
+      await withFixture(
+        {
+          ...BASE,
+          ".ori/pages/0bad/manifest.yaml": "type: [unclosed\n",
+          ".ori/pages/0bad/spec.md": pageSpec({}),
+          ".ori/pages/page-main/spec.md": pageSpec({ testPoints: "- field `screen-1-draft-body` を入力できる" }),
+        },
+        async (root) => {
+          const r = await run(["spec-gaps", "--all"], root);
+          expect(r.code).toBe(1);
+          expect(r.stdout).toMatch(/^ERROR 0bad: /m);
+          expect(r.stdout).toContain("WARN page/page-main#screen-1-toolbar-sort-field: 挙動規定なし");
+          expect(r.stdout).toContain("挙動規定の無い field: 1 件 (検査できなかった page: 1)");
+        },
+      );
+    });
+
+    it("存在しない page id を明示したら exit 1 (SKIP で素通りしない)", async () => {
+      await withFixture({ ...BASE }, async (root) => {
+        const r = await run(["spec-gaps", "nosuch"], root);
+        expect(r.code).toBe(1);
+        expect(r.stdout).toContain("ERROR nosuch: page 未 scaffold");
+      });
+    });
+
+    it("fence は開いた marker と同じ文字・長さ以上でだけ閉じる / H1 で節が終わる / HTML コメントは数えない / anchor の後ろに続きがあっても節と認める", async () => {
+      await withFixture(
+        {
+          ...BASE,
+          ".ori/pages/page-main/spec.md": [
+            "# page-main {#page-main}",
+            "",
+            "## 不変条件 {#invariants} <!-- derived -->",
+            "",
+            "````md",
+            "```",
+            "screen-1-x",
+            "````",
+            "",
+            "- field `screen-1-draft-body` は空でも保存できる",
+            "<!-- screen-1-toolbar-sort-field は後で -->",
+            "",
+            "# Appendix {#appendix}",
+            "",
+            "- screen-1-toolbar-sort-field",
+            "",
+          ].join("\n"),
+        },
+        async (root) => {
+          const r = await run(["spec-gaps", "page-main"], root);
+          expect(r.stdout).not.toContain("#screen-1-draft-body:");
+          expect(r.stdout).toContain("WARN page/page-main#screen-1-toolbar-sort-field: 挙動規定なし");
+          expect(r.stdout).toContain("挙動規定の無い field: 1 件");
+        },
+      );
+    });
+  });
+});

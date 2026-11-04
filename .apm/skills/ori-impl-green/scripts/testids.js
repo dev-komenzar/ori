@@ -7384,7 +7384,7 @@ async function exists(path) {
 }
 function usage() {
   console.error(
-    "Usage: testids.js sync <page-id>... | --all            [--root <dir>]\n       testids.js check <page-id>... | --all [--no-impl] [--implemented-only] [--root <dir>]\n       testids.js migrate-map <page-id>                 [--root <dir>]\n       testids.js check-collisions                      [--root <dir>]\n       testids.js add-extra <page-id> --testid <id> --purpose <text> --source <derive|scenario:<id>> [--dynamic data-key] [--root <dir>]\n  exit: 0 = ok / 1 = \u9055\u53CD\u30FB\u5165\u529B\u4E0D\u6574\u5408 / 2 = usage\u30FBproject root \u4E0D\u660E"
+    "Usage: testids.js sync <page-id>... | --all            [--root <dir>]\n       testids.js check <page-id>... | --all [--no-impl] [--implemented-only] [--root <dir>]\n       testids.js migrate-map <page-id>                 [--root <dir>]\n       testids.js check-collisions                      [--root <dir>]\n       testids.js spec-gaps <page-id>... | --all        [--root <dir>]\n       testids.js owned-fields                          [--root <dir>]\n       testids.js add-extra <page-id> --testid <id> --purpose <text> --source <derive|scenario:<id>> [--dynamic data-key] [--root <dir>]\n  exit: 0 = ok / 1 = \u9055\u53CD\u30FB\u5165\u529B\u4E0D\u6574\u5408 / 2 = usage\u30FBproject root \u4E0D\u660E"
   );
   process.exit(2);
 }
@@ -7861,6 +7861,76 @@ async function migrateMap(root, id) {
   console.log(remaining === 0 ? "OK: \u65E7 testid \u306E\u4F7F\u7528 0 \u4EF6" : `\u65E7 testid \u306E\u4F7F\u7528: ${remaining} \u4EF6`);
   return remaining > 0 ? 1 : 0;
 }
+var SPEC_SECTIONS = /\{#(invariants|test-points)\}/;
+async function specTarget(root, id) {
+  const page = await loadPage(root, id);
+  const specPath = join(root, ".ori/pages", id, "spec.md");
+  if (!await exists(specPath)) return { skip: "spec.md \u304C\u3042\u308A\u307E\u305B\u3093 (/ori-derive \u524D)" };
+  if (page.screens.length === 0) return { skip: NO_SCREEN };
+  const fields = [];
+  for (const s of page.screens) fields.push(...await loadFields(root, s));
+  return { fields, spec: await readFile(specPath, "utf8") };
+}
+function specCitations(spec) {
+  const out = [];
+  let inSection = false;
+  let fence = null;
+  for (const line of spec.replace(/<!--[\s\S]*?-->/g, "").split("\n")) {
+    const f = /^\s*(`{3,}|~{3,})/.exec(line);
+    if (f) {
+      const ch = f[1][0];
+      const len = f[1].length;
+      if (fence === null) fence = { ch, len };
+      else if (ch === fence.ch && len >= fence.len && line.trim() === ch.repeat(len)) fence = null;
+      continue;
+    }
+    if (fence) continue;
+    if (/^#{1,2} /.test(line)) {
+      inSection = /^## /.test(line) && SPEC_SECTIONS.test(line);
+      continue;
+    }
+    if (inSection && !/\bTBD\b/.test(line)) out.push(line);
+  }
+  return out.join("\n");
+}
+async function specGaps(root, ids) {
+  let count = 0;
+  let errors = 0;
+  for (const id of ids) {
+    let t;
+    try {
+      t = await specTarget(root, id);
+    } catch (e) {
+      if (!(e instanceof InputError)) throw e;
+      console.log(`ERROR ${id}: ${e.message}`);
+      errors++;
+      continue;
+    }
+    if ("skip" in t) {
+      console.log(`SKIP ${id}: ${t.skip}`);
+      continue;
+    }
+    const cited = specCitations(t.spec);
+    for (const f of t.fields) {
+      if (new RegExp(`(?<![\\w-])${escapeRe(f)}(?![\\w-])`).test(cited)) continue;
+      console.log(`WARN page/${id}#${f}: \u6319\u52D5\u898F\u5B9A\u306A\u3057 (.ori/pages/${id}/spec.md \u306E #invariants / #test-points \u306B field \`${f}\` \u306E\u5F15\u7528\u304C\u7121\u3044)`);
+      console.log(`      fix: /ori-flow ${id} (derive \u304B\u3089\u3084\u308A\u76F4\u3057\u3002\u4E0A\u6D41\u304B\u3089\u66F8\u3051\u306A\u3044\u6319\u52D5\u306F\u63A8\u6E2C\u3067\u57CB\u3081\u305A TBD \u306B\u3057\u3066\u4EBA\u9593\u306B\u554F\u3046)`);
+      count++;
+    }
+  }
+  const err = errors > 0 ? ` (\u691C\u67FB\u3067\u304D\u306A\u304B\u3063\u305F page: ${errors})` : "";
+  console.log(count === 0 && errors === 0 ? "OK: \u6319\u52D5\u898F\u5B9A\u306E\u7121\u3044 field \u306A\u3057" : `\u6319\u52D5\u898F\u5B9A\u306E\u7121\u3044 field: ${count} \u4EF6${err}`);
+  return count + errors;
+}
+async function ownedFields(root) {
+  const owned = /* @__PURE__ */ new Set();
+  for (const id of await listPageIds(root)) {
+    const t = await specTarget(root, id).catch(() => null);
+    if (t && "fields" in t) for (const f of t.fields) owned.add(f);
+  }
+  for (const f of [...owned].sort()) console.log(f);
+  return 0;
+}
 async function checkCollisions(root) {
   const groups = await parsePageGroups(root);
   if (groups === null) throw new InputError(".ori/domain/ui-fields/page-groups.md \u304C\u3042\u308A\u307E\u305B\u3093");
@@ -7929,6 +7999,10 @@ async function main() {
       return migrateMap(root, target);
     case "check-collisions":
       return await checkCollisions(root) > 0 ? 1 : 0;
+    case "spec-gaps":
+      return await specGaps(root, await ids()) > 0 ? 1 : 0;
+    case "owned-fields":
+      return ownedFields(root);
     case "add-extra":
       if (!target) usage();
       return addExtra(root, target, flags);

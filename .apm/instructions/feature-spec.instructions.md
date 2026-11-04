@@ -58,3 +58,16 @@ page / widget の spec.md は testid の具体値を**持たない**。testid �
 - 禁止: 「ui-fields の field id (`screen-<N>-*`) をそのまま data-testid に写す」等、
   契約と別の testid 規則を spec に書くこと (実装がそれに従い E2E と乖離する)
 - テスト観点で testid に触れる場合は契約の値 (`page.<id>.<elem>`) を引用する
+
+## page / widget の ui-field 挙動規定 {#page-field-behavior}
+
+page / widget が持つ ui-field (manifest `derives_from` → screen の `## Fields` の `{#screen-N-xxx}`) は、
+**1 つ残らず** `## 不変条件 {#invariants}` か `## テスト観点 {#test-points}` で挙動を規定する。
+規定には field id を「field `screen-N-xxx`」の形で引用する (field の参照。testid として書くのは上の禁止に当たる)。
+
+- レイアウト図・入出力・実装ノートだけの言及は規定に数えない。レイアウト図にだけある要素は、
+  実装にも test にも現れないまま見落とされる (promptnotes の「デフォルトに戻す」= screen-2-storage-dir-reset)
+- 表示専用の field も「何がいつ表示されるか」を test-point で規定する。除外の仕組みは設けない
+- 上流 (ui-fields / workflow) から挙動を書けない field は推測で埋めず **TBD** を残して人間に問う。
+  **TBD** を含む行の引用は規定に数えない
+- 検査: `node scripts/testids.js spec-gaps <page-id>` (`/ori-derive` 自己検証、`/ori-doctor` §15 は `--all`)

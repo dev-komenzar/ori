@@ -130,6 +130,7 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 - 対象 contract: (a) `screen-*.md` の field id `{#screen-N-xxx}`、(b) `ui-fields/*.md` 全体（cross-screen shortcut を定義する index / README を含む）のショートカット（`Cmd/Ctrl/⌘ + Key`、`Shift`/`Alt` 併用含む）
 - 写像判定は単語境界つきの文字列一致（大小無視）。field は field id 自体、または purpose 部分（`screen-N-` prefix を除いた部分。`-` と空白は同一視）が出れば写像済み（`titlebar` は `title` に一致しない）。ショートカットは Cmd/Command/Ctrl/Control/⌘ の表記ゆれと `+` 前後の空白、`⌘S` の `+` 省略を同一視し、key は複数文字（`Enter` 等）を右境界つきで比較する（`Cmd+Enter` は `Cmd+E` で写像済みにならない）
 - corpus は `.ori/scenarios/*/spec.md` / `.ori/pages/*/spec.md` / `.ori/slices/*/spec.md` の `#test-points`（sub-bullet 含む、fenced code 除外）を連結したもの。どの spec に写すべきかは判定しない
+- spec.md のある page / widget が持つ field（`testids.js owned-fields`）は §15 が持ち主 page 単位で扱うので数えない（2 重報告で WARN が埋もれるのを防ぐ、ori-oan.13.7）。ここに残るのはショートカットと、どの page にも属さない screen の field
 - `ui-fields/*.md` が無い、または test-points が 1 つも無ければ skip
 - fix は該当 spec の `#test-points` への項目追加 → `/ori-flow <id>` 再生成を案内する
 - **ERROR にしない**：文字列一致のため false positive がありうる。ori-arch adapter（page spec への構造的な写像）との連携は未実装（R4/R5 安定後の将来課題）
@@ -146,6 +147,16 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
 - `check-page-testids.sh` は `packages/skills-shared/src` から ori-doctor / ori-generate に複製配置される。`/ori-generate` は実装のある参加 page だけを `--implemented-only <page-id>...` で検査・起票する
 - `--testid-sweep` 指定時は page ごとに bd issue を起票 (手順 3b)
 
+### 15. page spec の ui-field 挙動規定 (ui-fields ⟷ page spec) {#spec-gaps}
+
+page / widget が持つ ui-field のうち、その page の spec.md に挙動規定が無いものを **WARN** で surface する（`check-spec-gaps.sh` = 同 bundle の `scripts/testids.js spec-gaps --all`、ori-oan.13.7）。ui-fields とレイアウト図にだけあり、spec・実装・test のどこにも挙動が無い要素（promptnotes の screen-2-storage-dir-reset / screen-1-block-updated-at）を、testid 移行で止まる前に見つける。
+
+- 規定あり = 持ち主 page（manifest `derives_from` → screen）の spec.md で、`#invariants` または `#test-points` 節（fenced code 外）に field id が literal で出る。**TBD** を含む行は数えない。レイアウト図・入出力・実装ノートだけの言及は数えない（基準: [`feature-spec.instructions.md#page-field-behavior`](../../instructions/feature-spec.instructions.md#page-field-behavior)）
+- spec.md 未生成の page と、screen を解決できない page は SKIP（件数に含めない）
+- 実装は見ない。実装側の欠落は §14
+- fix は `/ori-flow <page-id>`（derive からやり直し = `/ori-bug` のケース 3）。起票はしない
+- **ERROR にしない**：derive 済みの既存 spec は field id を引用していないことが多く、再 derive まで WARN が出るため
+
 ## 手順
 
 1. **`.ori/` 存在確認**：なければ「`/ori-init` で初期化してください」と返す
@@ -158,7 +169,8 @@ read-only mode (default) は report のみ。`--dod-sweep` (= 内部 script `--e
    - `check-slice-schema.sh` — slice の manifest/status ファイル存在確認（status.yaml 不在 slice を WARN + 2 段の fix（status.yaml 復元 → `/ori-flow <id>`）付きで報告）
    - `check-scenario-schema.sh` — scenario の status.yaml 台帳 ⟷ 成果物実在の突合（phases 空/未記録なのに tests/・review.md が存在、phase=done なのに成果物なし、completion と phases の不整合を WARN。fix は `scenario-status.js set` を案内）
    - `check-scenario-staleness.sh` — review.md が spec.md / runner config / tests/** などの入力成果物より古い scenario を WARN（mtime 比較、fix は `/ori-flow <id>` 再走）
-   - `check-ui-fields-traceability.sh` — ui-fields の field id / ショートカットが scenario・page・slice の spec.md#test-points に未写像なら WARN（文字列一致、fix は test-points 追記 → `/ori-flow <id>`）
+   - `check-ui-fields-traceability.sh` — ui-fields のショートカットと、どの page にも属さない screen の field id が scenario・page・slice の spec.md#test-points に未写像なら WARN（文字列一致、fix は test-points 追記 → `/ori-flow <id>`）
+   - `check-spec-gaps.sh` — page / widget が持つ ui-field のうち、その page の spec.md の #invariants / #test-points に field id の引用が無いものを WARN（§15、fix は `/ori-flow <page-id>`）
    - `check-dirty-integrity.sh` — dirty=[] なのに review.md 不在/verdict≠PASS を検出（status.yaml の手動改竄チェック）
    - `check-hash-consistency.sh` — 派生ファイルの upstream 参照実在確認
    - `check-cross-ref.sh` — derives_from / upstream の cross-reference 検証

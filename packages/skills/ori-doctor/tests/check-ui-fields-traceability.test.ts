@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -151,5 +151,35 @@ describe("check-ui-fields-traceability.sh", () => {
       });
       expect(r.code).toBe(0);
     });
+  });
+  it("ori-oan.13.7: spec.md のある page が持つ field は spec-gaps に任せて数えない (2 重報告しない)", async () => {
+    const r = await run({
+      "domain/ui-fields/screen-1.md": screen("| {#screen-1-note-body} | 本文 |"),
+      "domain/ui-fields/screen-2.md": "# S2 {#screen-2}\n\n## Fields {#fields}\n\n| {#screen-2-save} | 保存 |\n",
+      "pages/page-main/manifest.yaml": "page_id: page-main\ntype: page\nderives_from:\n  - domain/ui-fields/screen-1.md#screen-1\n",
+      "pages/page-main/spec.md": spec("- 無関係"),
+      "scenarios/s1/spec.md": spec("- 無関係"),
+    });
+    expect(r.out).not.toContain("screen-1-note-body");
+    expect(r.out).toContain("screen-2#screen-2-save");
+    expect(r.out).toContain("1 issue(s)");
+    expect(r.code).toBe(1);
+  });
+  it("ori-oan.13.7 回帰: skill dir から相対 path で起動しても落ちない", async () => {
+    const root = await mkdtemp(join(tmpdir(), "ori-uif-trace-"));
+    tmpDirs.push(root);
+    await mkdir(join(root, ".ori/domain/ui-fields"), { recursive: true });
+    await writeFile(join(root, ".ori/domain/ui-fields/screen-1.md"), screen("| {#screen-1-note-body} | 本文 |"));
+    await mkdir(join(root, ".ori/scenarios/s1"), { recursive: true });
+    await writeFile(join(root, ".ori/scenarios/s1/spec.md"), spec("- note body"));
+    // project root 配下に skill dir を置き (scripts を copy)、そこから相対 $0 で起動する
+    await mkdir(join(root, "skill/scripts"), { recursive: true });
+    for (const f of ["check-ui-fields-traceability.sh", "testids.js"]) {
+      await copyFile(join(dirname(SCRIPT), f), join(root, "skill/scripts", f));
+    }
+    const r = spawnSync("bash", ["scripts/check-ui-fields-traceability.sh"], { cwd: join(root, "skill"), encoding: "utf8" });
+    expect(r.stdout + r.stderr).not.toContain("No such file or directory");
+    expect(r.stdout).toContain("0 issue(s)");
+    expect(r.status).toBe(0);
   });
 });
