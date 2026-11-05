@@ -1,10 +1,13 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
-import { parse as parseYaml, parseDocument, stringify as yamlStringify } from "yaml";
+import { Document, isSeq, parseDocument } from "yaml";
 import { consola } from "consola";
 import type { NodeRef } from "@ori-ori/coherence";
-import type { DirtyEntry } from "@ori-ori/slice-runner";
+import { extractSections, hashSection, parseFrontmatter } from "@ori-ori/parser";
+import type { DirtyEntry, ScenarioDirtyEntry } from "@ori-ori/slice-runner";
+
+type AnyDirtyEntry = DirtyEntry | ScenarioDirtyEntry;
 
 const args = process.argv.slice(2);
 function flag(name: string): string | undefined {
@@ -50,16 +53,45 @@ async function findProjectRoot(start: string): Promise<string> {
 const root = await findProjectRoot(process.cwd());
 process.chdir(root);
 
-function gitDiffNames(sinceRef: string): string[] {
+function git(gitArgs: string[]): string | null {
   try {
-    const out = execSync(`git diff --name-only ${sinceRef} -- .ori/domain/`, {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    return out.split("\n").map((s) => s.trim()).filter(Boolean);
+    return execFileSync("git", gitArgs, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024 });
   } catch {
-    return [];
+    return null;
   }
+}
+
+// .ori/ 配下の変更ファイル (domain だけでなく slice/page/scenario の派生物も。ori-7jm.10)。
+// --relative で project root 相対にそろえる (.ori/ が git repo の subdir にある場合のため)。
+// 未追跡ファイル (生成直後のテスト・新規 domain 文書) も変更として扱う
+// -z: 非 ASCII のパス (日本語のファイル名) を git が 8 進エスケープ + 引用符で出さないように。
+// --no-renames: rename 元のパスも「削除」として出し、旧パスを derives_from に持つ doc を取りこぼさない
+function gitChangedNames(sinceRef: string): string[] {
+  const diff = git(["diff", "--name-only", "-z", "--no-renames", "--relative", sinceRef, "--", ".ori/"]);
+  const untracked = git(["ls-files", "-z", "--others", "--exclude-standard", "--", ".ori/"]);
+  if (diff === null || untracked === null) {
+    consola.error(`/ori-sync: git failed to list changes under .ori/ (since=${sinceRef})`);
+    process.exit(2);
+  }
+  const out = new Set<string>();
+  for (const f of [...diff.split("\0"), ...untracked.split("\0")]) {
+    if (!f || f.split("/").includes("node_modules")) continue;
+    out.add(f);
+  }
+  return [...out];
+}
+
+// 比較元の ref が解決できないとき (typo・shallow clone で origin/main が無い等) に
+// 「変更なし」で exit 0 すると --check が素通りするため、先に検証して止める
+// (既定の HEAD が解決できない = git 外 / commit 前の repo は従来どおり「変更なし」で続ける)
+function sinceResolvable(sinceRef: string): boolean {
+  if (git(["rev-parse", "--verify", "--quiet", `${sinceRef}^{commit}`]) !== null) return true;
+  if (flag("since") !== undefined) {
+    consola.error(`/ori-sync: cannot resolve --since ref '${sinceRef}' (is this a git repository with that commit?)`);
+    process.exit(2);
+  }
+  consola.warn(`/ori-sync: ${sinceRef} is not resolvable (not a git repository, or no commits yet); use --file=<path> to name changed files`);
+  return false;
 }
 
 function normalizeRef(s: string): { path: string; sectionId: string | null } {
@@ -78,6 +110,67 @@ function pathMatches(derivesValue: string, changedFile: string): boolean {
   return false;
 }
 
+// domain 文書の変更を section (H2/H3 の {#anchor}) 単位で判定する (ori-t3vg)。
+// 以前はファイル単位で突き合わせていたため、1 節の編集でそのファイルのどこかを
+// derives_from に持つ全 doc が dirty になっていた。
+interface DomainChange {
+  /** null = 節単位で判定できない (旧版が無い / 新規 / 削除 / .md 以外 / --file・--force) → ファイル単位 */
+  changed: Set<string> | null;
+  /** 旧版・新版の両方で一意な anchor 付き H2/H3 section id (重複 anchor はファイル単位に倒す) */
+  known: Set<string>;
+}
+
+const domainChangeCache = new Map<string, DomainChange>();
+
+// anchor → 見出し + 本文の hash。見出しの書き換えも変更として扱う。重複 anchor は null
+function sectionHashes(content: string): Map<string, string | null> {
+  const out = new Map<string, string | null>();
+  for (const sec of extractSections(parseFrontmatter(content).content).ordered) {
+    if (sec.id === null) continue;
+    out.set(sec.id, out.has(sec.id) ? null : hashSection(`${sec.heading}\n${sec.body}`));
+  }
+  return out;
+}
+
+async function domainChange(changedFile: string): Promise<DomainChange> {
+  const cached = domainChangeCache.get(changedFile);
+  if (cached) return cached;
+  let result: DomainChange = { changed: null, known: new Set() };
+  // --file / --force は「このファイルが変わった」という明示指定なので、差分の有無によらずファイル単位
+  if (!fileArg && !force && changedFile.endsWith(".md")) {
+    const prev = git(["show", `${since}:./${changedFile}`]);
+    let curr: string | null = null;
+    try { curr = await readFile(join(root, changedFile), "utf8"); } catch { curr = null; }
+    if (prev !== null && curr !== null) {
+      const before = sectionHashes(prev);
+      const after = sectionHashes(curr);
+      const changed = new Set<string>();
+      const known = new Set<string>();
+      for (const id of new Set([...before.keys(), ...after.keys()])) {
+        const b = before.get(id);
+        const a = after.get(id);
+        if (b === null || a === null) continue; // 重複 anchor → known に入れずファイル単位
+        known.add(id);
+        if (b !== a) changed.add(id); // 片方にしか無い (追加・削除) も変更
+      }
+      result = { changed, known };
+    }
+  }
+  domainChangeCache.set(changedFile, result);
+  return result;
+}
+
+async function domainRefAffected(ref: string, changedFile: string): Promise<boolean> {
+  if (!pathMatches(ref, changedFile)) return false;
+  const { sectionId } = normalizeRef(ref);
+  if (!sectionId) return true;
+  const change = await domainChange(changedFile);
+  if (change.changed === null) return true;
+  // H1 の anchor や H4 以下など節として追跡していない anchor は、ファイル単位で判定する (取りこぼし防止)
+  if (!change.known.has(sectionId)) return true;
+  return change.changed.has(sectionId);
+}
+
 interface ManifestEntry {
   id: string;
   kind: "slice" | "page" | "scenario";
@@ -85,8 +178,24 @@ interface ManifestEntry {
   manifest: any;
 }
 
-async function listManifests(): Promise<ManifestEntry[]> {
+// manifest.yaml が YAML として不正なとき、その doc は derives_from が分からず dirty を付けられない。
+// 黙って飛ばすと exit 0 で終わり dirty 付与漏れになるため、位置付きで報告して exit 1 にする (ori-5qrc)
+class InvalidYamlError extends Error {
+  constructor(readonly rel: string, readonly details: string[]) {
+    super(`${rel} is not valid YAML`);
+  }
+}
+
+function yamlErrorDetails(rel: string, doc: Document.Parsed): string[] {
+  return doc.errors.map((e) => {
+    const pos = e.linePos?.[0];
+    return `${pos ? `${rel}:${pos.line}:${pos.col}` : rel}  ${e.message.split("\n")[0]}`;
+  });
+}
+
+async function listManifests(): Promise<{ entries: ManifestEntry[]; invalid: InvalidYamlError[] }> {
   const out: ManifestEntry[] = [];
+  const invalid: InvalidYamlError[] = [];
   for (const kind of ["slices", "pages", "scenarios"] as const) {
     const baseDir = join(root, ".ori", kind);
     if (!(await exists(baseDir))) continue;
@@ -96,17 +205,24 @@ async function listManifests(): Promise<ManifestEntry[]> {
       const dir = join(baseDir, e.name);
       const manifestPath = join(dir, "manifest.yaml");
       if (!(await exists(manifestPath))) continue;
+      const rel = relative(root, manifestPath);
+      let raw: string;
       try {
-        const yaml = await readFile(manifestPath, "utf8");
-        const manifest = parseYaml(yaml);
-        const kindType = kind === "slices" ? "slice" : kind === "pages" ? "page" : "scenario";
-        out.push({ id: e.name, kind: kindType, dir, manifest });
+        raw = await readFile(manifestPath, "utf8");
       } catch (err) {
-        consola.warn(`failed to parse ${relative(root, manifestPath)}: ${(err as Error).message}`);
+        invalid.push(new InvalidYamlError(rel, [`${rel}  cannot read: ${(err as Error).message}`]));
+        continue;
       }
+      const doc = parseDocument(raw);
+      if (doc.errors.length > 0) {
+        invalid.push(new InvalidYamlError(rel, yamlErrorDetails(rel, doc)));
+        continue;
+      }
+      const kindType = kind === "slices" ? "slice" : kind === "pages" ? "page" : "scenario";
+      out.push({ id: e.name, kind: kindType, dir, manifest: doc.toJS() });
     }
   }
-  return out;
+  return { entries: out, invalid };
 }
 
 function collectDerivedRefs(manifest: any): string[] {
@@ -124,67 +240,138 @@ function collectDerivedRefs(manifest: any): string[] {
   return refs;
 }
 
-// status.yaml が YAML として不正なときに、該当ファイルと位置を示して報告するための例外 (ori-6dr5)。
+// status.yaml が YAML として不正なときは該当ファイルと位置を示して報告する (ori-6dr5)。
 // 例外のスタックトレースで落ちると、どのファイルが壊れているか利用者に分からない。
-class InvalidStatusYamlError extends Error {
-  constructor(readonly rel: string, readonly details: string[]) {
-    super(`${rel} is not valid YAML`);
+async function readStatusDoc(statusPath: string): Promise<Document.Parsed> {
+  const rel = relative(root, statusPath);
+  const doc = parseDocument(await readFile(statusPath, "utf8"));
+  if (doc.errors.length > 0) throw new InvalidYamlError(rel, yamlErrorDetails(rel, doc));
+  const data = doc.toJS();
+  if (data != null && (typeof data !== "object" || Array.isArray(data))) {
+    throw new InvalidYamlError(rel, [`${rel}  top level must be a mapping`]);
   }
+  return doc;
 }
 
 async function readStatus(statusPath: string): Promise<Record<string, any>> {
-  const rel = relative(root, statusPath);
-  const doc = parseDocument(await readFile(statusPath, "utf8"));
-  if (doc.errors.length > 0) {
-    throw new InvalidStatusYamlError(
-      rel,
-      doc.errors.map((e) => {
-        const pos = e.linePos?.[0];
-        return `${pos ? `${rel}:${pos.line}:${pos.col}` : rel}  ${e.message.split("\n")[0]}`;
-      }),
+  return (await readStatusDoc(statusPath)).toJS() ?? {};
+}
+
+function reportInvalid(invalid: InvalidYamlError[]): void {
+  // 詳細も error に含める (consola.log は test 環境などで level により抑止される)
+  const statuses = invalid.filter((e) => e.rel.endsWith("status.yaml"));
+  const manifests = invalid.filter((e) => !e.rel.endsWith("status.yaml"));
+  const lines: string[] = [];
+  if (statuses.length > 0) {
+    lines.push(
+      `${statuses.length} status.yaml file(s) are not valid YAML:`,
+      ...statuses.flatMap((e) => e.details.map((d) => `  ${d}`)),
+      "  fix the file(s) by hand (e.g. remove list items left under 'dirty: []', quote values containing ': '), then re-run /ori-sync",
     );
   }
-  const data = doc.toJS();
-  if (data == null) return {};
-  if (typeof data !== "object" || Array.isArray(data)) {
-    throw new InvalidStatusYamlError(rel, [`${rel}  top level must be a mapping`]);
+  if (manifests.length > 0) {
+    lines.push(
+      `${manifests.length} manifest.yaml file(s) are not valid YAML (their docs could not be checked for dirty):`,
+      ...manifests.flatMap((e) => e.details.map((d) => `  ${d}`)),
+      "  fix the file(s), then re-run /ori-sync",
+    );
   }
-  return data;
+  consola.error(lines.join("\n"));
 }
 
-function reportInvalidStatus(invalid: InvalidStatusYamlError[]): void {
-  // 詳細も error に含める (consola.log は test 環境などで level により抑止される)
-  consola.error(
-    [
-      `${invalid.length} status.yaml file(s) are not valid YAML:`,
-      ...invalid.flatMap((e) => e.details.map((d) => `  ${d}`)),
-      "  fix the file(s) by hand (e.g. remove list items left under 'dirty: []', quote values containing ': '), then re-run /ori-sync",
-    ].join("\n"),
-  );
-}
+const entryKey = (e: AnyDirtyEntry) =>
+  `${e.source.path}#${e.source.sectionId ?? ""}|${e.affected_phase}|${e.reason ?? ""}`;
 
-async function appendDirty(
-  statusPath: string,
-  newEntries: DirtyEntry[],
-): Promise<number> {
-  let status: any = {};
-  if (await exists(statusPath)) {
-    status = await readStatus(statusPath);
-  }
-  const existing: DirtyEntry[] = Array.isArray(status.dirty) ? status.dirty : [];
-  const key = (e: DirtyEntry) =>
-    `${e.source.path}#${e.source.sectionId ?? ""}|${e.affected_phase}|${e.reason ?? ""}`;
-  const seen = new Set(existing.map(key));
-  let added = 0;
+// dirty だけを追記し、手書きのコメントや他キーの書式は保つ (ori-o3nu)
+async function appendDirty(statusPath: string, newEntries: AnyDirtyEntry[]): Promise<number> {
+  const doc = (await exists(statusPath)) ? await readStatusDoc(statusPath) : new Document({});
+  if (doc.contents == null) doc.contents = doc.createNode({}) as any;
+  const data = doc.toJS() ?? {};
+  const existing: AnyDirtyEntry[] = Array.isArray(data.dirty) ? data.dirty : [];
+  const seen = new Set(existing.map(entryKey));
+  const toAdd: AnyDirtyEntry[] = [];
   for (const e of newEntries) {
-    if (seen.has(key(e))) continue;
-    existing.push(e);
-    seen.add(key(e));
-    added++;
+    if (seen.has(entryKey(e))) continue;
+    seen.add(entryKey(e));
+    toAdd.push(e);
   }
-  status.dirty = existing;
-  await writeFile(statusPath, yamlStringify(status), "utf8");
-  return added;
+  if (toAdd.length === 0) return 0;
+  const node = doc.get("dirty", true);
+  if (isSeq(node)) {
+    node.flow = false;
+    for (const e of toAdd) node.add(doc.createNode(e));
+  } else {
+    doc.set("dirty", doc.createNode([...existing, ...toAdd]));
+  }
+  await writeFile(statusPath, doc.toString(), "utf8");
+  return toAdd.length;
+}
+
+// ---- derived 内の dirty 伝播 (ori-7jm.10) ----
+// domain → derived だけでなく、doc 自身の source / 派生物の変更、scenario が参照する page の変更も
+// dirty にする。affected_phase は「どの phase からやり直すか」。
+//   manifest.yaml (全 kind)                      → derive
+//   scenario の spec.md                           → generate (テストを spec に合わせ直す)
+//   scenario の tests/** / runner config          → review   (再レビューが要る)
+//   scenario.pages の page spec.md / testids.yaml → generate (testid 契約・画面仕様の変更)
+// doctor の check-scenario-staleness.sh と同じく、変更ファイルが doc の review.md より新しい場合だけ
+// 付ける (flow を回して review 済みの変更を、HEAD との差分として再び dirty にしないため)。
+const SCENARIO_RUNNER_FILES = new Set([
+  "validation.md",
+  "playwright.config.ts",
+  "wdio.conf.ts",
+  "teardown.mjs",
+  "tsconfig.json",
+  "docker-compose.yml",
+]);
+
+function internalPhase(m: ManifestEntry, relInDir: string): AnyDirtyEntry["affected_phase"] | null {
+  if (relInDir === "manifest.yaml") return "derive";
+  if (m.kind !== "scenario") return null;
+  if (relInDir === "spec.md") return "generate";
+  if (SCENARIO_RUNNER_FILES.has(relInDir)) return "review";
+  if (relInDir.startsWith("tests/")) return "review";
+  return null;
+}
+
+async function mtimeMs(p: string): Promise<number | null> {
+  try { return (await stat(p)).mtimeMs; } catch { return null; }
+}
+
+// review.md より後に変わったか (削除されたファイルは mtime が無いので常に後とみなす)。
+// review.md が無い doc は初回の flow が進行中 (scaffold 直後・generate 中) で、review → finalize を
+// まだ通っていないので付けない (付けると作成直後の doc が --check で落ちる)
+async function changedAfterReview(m: ManifestEntry, changedFile: string): Promise<boolean> {
+  const reviewed = await mtimeMs(join(m.dir, "review.md"));
+  if (reviewed === null) return false;
+  const changed = await mtimeMs(join(root, changedFile));
+  if (changed === null) return true;
+  // 秒単位にそろえる (doctor と同じく同秒は review 済み扱い)
+  return Math.floor(changed / 1000) > Math.floor(reviewed / 1000);
+}
+
+async function derivedHits(
+  m: ManifestEntry,
+  changedFiles: string[],
+): Promise<Array<{ source: NodeRef; phase: AnyDirtyEntry["affected_phase"] }>> {
+  const out: Array<{ source: NodeRef; phase: AnyDirtyEntry["affected_phase"] }> = [];
+  const dirRel = relative(root, m.dir);
+  const pages: string[] =
+    m.kind === "scenario" && Array.isArray(m.manifest?.pages)
+      ? m.manifest.pages.filter((p: unknown): p is string => typeof p === "string")
+      : [];
+  for (const cf of changedFiles) {
+    let phase: AnyDirtyEntry["affected_phase"] | null = null;
+    if (cf.startsWith(`${dirRel}/`)) {
+      phase = internalPhase(m, cf.slice(dirRel.length + 1));
+    } else if (pages.some((p) => cf === `.ori/pages/${p}/spec.md` || cf === `.ori/pages/${p}/testids.yaml`)) {
+      phase = "generate";
+    }
+    if (phase === null) continue;
+    if (!(await changedAfterReview(m, cf))) continue;
+    out.push({ source: { path: cf, sectionId: null }, phase });
+  }
+  return out;
 }
 
 async function generateProposal(forcedPath: string): Promise<string> {
@@ -199,7 +386,7 @@ async function generateProposal(forcedPath: string): Promise<string> {
     owner = segs[2];
   }
 
-  const manifests = await listManifests();
+  const { entries: manifests } = await listManifests();
   const ownerEntry = manifests.find((m) => m.id === owner);
   const upstream = ownerEntry ? collectDerivedRefs(ownerEntry.manifest) : [];
   const targetSlug = upstream[0]
@@ -245,7 +432,7 @@ async function run(): Promise<void> {
   if (fileArg) {
     changedFiles = [relative(root, resolve(process.cwd(), fileArg)) || fileArg];
   } else {
-    changedFiles = gitDiffNames(since);
+    changedFiles = sinceResolvable(since) ? gitChangedNames(since) : [];
   }
 
   // 2. proposal generation for --force
@@ -262,7 +449,7 @@ async function run(): Promise<void> {
   }
 
   if (!changedFiles.length) {
-    consola.success(`/ori-sync: no domain changes since ${since}`);
+    consola.success(`/ori-sync: no changes under .ori/ since ${since}`);
     // also check existing dirty marks
     if (check) await exitIfDirtyRemaining();
     process.exit(0);
@@ -271,42 +458,40 @@ async function run(): Promise<void> {
   consola.info(`/ori-sync: ${changedFiles.length} changed file(s) (since=${since})`);
   for (const f of changedFiles) consola.log(`  - ${f}`);
 
-  // 3. find affected slices/pages
-  const manifests = await listManifests();
+  // 3. find affected slices/pages/scenarios
+  const { entries: manifests, invalid } = await listManifests();
   const now = new Date().toISOString();
+  const reason = force ? "force" : "edit";
   let totalDirty = 0;
   const affectedIds: string[] = [];
-  const invalid: InvalidStatusYamlError[] = [];
 
   for (const m of manifests) {
-    const refs = collectDerivedRefs(m.manifest);
-    if (!refs.length) continue;
-    const hits: NodeRef[] = [];
-    for (const ref of refs) {
+    const entries: AnyDirtyEntry[] = [];
+    // 3a. domain → derived (section 単位)
+    for (const ref of collectDerivedRefs(m.manifest)) {
       for (const cf of changedFiles) {
-        if (pathMatches(ref, cf)) {
-          const norm = normalizeRef(ref);
-          hits.push({
-            path: norm.path.startsWith(".ori/") ? norm.path : `.ori/${norm.path}`,
-            sectionId: norm.sectionId,
-          });
-        }
+        if (!(await domainRefAffected(ref, cf))) continue;
+        const norm = normalizeRef(ref);
+        entries.push({
+          source: { path: norm.path.startsWith(".ori/") ? norm.path : `.ori/${norm.path}`, sectionId: norm.sectionId },
+          detected_at: now,
+          affected_phase: "derive",
+          reason,
+        });
       }
     }
-    if (!hits.length) continue;
+    // 3b. derived 内 (doc 自身の source / 派生物、scenario が参照する page)
+    for (const h of await derivedHits(m, changedFiles)) {
+      entries.push({ source: h.source, detected_at: now, affected_phase: h.phase, reason } as AnyDirtyEntry);
+    }
+    if (!entries.length) continue;
 
-    const entries: DirtyEntry[] = hits.map((h) => ({
-      source: h,
-      detected_at: now,
-      affected_phase: "derive",
-      reason: force ? "force" : "edit",
-    }));
     const statusPath = join(m.dir, "status.yaml");
     let added: number;
     try {
       added = await appendDirty(statusPath, entries);
     } catch (err) {
-      if (!(err instanceof InvalidStatusYamlError)) throw err;
+      if (!(err instanceof InvalidYamlError)) throw err;
       invalid.push(err);
       consola.log(`  skipped (invalid status.yaml) → ${m.kind}/${m.id}`);
       continue;
@@ -319,9 +504,9 @@ async function run(): Promise<void> {
   }
 
   if (totalDirty === 0 && invalid.length === 0) {
-    consola.success("/ori-sync: no slices/pages affected by these changes");
+    consola.success("/ori-sync: no slices/pages/scenarios affected by these changes");
   } else if (totalDirty === 0) {
-    consola.warn("/ori-sync: no dirty marks added (some status.yaml could not be read)");
+    consola.warn("/ori-sync: no dirty marks added (some manifest.yaml / status.yaml could not be read)");
   } else {
     consola.success(`/ori-sync: marked ${totalDirty} dirty entr${totalDirty === 1 ? "y" : "ies"} across ${affectedIds.length} ${affectedIds.length === 1 ? "doc" : "docs"}`);
     consola.info(`affected: ${affectedIds.join(", ")}`);
@@ -329,7 +514,7 @@ async function run(): Promise<void> {
 
   if (invalid.length > 0) {
     // dirty を付けられなかった doc があるので成功扱いにしない。修正後の再実行で重複なく付け直せる
-    reportInvalidStatus(invalid);
+    reportInvalid(invalid);
     process.exit(1);
   }
 
@@ -339,19 +524,18 @@ async function run(): Promise<void> {
 async function exitIfDirtyRemaining(): Promise<void> {
   const { count, invalid } = await countRemainingDirty();
   if (invalid.length > 0) {
-    reportInvalidStatus(invalid);
+    reportInvalid(invalid);
     process.exit(1);
   }
   if (count > 0) {
-    consola.error(`${count} dirty mark(s) still pending across slices/pages`);
+    consola.error(`${count} dirty mark(s) still pending across slices/pages/scenarios`);
     process.exit(1);
   }
 }
 
-async function countRemainingDirty(): Promise<{ count: number; invalid: InvalidStatusYamlError[] }> {
-  const manifests = await listManifests();
+async function countRemainingDirty(): Promise<{ count: number; invalid: InvalidYamlError[] }> {
+  const { entries: manifests, invalid } = await listManifests();
   let count = 0;
-  const invalid: InvalidStatusYamlError[] = [];
   for (const m of manifests) {
     const statusPath = join(m.dir, "status.yaml");
     if (!(await exists(statusPath))) continue;
@@ -360,7 +544,7 @@ async function countRemainingDirty(): Promise<{ count: number; invalid: InvalidS
       if (Array.isArray(data.dirty)) count += data.dirty.length;
     } catch (err) {
       // 以前は黙って 0 件扱いにしていたため、壊れた status.yaml が --check を素通りした
-      if (!(err instanceof InvalidStatusYamlError)) throw err;
+      if (!(err instanceof InvalidYamlError)) throw err;
       invalid.push(err);
     }
   }

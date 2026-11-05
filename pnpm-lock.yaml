@@ -212,6 +212,9 @@ importers:
       '@ori-ori/coherence':
         specifier: workspace:*
         version: link:../../coherence
+      '@ori-ori/parser':
+        specifier: workspace:*
+        version: link:../../parser
       '@ori-ori/slice-runner':
         specifier: workspace:*
         version: link:../../slice-runner
