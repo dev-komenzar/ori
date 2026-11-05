@@ -29,14 +29,24 @@ node ./scripts/sync.js [--file=<path>] [--since=<ref>] [--check]
    | domain 文書の section | その section を `derives_from` に持つ slice / page / scenario | derive |
    | doc の `manifest.yaml` | その doc 自身 | derive |
    | scenario の `spec.md` | その scenario | generate |
-   | scenario の `tests/**`・runner config（`wdio.conf.ts` / `playwright.config.ts` / `docker-compose.yml` / `tsconfig.json` / `teardown.mjs` / `validation.md`） | その scenario | review |
+   | scenario の `tests/**`（実行成果物を除く）・runner config（`wdio.conf.ts` / `playwright.config.ts` / `docker-compose.yml` / `tsconfig.json` / `teardown.mjs` / `validation.md`） | その scenario | review |
    | page の `spec.md` / `testids.yaml` | その page を `pages:` に持つ scenario | generate |
 
-   - **domain は section 単位**：`derives_from` の `#anchor` が H2/H3 の `{#id}` なら、その節（見出し + 子節を含む本文）が変わったときだけ dirty にする。次の場合はファイル単位で判定する：anchor なし・H1 の anchor・存在しない anchor・同じ anchor が複数ある・比較元の版が無い（新規 / 削除 / rename されたファイル、git 外）・`--file` / `--force` で明示指定したとき
+   - **domain は section 単位**：`derives_from` の `#anchor` が H2/H3 の `{#id}` なら、その節（見出し + 子節を含む本文）か、祖先 H2 の自身の本文（見出し + anchor 付き子節を除く本文）が変わったときだけ dirty にする。次の場合はファイル単位で判定する：anchor なし・H1 の anchor・存在しない anchor・同じ anchor が複数ある・frontmatter / 前文（最初の H2/H3 より前、H1 直下）が変わった・比較元の版が無い（新規 / 削除 / rename されたファイル、git 外）・節に分けられない・`--file` / `--force` で明示指定したとき
+     - `<!-- ori:auto-*:start -->` 〜 `end` の自動生成ブロック内の編集は、節の変更として扱わない（spec hash と同じ正規化）
    - **derived 内の変更は review 済みの doc だけ、review.md より新しいものだけ**：doc の `review.md` より後に変わったファイルだけを dirty にする（flow を回して review 済みの変更を HEAD との差分として再び dirty にしないため）。`review.md` が無い doc（初回の flow 中）には付けない
      - 判定は mtime（秒単位、同秒は review 済み扱い）で、`/ori-doctor` の `check-scenario-staleness.sh` と同じ。clone / checkout 直後は mtime が揃わないため、誤検知・見落としがありうる
      - domain → derived の伝播にはこの判定は無い。domain の編集は finalize 前に commit する（未 commit のまま finalize すると、次の `/ori-sync` が同じ dirty を付け直す）
-   - `--since` に解決できない ref を渡すと exit 2（shallow clone で `--check` が素通りしないため）
+     - CI の fresh checkout では mtime が揃うため、derived 内の規則は実質ローカル（flow を回す作業環境）向け。CI では domain → derived の規則と `--check` による残 dirty 検査が主になる
+   - tests/ 配下のテスト実行成果物（`test-results/` / `playwright-report/` / `allure-results/` / `coverage/` / `.cache/` / `logs/` 配下、画像・動画・zip・log。`__snapshots__` 等の参照 snapshot は除かない）は対象外。その他の生成物は `.gitignore` に入れる
+   - `.ori/` 配下の未 commit 変更・未追跡ファイルはすべて変更として扱う。作業途中の `--check` は、それらの dirty で落ちうる
+   - `--since` は単一の commit を取る（`A..B` / `A...B` の範囲指定は不可。PR の base と比べるなら `--since=$(git merge-base origin/main HEAD)`）。解決できない ref は exit 2（shallow clone で `--check` が素通りしないため）
+
+## 終了コード
+
+- `0` — 正常（`--check` では残 dirty なし）
+- `1` — `manifest.yaml` / `status.yaml` が YAML として不正、または `--check` で残 dirty あり
+- `2` — 引数の誤り（`--force` の対象なし、解決できない `--since`）、または git での変更一覧の取得に失敗
    - `manifest.yaml` / `status.yaml` が YAML として不正なら、該当箇所（`path:line:col`）を報告して exit 1
 3. dirty な slice / page / scenario ごとに：
    - 該当 phase の beads issue を reopen（手動 or `bd update --status=open`）

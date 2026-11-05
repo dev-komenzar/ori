@@ -270,6 +270,7 @@ describe("dirty propagation inside derived docs (ori-7jm.10)", () => {
 
   it("marks a deleted scenario test for review", async () => {
     const root = await repo(base);
+    await age(root, ".ori/scenarios/s1/review.md");
     await rm(join(root, ".ori/scenarios/s1/tests/s1.spec.ts"));
     run(root);
     expect(await dirty(root, ".ori/scenarios/s1")).toEqual([
@@ -331,5 +332,87 @@ describe("status.yaml / manifest.yaml handling", () => {
     const c = run(root, ["--check", "--since", "HEAD"]);
     expect(c.code).toBe(1);
     expect(c.out).toContain(".ori/slices/broken/manifest.yaml");
+  });
+});
+
+describe("PR #138 review follow-ups", () => {
+  const slice = (ref: string) => ({
+    ".ori/slices/a/manifest.yaml": `derives_from:\n  - ${ref}\n`,
+    ".ori/slices/a/status.yaml": CLEAN,
+  });
+
+  it("falls back to file level when the frontmatter is invalid, without aborting (S1)", async () => {
+    const broken = "---\ntitle: [unclosed\n---\n" + DOMAIN;
+    const root = await repo({
+      ".ori/domain/validation.md": broken,
+      ".ori/domain/other.md": DOMAIN,
+      ...slice("domain/validation.md#s1"),
+      ".ori/slices/b/manifest.yaml": "derives_from:\n  - domain/other.md#s2\n",
+      ".ori/slices/b/status.yaml": CLEAN,
+    });
+    await write(root, {
+      ".ori/domain/validation.md": broken.replace("s2 body", "s2 body v2"),
+      ".ori/domain/other.md": DOMAIN.replace("s2 body", "s2 body v2"),
+    });
+    const r = run(root);
+    expect(r.code).toBe(0);
+    expect(await dirty(root, ".ori/slices/b")).toHaveLength(1);
+    // frontmatter は YAML として解釈しない (gray-matter のように throw しない)。前文は不変なので節単位で s1 は不変
+    expect(await dirty(root, ".ori/slices/a")).toEqual([]);
+  });
+
+  it("marks an H3 ref when the parent H2's own body changes (S3)", async () => {
+    const root = await repo({ ".ori/domain/validation.md": DOMAIN, ...slice("domain/validation.md#s1-detail") });
+    await write(root, { ".ori/domain/validation.md": DOMAIN.replace("s1 body", "s1 body v2") });
+    run(root);
+    expect(await dirty(root, ".ori/slices/a")).toHaveLength(1);
+  });
+
+  it("does not mark an H3 ref when only a sibling anchored H3 changes", async () => {
+    const doc = DOMAIN.replace("## Scenario S2", "### Other {#s1-other}\nother\n\n## Scenario S2");
+    const root = await repo({ ".ori/domain/validation.md": doc, ...slice("domain/validation.md#s1-detail") });
+    await write(root, { ".ori/domain/validation.md": doc.replace("other\n", "other v2\n") });
+    run(root);
+    expect(await dirty(root, ".ori/slices/a")).toEqual([]);
+  });
+
+  it("matches by file when the frontmatter or the preamble changes (S3)", async () => {
+    const withFm = "---\ntitle: v1\n---\n" + DOMAIN.replace("# Validation {#validation}\n", "# Validation {#validation}\nintro\n");
+    for (const edit of [(d: string) => d.replace("title: v1", "title: v2"), (d: string) => d.replace("intro", "intro v2")]) {
+      const root = await repo({ ".ori/domain/validation.md": withFm, ...slice("domain/validation.md#s2") });
+      await write(root, { ".ori/domain/validation.md": edit(withFm) });
+      run(root);
+      expect(await dirty(root, ".ori/slices/a")).toHaveLength(1);
+    }
+  });
+
+  const scenario = {
+    ".ori/scenarios/s1/manifest.yaml": "type: scenario\nderives_from: []\n",
+    ".ori/scenarios/s1/status.yaml": CLEAN,
+    ".ori/scenarios/s1/tests/a.spec.ts": "// a\n",
+    ".ori/scenarios/s1/tests/b.spec.ts": "// b\n",
+  };
+
+  it("does not re-mark a deleted test once the scenario has been reviewed again (S2)", async () => {
+    const root = await repo(scenario);
+    await rm(join(root, ".ori/scenarios/s1/tests/a.spec.ts"));
+    await age(root, ".ori/scenarios/s1/tests"); // 削除 → (1 時間後に) review
+    await write(root, { ".ori/scenarios/s1/review.md": "verdict: PASS\n" });
+    run(root);
+    expect(await dirty(root, ".ori/scenarios/s1")).toEqual([]);
+  });
+
+  it("ignores test run artifacts under tests/ (N5)", async () => {
+    const root = await repo({ ...scenario, ".ori/scenarios/s1/review.md": "verdict: PASS\n" });
+    await age(root, ".ori/scenarios/s1/review.md");
+    await write(root, {
+      ".ori/scenarios/s1/tests/test-results/trace.json": "{}\n",
+      ".ori/scenarios/s1/tests/shot.png": "x",
+      ".ori/scenarios/s1/tests/__snapshots__/a.png": "x",
+    });
+    run(root);
+    expect((await dirty(root, ".ori/scenarios/s1")).map((d) => d.source.path)).toEqual([
+      ".ori/scenarios/s1/tests/__snapshots__/a.png",
+    ]);
   });
 });

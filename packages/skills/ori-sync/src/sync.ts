@@ -4,7 +4,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { Document, isSeq, parseDocument } from "yaml";
 import { consola } from "consola";
 import type { NodeRef } from "@ori-ori/coherence";
-import { extractSections, hashSection, parseFrontmatter } from "@ori-ori/parser";
+import { extractSections, hashSection } from "@ori-ori/parser";
 import type { DirtyEntry, ScenarioDirtyEntry } from "@ori-ori/slice-runner";
 
 type AnyDirtyEntry = DirtyEntry | ScenarioDirtyEntry;
@@ -122,14 +122,57 @@ interface DomainChange {
 
 const domainChangeCache = new Map<string, DomainChange>();
 
-// anchor → 見出し + 本文の hash。見出しの書き換えも変更として扱う。重複 anchor は null
-function sectionHashes(content: string): Map<string, string | null> {
-  const out = new Map<string, string | null>();
-  for (const sec of extractSections(parseFrontmatter(content).content).ordered) {
-    if (sec.id === null) continue;
-    out.set(sec.id, out.has(sec.id) ? null : hashSection(`${sec.heading}\n${sec.body}`));
+// frontmatter は自前で切り出す (gray-matter は不正な frontmatter で throw し、sync 全体が落ちるため)
+function splitFrontmatter(content: string): { frontmatter: string; body: string } {
+  const m = /^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/.exec(content);
+  return m ? { frontmatter: m[0], body: content.slice(m[0].length) } : { frontmatter: "", body: content };
+}
+
+interface SectionDigest {
+  /** どの節にも属さない部分 (frontmatter + 最初の H2/H3 より前の前文 + H1 直下の本文) の hash */
+  preamble: string;
+  /** anchor → 判定用 hash。null は重複 anchor */
+  sections: Map<string, string | null>;
+}
+
+// 節の判定用 hash = 自身 (見出し + 子節を含む本文) + 祖先 H2 の「自身の本文」(見出し + anchor 付き子節を除く本文)。
+// 親 H2 の前文や anchor の無い子節が変わったときも、子の H3 を参照する doc を dirty にする (取りこぼし防止)
+function sectionDigest(content: string): SectionDigest {
+  const { frontmatter, body } = splitFrontmatter(content);
+  const lines = body.split(/\r?\n/);
+  const ordered = extractSections(body).ordered;
+  // 0-indexed の [start, end) 行範囲 (見出し行を含む)
+  const range = (sec: (typeof ordered)[number]) => [sec.startLine - 1, sec.endLine - 1] as const;
+  const covered = new Array<boolean>(lines.length).fill(false);
+  for (const sec of ordered) {
+    const [a, b] = range(sec);
+    for (let k = a; k < b; k++) covered[k] = true;
   }
-  return out;
+  const preamble = hashSection(frontmatter + "\n" + lines.filter((_, k) => !covered[k]).join("\n"));
+
+  const sections = new Map<string, string | null>();
+  let parent: { own: string; end: number } | null = null;
+  for (const sec of ordered) {
+    const [a, b] = range(sec);
+    if (sec.depth === 2) {
+      // 自身の本文 = 範囲から anchor 付きの子 H3 を除いた行
+      const own = new Array<boolean>(b - a).fill(true);
+      for (const child of ordered) {
+        if (child.depth !== 3 || child.id === null) continue;
+        const [ca, cb] = range(child);
+        if (ca < a || ca >= b) continue;
+        for (let k = ca; k < cb; k++) own[k - a] = false;
+      }
+      parent = { own: hashSection(lines.slice(a, b).filter((_, k) => own[k]).join("\n")), end: b };
+    } else if (parent && a >= parent.end) {
+      parent = null; // H2 の外にある H3
+    }
+    if (sec.id === null) continue;
+    const self = hashSection(lines.slice(a, b).join("\n"));
+    const digest = sec.depth === 3 && parent ? `${parent.own}:${self}` : self;
+    sections.set(sec.id, sections.has(sec.id) ? null : digest);
+  }
+  return { preamble, sections };
 }
 
 async function domainChange(changedFile: string): Promise<DomainChange> {
@@ -141,14 +184,24 @@ async function domainChange(changedFile: string): Promise<DomainChange> {
     const prev = git(["show", `${since}:./${changedFile}`]);
     let curr: string | null = null;
     try { curr = await readFile(join(root, changedFile), "utf8"); } catch { curr = null; }
-    if (prev !== null && curr !== null) {
-      const before = sectionHashes(prev);
-      const after = sectionHashes(curr);
+    let before: SectionDigest | null = null;
+    let after: SectionDigest | null = null;
+    try {
+      if (prev !== null && curr !== null) {
+        before = sectionDigest(prev);
+        after = sectionDigest(curr);
+      }
+    } catch (err) {
+      // 解析できない文書はファイル単位で判定する (無関係な doc の dirty 付与まで止めない)
+      consola.warn(`cannot split ${changedFile} into sections (${(err as Error).message}); matching by file`);
+    }
+    // frontmatter / 前文の変更は、どの節に効くか分からないのでファイル単位
+    if (before && after && before.preamble === after.preamble) {
       const changed = new Set<string>();
       const known = new Set<string>();
-      for (const id of new Set([...before.keys(), ...after.keys()])) {
-        const b = before.get(id);
-        const a = after.get(id);
+      for (const id of new Set([...before.sections.keys(), ...after.sections.keys()])) {
+        const b = before.sections.get(id);
+        const a = after.sections.get(id);
         if (b === null || a === null) continue; // 重複 anchor → known に入れずファイル単位
         known.add(id);
         if (b !== a) changed.add(id); // 片方にしか無い (追加・削除) も変更
@@ -325,12 +378,22 @@ const SCENARIO_RUNNER_FILES = new Set([
   "docker-compose.yml",
 ]);
 
+// tests/ 配下でもテスト実行が吐く成果物 (screenshot・動画・trace・レポート・cache) は派生物ではないので除く。
+// 比較用の参照 snapshot (__snapshots__ / __screenshots__ 等) はテストの入力なので除かない
+const RUN_ARTIFACT_DIRS = new Set(["test-results", "playwright-report", "allure-results", "coverage", ".cache", "logs"]);
+const RUN_ARTIFACT_EXT = /\.(png|jpe?g|gif|webp|webm|mp4|zip|log)$/i;
+function isRunArtifact(relInDir: string): boolean {
+  const segs = relInDir.split("/");
+  if (segs.some((s) => RUN_ARTIFACT_DIRS.has(s))) return true;
+  return RUN_ARTIFACT_EXT.test(relInDir) && !segs.some((s) => /^__\w*snapshots__$/i.test(s));
+}
+
 function internalPhase(m: ManifestEntry, relInDir: string): AnyDirtyEntry["affected_phase"] | null {
   if (relInDir === "manifest.yaml") return "derive";
   if (m.kind !== "scenario") return null;
   if (relInDir === "spec.md") return "generate";
   if (SCENARIO_RUNNER_FILES.has(relInDir)) return "review";
-  if (relInDir.startsWith("tests/")) return "review";
+  if (relInDir.startsWith("tests/") && !isRunArtifact(relInDir)) return "review";
   return null;
 }
 
@@ -338,13 +401,18 @@ async function mtimeMs(p: string): Promise<number | null> {
   try { return (await stat(p)).mtimeMs; } catch { return null; }
 }
 
-// review.md より後に変わったか (削除されたファイルは mtime が無いので常に後とみなす)。
+// review.md より後に変わったか。削除されたファイルは、残っている最寄りの親ディレクトリの mtime
+// (エントリ削除で更新される) で比べる (常に「後」とすると finalize 後も毎回 dirty が付き直る)。
 // review.md が無い doc は初回の flow が進行中 (scaffold 直後・generate 中) で、review → finalize を
 // まだ通っていないので付けない (付けると作成直後の doc が --check で落ちる)
 async function changedAfterReview(m: ManifestEntry, changedFile: string): Promise<boolean> {
   const reviewed = await mtimeMs(join(m.dir, "review.md"));
   if (reviewed === null) return false;
-  const changed = await mtimeMs(join(root, changedFile));
+  let changed = await mtimeMs(join(root, changedFile));
+  for (let d = dirname(join(root, changedFile)); changed === null && d.startsWith(root); d = dirname(d)) {
+    changed = await mtimeMs(d);
+    if (d === root) break;
+  }
   if (changed === null) return true;
   // 秒単位にそろえる (doctor と同じく同秒は review 済み扱い)
   return Math.floor(changed / 1000) > Math.floor(reviewed / 1000);

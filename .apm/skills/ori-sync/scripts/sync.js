@@ -23893,13 +23893,6 @@ var coerce = {
 var NEVER = INVALID;
 
 // packages/parser/dist/index.js
-function parseFrontmatter(raw) {
-  const parsed = (0, import_gray_matter.default)(raw);
-  return {
-    data: parsed.data,
-    content: parsed.content
-  };
-}
 var ID_RE = /\{#([a-z0-9][a-z0-9-]*)\}\s*$/;
 function extractSections(markdown) {
   const lines = markdown.split(/\r?\n/);
@@ -24167,14 +24160,43 @@ function pathMatches(derivesValue, changedFile) {
   return false;
 }
 var domainChangeCache = /* @__PURE__ */ new Map();
-function sectionHashes(content3) {
-  const out = /* @__PURE__ */ new Map();
-  for (const sec of extractSections(parseFrontmatter(content3).content).ordered) {
-    if (sec.id === null) continue;
-    out.set(sec.id, out.has(sec.id) ? null : hashSection(`${sec.heading}
-${sec.body}`));
+function splitFrontmatter(content3) {
+  const m2 = /^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/.exec(content3);
+  return m2 ? { frontmatter: m2[0], body: content3.slice(m2[0].length) } : { frontmatter: "", body: content3 };
+}
+function sectionDigest(content3) {
+  const { frontmatter, body } = splitFrontmatter(content3);
+  const lines = body.split(/\r?\n/);
+  const ordered = extractSections(body).ordered;
+  const range = (sec) => [sec.startLine - 1, sec.endLine - 1];
+  const covered = new Array(lines.length).fill(false);
+  for (const sec of ordered) {
+    const [a2, b2] = range(sec);
+    for (let k2 = a2; k2 < b2; k2++) covered[k2] = true;
   }
-  return out;
+  const preamble = hashSection(frontmatter + "\n" + lines.filter((_3, k2) => !covered[k2]).join("\n"));
+  const sections = /* @__PURE__ */ new Map();
+  let parent = null;
+  for (const sec of ordered) {
+    const [a2, b2] = range(sec);
+    if (sec.depth === 2) {
+      const own3 = new Array(b2 - a2).fill(true);
+      for (const child of ordered) {
+        if (child.depth !== 3 || child.id === null) continue;
+        const [ca, cb] = range(child);
+        if (ca < a2 || ca >= b2) continue;
+        for (let k2 = ca; k2 < cb; k2++) own3[k2 - a2] = false;
+      }
+      parent = { own: hashSection(lines.slice(a2, b2).filter((_3, k2) => own3[k2]).join("\n")), end: b2 };
+    } else if (parent && a2 >= parent.end) {
+      parent = null;
+    }
+    if (sec.id === null) continue;
+    const self = hashSection(lines.slice(a2, b2).join("\n"));
+    const digest = sec.depth === 3 && parent ? `${parent.own}:${self}` : self;
+    sections.set(sec.id, sections.has(sec.id) ? null : digest);
+  }
+  return { preamble, sections };
 }
 async function domainChange(changedFile) {
   const cached = domainChangeCache.get(changedFile);
@@ -24188,14 +24210,22 @@ async function domainChange(changedFile) {
     } catch {
       curr = null;
     }
-    if (prev !== null && curr !== null) {
-      const before = sectionHashes(prev);
-      const after = sectionHashes(curr);
+    let before = null;
+    let after = null;
+    try {
+      if (prev !== null && curr !== null) {
+        before = sectionDigest(prev);
+        after = sectionDigest(curr);
+      }
+    } catch (err) {
+      consola.warn(`cannot split ${changedFile} into sections (${err.message}); matching by file`);
+    }
+    if (before && after && before.preamble === after.preamble) {
       const changed = /* @__PURE__ */ new Set();
       const known = /* @__PURE__ */ new Set();
-      for (const id of /* @__PURE__ */ new Set([...before.keys(), ...after.keys()])) {
-        const b2 = before.get(id);
-        const a2 = after.get(id);
+      for (const id of /* @__PURE__ */ new Set([...before.sections.keys(), ...after.sections.keys()])) {
+        const b2 = before.sections.get(id);
+        const a2 = after.sections.get(id);
         if (b2 === null || a2 === null) continue;
         known.add(id);
         if (b2 !== a2) changed.add(id);
@@ -24340,12 +24370,19 @@ var SCENARIO_RUNNER_FILES = /* @__PURE__ */ new Set([
   "tsconfig.json",
   "docker-compose.yml"
 ]);
+var RUN_ARTIFACT_DIRS = /* @__PURE__ */ new Set(["test-results", "playwright-report", "allure-results", "coverage", ".cache", "logs"]);
+var RUN_ARTIFACT_EXT = /\.(png|jpe?g|gif|webp|webm|mp4|zip|log)$/i;
+function isRunArtifact(relInDir) {
+  const segs = relInDir.split("/");
+  if (segs.some((s2) => RUN_ARTIFACT_DIRS.has(s2))) return true;
+  return RUN_ARTIFACT_EXT.test(relInDir) && !segs.some((s2) => /^__\w*snapshots__$/i.test(s2));
+}
 function internalPhase(m2, relInDir) {
   if (relInDir === "manifest.yaml") return "derive";
   if (m2.kind !== "scenario") return null;
   if (relInDir === "spec.md") return "generate";
   if (SCENARIO_RUNNER_FILES.has(relInDir)) return "review";
-  if (relInDir.startsWith("tests/")) return "review";
+  if (relInDir.startsWith("tests/") && !isRunArtifact(relInDir)) return "review";
   return null;
 }
 async function mtimeMs(p) {
@@ -24358,7 +24395,11 @@ async function mtimeMs(p) {
 async function changedAfterReview(m2, changedFile) {
   const reviewed = await mtimeMs(join(m2.dir, "review.md"));
   if (reviewed === null) return false;
-  const changed = await mtimeMs(join(root, changedFile));
+  let changed = await mtimeMs(join(root, changedFile));
+  for (let d2 = dirname(join(root, changedFile)); changed === null && d2.startsWith(root); d2 = dirname(d2)) {
+    changed = await mtimeMs(d2);
+    if (d2 === root) break;
+  }
   if (changed === null) return true;
   return Math.floor(changed / 1e3) > Math.floor(reviewed / 1e3);
 }
