@@ -143,7 +143,7 @@ description: /ori-flow phase 2。spec.md を読み、下流 phase の beads issu
      ```
    - **finalize**：sync / proposal 必要性チェックを記載
 4. **TBD の扱い**：spec に TBD が残っているなら：
-   - 軽微（throttle 値など）→ phase 2 で人間に質問しその場で確定。spec を更新するなら `--force` 経路
+   - 軽微（throttle 値など）→ phase 2 で人間に質問しその場で確定。確定値は spec.md に直接書かず、domain 文書に反映して `/ori-sync` → `/ori-derive <id>` で spec を再生成する（domain の変更に人間の判断が要るなら `/ori-propose`）
    - 重大（不変条件不明など）→ 停止し `/ori-derive` への戻りを促す
 5. **完了報告**：
    ```bash

@@ -117,7 +117,7 @@ scenario は **scenario-first が既定**: 参加 slice（`contracts.slices`）�
 ## 注意
 
 - subtask は beads issue description 内の `- [ ]` checklist を更新（**別 issue にしない**）
-- domain 文書を変更したくなった場合は `/ori-sync --force <path>` または `/ori-propose` で proposal 生成
+- domain 文書を変更したくなった場合は `/ori-propose` で proposal を作る（派生文書の直接編集はしない。`/ori-sync --force` は廃止済）
 - **slice / page / scenario 不在時に勝手に新規作成しない**：必ずユーザ確認
 - orchestrator が runner / bundle / 独自 state file を導入したくなったら、それは「各 phase skill が self-contained でない」サイン — 該当 phase skill を強化するのが正しい修正方向（orchestrator に責務を集約しない）
 - **scenario が RED でも scenario workflow で実装しない**：scenario = 検証軸（4 phase、impl phase なし）。RED の対処は実装軸の別ワークフロー（対象 slice に対する `/ori-flow <slice-id>`、または `/ori-bug` case 4）で行う。scenario と slice は 1:1 対応不要で、`contracts.slices` は任意の情報リンク（blocking しない）
@@ -128,7 +128,7 @@ scenario は **scenario-first が既定**: 参加 slice（`contracts.slices`）�
 `/ori-flow` 完走後（finalize phase 完了）、ユーザに以下を提示：
 
 - **次 slice / page / scenario パス**：`/ori-flow <next-id>` — 他に dirty な slice / page / scenario や未着手 slice / page / scenario があれば続行
-- **proposal review パス**：`/ori-review-proposals` — phase 中に `--force` で生成された proposal を人間と共にレビュー
+- **proposal review パス**：`/ori-review-proposals` — phase 中に `/ori-propose` で作成された proposal を人間と共にレビュー
 - **全体俯瞰パス**：`/ori-feature-status` で dirty / blocked / done を一覧
 - **session 締めパス**：CLAUDE.md の Session Completion 手順（`bd dolt push` / `git push`）
 

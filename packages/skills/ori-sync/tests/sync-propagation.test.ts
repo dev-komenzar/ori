@@ -181,6 +181,46 @@ describe("change detection edge cases", () => {
     run(root, ["--file", ".ori/domain/validation.md"]);
     expect(await dirty(root, ".ori/slices/a")).toHaveLength(1);
   });
+
+  it("resolves a relative --file against the invoking cwd, not the project root (ori-064a)", async () => {
+    const root = await repo({
+      ".ori/domain/validation.md": DOMAIN,
+      ".ori/slices/a/manifest.yaml": "derives_from:\n  - domain/validation.md#s2\n",
+      ".ori/slices/a/status.yaml": CLEAN,
+    });
+    const r = spawnSync("node", [SYNC, "--file", "validation.md"], { cwd: join(root, ".ori/domain"), encoding: "utf8" });
+    expect(r.status).toBe(0);
+    expect(await dirty(root, ".ori/slices/a")).toEqual([
+      expect.objectContaining({ source: { path: ".ori/domain/validation.md", sectionId: "s2" } }),
+    ]);
+  });
+
+  it("does not split sections at headings inside a blockquote or a list (ori-064a)", async () => {
+    const quoted = DOMAIN.replace("s1 body", "s1 body\n\n> ## Quoted example\n> quoted\n\n- ## Listed\n  listed");
+    const root = await repo({
+      ".ori/domain/validation.md": quoted,
+      ".ori/scenarios/s1/manifest.yaml": scenarioManifest("domain/validation.md#s1"),
+      ".ori/scenarios/s1/status.yaml": CLEAN,
+    });
+    // blockquote / list 内の本文は s1 の一部。見出しとして扱うと s1 の範囲が手前で切れ、この編集を取りこぼす
+    await write(root, { ".ori/domain/validation.md": quoted.replace("listed", "listed (edited)") });
+    run(root);
+    expect(await dirty(root, ".ori/scenarios/s1")).toHaveLength(1);
+  });
+
+  it("rejects the retired --force flag with exit 2 and writes no proposal (ori-7jm.11)", async () => {
+    const root = await repo({
+      ".ori/domain/validation.md": DOMAIN,
+      ".ori/slices/a/manifest.yaml": "derives_from:\n  - domain/validation.md\n",
+      ".ori/slices/a/status.yaml": CLEAN,
+      ".ori/slices/a/spec.md": "# spec\n",
+    });
+    const r = run(root, ["--force", ".ori/slices/a/spec.md"]);
+    expect(r.code).toBe(2);
+    expect(r.out).toContain("/ori-propose");
+    await expect(readFile(join(root, ".ori/proposals"), "utf8")).rejects.toThrow();
+    expect(await dirty(root, ".ori/slices/a")).toEqual([]);
+  });
 });
 
 describe("dirty propagation inside derived docs (ori-7jm.10)", () => {

@@ -17,7 +17,7 @@ description: '既存 slice のバグ報告を 4 ケース（domain / impl / spec
 |---|----------|------|------|
 | **1** | **ドメインモデル**が誤り | 不変条件抜け、概念の境界違い | `.ori/domain/` 編集 |
 | **2** | **spec は正しいが impl が誤り**（テスト網羅漏れ） | impl が edge case で落ちる | 失敗テスト追加 |
-| **3** | **spec 自体に欠陥**（domain は正しいが derive が悪い） | 派生時に取りこぼし／曲解 | `--force` で spec 編集 → proposal |
+| **3** | **spec 自体に欠陥**（domain は正しいが derive が悪い） | 派生時に取りこぼし／曲解 | `manifest.yaml` を直す or 再 derive（spec は直接編集しない） |
 | **4** | **複数 slice の統合バグ** | 単体は OK だが組み合わせで破綻 | 新規 slice 作成 |
 
 ## testid 契約違反の issue（triage の前に判定）
@@ -103,20 +103,24 @@ slice から /ori-flow で再 derive することを推奨。
 
 ### ケース 3（spec bug）
 
+spec.md は派生文書なので直接編集しない（`/ori-sync --force` は廃止済）。source を直して再生成する
+（[`scenario.instructions.md#caveats`](../../instructions/scenario.instructions.md#caveats) の正規更新手順と同じ）。
+
 ```
-分類：spec バグ。domain は正しいが派生が悪い。
+分類：spec バグ。domain は正しいが派生が悪い。spec.md は直接編集しない。
 
-推奨動線：
-  1. Read / Edit .ori/slices/<id>/spec.md
-  2. `/ori-sync`                       ← guardrail がブロックする
-      エラー：spec.md is derived. Edit blocked.
-        [1] Edit domain source
-        [2] Force edit + upstream proposal: `/ori-sync --force <path>`
-  3. オプション [2] を選んだ場合：proposal が .ori/proposals/ に生成される
-  4. `/ori-review-proposals`          ← 人間レビューで accept/reject
+推奨動線（原因で分ける）：
+  a. 取りこぼし — 必要な domain section が manifest.yaml の derives_from に無い
+       1. Edit .ori/slices/<id>/manifest.yaml   ← derives_from に section を追加
+       2. `/ori-sync`                          ← manifest の変更で derive が dirty になる
+       3. `/ori-flow <id>`                     ← derive から再走（spec 再生成 → 下流 phase も追従）
+  b. 曲解 — derives_from は正しいが、spec が domain の記述と食い違う
+       1. `/ori-flow <id>`                     ← derive からやり直す
+  c. 再 derive しても同じ解釈になる — domain の記述が曖昧で一意に派生できない
+       → ケース 1 に昇格（domain を明確化 → `/ori-sync` → `/ori-flow <id>`）
+       → domain の変更に人間の判断が要るなら `/ori-propose` → `/ori-review-proposals`
 
-ヒント：多くの場合 domain を直すのが正解（ケース 1 への昇格）。
-spec で局所決定したい時のみ --force を使う。
+ヒント：spec だけで局所決定する経路は無い。決めたい内容は domain（または manifest）に書く。
 ```
 
 ### ケース 4（cross-slice bug）
@@ -138,7 +142,7 @@ spec で局所決定したい時のみ --force を使う。
 - **fix を実行しない**：このスキルはルーティングのみ。実際の修正は対象スキルに渡す
 - **ケース 1 ↔ ケース 3 は紙一重**：迷ったら domain を直す方向を優先（ケース 1 へ昇格）
 - **scenario の RED は検証軸の出力**：scenario（検証軸）が RED を示した場合、scenario 側に実装を足さず、原因を本 triage で分類して実装軸の動線へ渡す（実装不足の slice は `/ori-flow <slice-id>`、cross-slice は case 4）。scenario と slice は 1:1 対応不要
-- **アンチパターン回避**：「impl だけパッチ」「spec を `--force` なし編集」「review skip」は禁止（README 参照）
+- **アンチパターン回避**：「impl だけパッチ」「spec.md を直接編集」「review skip」は禁止（README 参照）
 
 ## 次のアクション
 
@@ -146,7 +150,7 @@ triage 結果に応じて以下を案内（実行はしない）：
 
 - **ケース 1 と分類された場合**：`.ori/domain/<file>.md` の編集 → `/ori-sync` → `/ori-flow <dirty-id>`
 - **ケース 2 と分類された場合**：失敗テスト追加 → `/ori-impl-green <id> --reason "bug fix"` → `/ori-review <id>`
-- **ケース 3 と分類された場合**：`/ori-sync --force <spec>` で proposal 生成 → `/ori-review-proposals`
+- **ケース 3 と分類された場合**：`manifest.yaml` の `derives_from` を直して `/ori-sync` → `/ori-flow <id>`、または `/ori-flow <id>` で再 derive。domain が曖昧ならケース 1 へ昇格（人間判断が要るなら `/ori-propose`）
 - **ケース 4 と分類された場合**：`/ori-ddd-9-workflows` 再走 → 新規 slice 作成 → `/ori-flow`
 - **testid-violation issue の場合**：[`ui-test.instructions.md#testid-migration`](../../instructions/ui-test.instructions.md#testid-migration) の手順（`/ori-flow <page-id>` または `/ori-impl-green <page-id>` → `/ori-review <page-id>`）
 - **どれにも分類できないパス**：症状情報が不足。ユーザにヒアリング継続、難しければ `bd human` で人間判断 flag

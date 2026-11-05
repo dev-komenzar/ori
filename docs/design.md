@@ -41,7 +41,7 @@ AI ハーネス(Claude Code, OpenCode, Codex, Gemini CLI, GitHub Copilot, Cursor
 ### 設計原則
 1. **DDD ドキュメントが Single Source of Truth** — slice/page・コードは派生
 2. **構造から自動抽出** — Phase 9 (workflows) と Phase 11b (page-grouping) から slice/page を生成
-3. **単一伝播アルゴリズム + edit-time SSoT guardrail** — `--force` で派生側編集を許可、proposal を自動生成
+3. **単一伝播アルゴリズム + SSoT guardrail** — 派生側は直接編集しない(source を直して再派生)。上流の変更は `/ori-propose` の proposal で人間判断を経る
 4. **CLI = 決定的重処理 / AI = 創造的判断** の責務分離
 5. **multi-harness 中立** — APM で全 AI ツールへ配布、capability-role で model 抽象化
 6. **markdown-driven 拡張** — pattern / tech / schema は markdown で curate、TS adapter は最小化
@@ -624,7 +624,6 @@ APM が各 harness の settings に **自動 merge**(`.claude/settings.json`, `.
 3. derives_from の reverse 参照を辿り、影響 slice/page/scenario を dirty マーク
 4. dirty slice/page/scenario の beads issue 起票
 5. 全 manifest の hash 整合性 fail-safe check
-6. `--force` 編集された SSoT の `.ori/proposals/` 生成
 ```
 
 ### Fail-safe path
