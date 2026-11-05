@@ -24149,6 +24149,38 @@ async function lintFile(path) {
   }
   return issues2;
 }
+var STATUS_YAML_PATH = /(^|\/)\.ori\/(slices|pages|scenarios)\/[^/]+\/status\.yaml$/;
+async function* walkStatusYamls(dir) {
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name === ".git") continue;
+      yield* walkStatusYamls(full);
+    } else if (entry.isFile() && STATUS_YAML_PATH.test(full)) {
+      yield full;
+    }
+  }
+}
+async function lintStatusYamls(target2) {
+  const issues2 = [];
+  for await (const path of walkStatusYamls(target2)) {
+    const doc = import_yaml.default.parseDocument(await readFile(path, "utf8"));
+    for (const err of doc.errors) {
+      issues2.push({
+        file: path,
+        line: err.linePos?.[0]?.line ?? 1,
+        message: `status.yaml \u304C YAML \u3068\u3057\u3066 parse \u3067\u304D\u306A\u3044: ${err.message.split("\n")[0]}`
+      });
+    }
+  }
+  return issues2;
+}
 function parseAgentSection(body) {
   const merged = {};
   for (const match of body.matchAll(/```yaml\s*\n([\s\S]*?)```/g)) {
@@ -24469,6 +24501,7 @@ if (st.isFile()) {
   for await (const file of walkMarkdown(absTarget)) {
     issues.push(...await lintFile(file));
   }
+  issues.push(...await lintStatusYamls(absTarget));
   const archPath = join(absTarget, "architecture.md");
   if (await fileExists(archPath)) {
     issues.push(...await runGuardrailsCheck(archPath));

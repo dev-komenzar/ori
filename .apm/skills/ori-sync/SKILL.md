@@ -32,7 +32,7 @@ node ./scripts/sync.js [--file=<path>] [--since=<ref>] [--check]
 
 `/ori-sync` 実行後、状況に応じて以下を提示：
 
-- **dirty slice がある場合**：影響を受けた slice ごとに `/ori-flow <slice-id>` を**必須**で提案（最も影響が大きい順に）。dirty の手動解除は禁止されており、`/ori-finalize` の `clear-dirty.sh` は review PASS なしで解除を拒否する
+- **dirty slice がある場合**：影響を受けた slice ごとに `/ori-flow <slice-id>` を**必須**で提案（最も影響が大きい順に）。dirty の手動解除は禁止されており、`/ori-finalize` の `clear-dirty.js` は review PASS なしで解除を拒否する
 - **dirty なし**：通常終了。次の作業（新 slice `/ori-flow` or DDD `/ori-distill`）へ
 - **整合性エラー検出時**：`/ori-doctor` で詳細診断 → 修復方針をユーザと相談
 - **scope 1 slice を締めたい場合**：`/ori-finalize <slice-id>` を呼ぶ（/ori-sync は全体伝播、/ori-finalize は単一 slice 終了）

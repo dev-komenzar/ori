@@ -183,7 +183,7 @@ _Add your build and test commands here_
 | 層 | メカニズム | 違反時の動作 |
 |----|-----------|------------|
 | L1 | `/ori-sync` の出力で `/ori-flow` を「必須」と明示 | 提案ではなく強制。spec 直接編集禁止を宣言 |
-| L2 | `clear-dirty.sh` が `review.md` の verdict=PASS を確認 | 不在 or ≠PASS → 拒否 (exit 1) |
+| L2 | `clear-dirty.js` が `review.md` の verdict=PASS を確認 | 不在 or ≠PASS → 拒否 (exit 1) |
 | L3 | `/ori-doctor` `check-dirty-integrity.sh` が dirty=[] + review 未完了を検出 | 事後バレ。git diff で証跡残る |
 
 **アンチパターン（厳禁）**:
@@ -201,7 +201,7 @@ domain/ 編集 → /ori-sync (dirtyマーク伝播)
             /ori-finalize (review PASS → dirty解除)
 ```
 
-**ルール**: dirty の手動解除は不可。`/ori-finalize` の `clear-dirty.sh` が review gate を通過した場合のみ解除される。
+**ルール**: dirty の手動解除は不可。`/ori-finalize` の `clear-dirty.js` が review gate を通過した場合のみ解除される。
 
 ### バグリカバリー
 

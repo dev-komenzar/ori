@@ -7248,7 +7248,7 @@ var require_public_api = __commonJS({
         return docs;
       return Object.assign([], { empty: true }, composer$1.streamInfo());
     }
-    function parseDocument(source, options = {}) {
+    function parseDocument2(source, options = {}) {
       const { lineCounter: lineCounter2, prettyErrors } = parseOptions(options);
       const parser$1 = new parser.Parser(lineCounter2?.addNewLine);
       const composer$1 = new composer.Composer(options);
@@ -7274,7 +7274,7 @@ var require_public_api = __commonJS({
       } else if (options === void 0 && reviver && typeof reviver === "object") {
         options = reviver;
       }
-      const doc = parseDocument(src2, options);
+      const doc = parseDocument2(src2, options);
       if (!doc)
         return null;
       doc.warnings.forEach((warning) => log.warn(doc.options.logLevel, warning));
@@ -7310,7 +7310,7 @@ var require_public_api = __commonJS({
     }
     exports.parse = parse;
     exports.parseAllDocuments = parseAllDocuments;
-    exports.parseDocument = parseDocument;
+    exports.parseDocument = parseDocument2;
     exports.stringify = stringify;
   }
 });
@@ -9332,11 +9332,47 @@ function collectDerivedRefs(manifest) {
   }
   return refs;
 }
+var InvalidStatusYamlError = class extends Error {
+  constructor(rel, details) {
+    super(`${rel} is not valid YAML`);
+    this.rel = rel;
+    this.details = details;
+  }
+  rel;
+  details;
+};
+async function readStatus(statusPath) {
+  const rel = relative(root, statusPath);
+  const doc = (0, import_yaml.parseDocument)(await readFile(statusPath, "utf8"));
+  if (doc.errors.length > 0) {
+    throw new InvalidStatusYamlError(
+      rel,
+      doc.errors.map((e2) => {
+        const pos = e2.linePos?.[0];
+        return `${pos ? `${rel}:${pos.line}:${pos.col}` : rel}  ${e2.message.split("\n")[0]}`;
+      })
+    );
+  }
+  const data = doc.toJS();
+  if (data == null) return {};
+  if (typeof data !== "object" || Array.isArray(data)) {
+    throw new InvalidStatusYamlError(rel, [`${rel}  top level must be a mapping`]);
+  }
+  return data;
+}
+function reportInvalidStatus(invalid) {
+  consola.error(
+    [
+      `${invalid.length} status.yaml file(s) are not valid YAML:`,
+      ...invalid.flatMap((e2) => e2.details.map((d2) => `  ${d2}`)),
+      "  fix the file(s) by hand (e.g. remove list items left under 'dirty: []', quote values containing ': '), then re-run /ori-sync"
+    ].join("\n")
+  );
+}
 async function appendDirty(statusPath, newEntries) {
   let status = {};
   if (await exists(statusPath)) {
-    const raw = await readFile(statusPath, "utf8");
-    status = (0, import_yaml.parse)(raw) ?? {};
+    status = await readStatus(statusPath);
   }
   const existing = Array.isArray(status.dirty) ? status.dirty : [];
   const key = (e2) => `${e2.source.path}#${e2.source.sectionId ?? ""}|${e2.affected_phase}|${e2.reason ?? ""}`;
@@ -9416,13 +9452,7 @@ async function run() {
   }
   if (!changedFiles.length) {
     consola.success(`/ori-sync: no domain changes since ${since}`);
-    if (check) {
-      const dirtyRemaining = await countRemainingDirty();
-      if (dirtyRemaining > 0) {
-        consola.error(`${dirtyRemaining} dirty mark(s) still pending across slices/pages`);
-        process.exit(1);
-      }
-    }
+    if (check) await exitIfDirtyRemaining();
     process.exit(0);
   }
   consola.info(`/ori-sync: ${changedFiles.length} changed file(s) (since=${since})`);
@@ -9431,6 +9461,7 @@ async function run() {
   const now = (/* @__PURE__ */ new Date()).toISOString();
   let totalDirty = 0;
   const affectedIds = [];
+  const invalid = [];
   for (const m2 of manifests) {
     const refs = collectDerivedRefs(m2.manifest);
     if (!refs.length) continue;
@@ -9454,39 +9485,61 @@ async function run() {
       reason: force ? "force" : "edit"
     }));
     const statusPath = join(m2.dir, "status.yaml");
-    const added = await appendDirty(statusPath, entries);
+    let added;
+    try {
+      added = await appendDirty(statusPath, entries);
+    } catch (err) {
+      if (!(err instanceof InvalidStatusYamlError)) throw err;
+      invalid.push(err);
+      consola.log(`  skipped (invalid status.yaml) \u2192 ${m2.kind}/${m2.id}`);
+      continue;
+    }
     if (added > 0) {
       totalDirty += added;
       affectedIds.push(m2.id);
       consola.log(`  dirty +${added} \u2192 ${m2.kind}/${m2.id}`);
     }
   }
-  if (totalDirty === 0) {
+  if (totalDirty === 0 && invalid.length === 0) {
     consola.success("/ori-sync: no slices/pages affected by these changes");
+  } else if (totalDirty === 0) {
+    consola.warn("/ori-sync: no dirty marks added (some status.yaml could not be read)");
   } else {
     consola.success(`/ori-sync: marked ${totalDirty} dirty entr${totalDirty === 1 ? "y" : "ies"} across ${affectedIds.length} ${affectedIds.length === 1 ? "doc" : "docs"}`);
     consola.info(`affected: ${affectedIds.join(", ")}`);
   }
-  if (check) {
-    const dirtyRemaining = await countRemainingDirty();
-    if (dirtyRemaining > 0) {
-      consola.error(`${dirtyRemaining} dirty mark(s) still pending across slices/pages`);
-      process.exit(1);
-    }
+  if (invalid.length > 0) {
+    reportInvalidStatus(invalid);
+    process.exit(1);
+  }
+  if (check) await exitIfDirtyRemaining();
+}
+async function exitIfDirtyRemaining() {
+  const { count, invalid } = await countRemainingDirty();
+  if (invalid.length > 0) {
+    reportInvalidStatus(invalid);
+    process.exit(1);
+  }
+  if (count > 0) {
+    consola.error(`${count} dirty mark(s) still pending across slices/pages`);
+    process.exit(1);
   }
 }
 async function countRemainingDirty() {
   const manifests = await listManifests();
-  let n2 = 0;
+  let count = 0;
+  const invalid = [];
   for (const m2 of manifests) {
     const statusPath = join(m2.dir, "status.yaml");
     if (!await exists(statusPath)) continue;
     try {
-      const data = (0, import_yaml.parse)(await readFile(statusPath, "utf8")) ?? {};
-      if (Array.isArray(data.dirty)) n2 += data.dirty.length;
-    } catch {
+      const data = await readStatus(statusPath);
+      if (Array.isArray(data.dirty)) count += data.dirty.length;
+    } catch (err) {
+      if (!(err instanceof InvalidStatusYamlError)) throw err;
+      invalid.push(err);
     }
   }
-  return n2;
+  return { count, invalid };
 }
 await run();

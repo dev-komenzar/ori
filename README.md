@@ -43,7 +43,7 @@ ori ハーネスの全 skill と状態遷移を俯瞰します。
 | 6. review | `/ori-review` | spec/impl → review.md | `ori-review-<id>` |
 | 7. finalize | `/ori-finalize` | review PASS → dirty 解除 | `ori-finalize-<id>` |
 
-**ガード**: `clear-dirty.sh` は `review.md` の verdict=PASS がないと dirty 解除を拒否する。`sed` 直打ちによる手動解除は `/ori-doctor` の `check-dirty-integrity.sh` が検出する。
+**ガード**: `clear-dirty.js` は `review.md` の verdict=PASS がないと dirty 解除を拒否する。`sed` 直打ちによる手動解除は `/ori-doctor` の `check-dirty-integrity.sh` が検出する。
 
 #### 3. ドメイン変更の伝播
 
@@ -79,7 +79,7 @@ ori ハーネスの全 skill と状態遷移を俯瞰します。
 | 層 | どこ | 何を防ぐか |
 |----|------|----------|
 | L1 | `/ori-sync` | 「提案」ではなく「必須」。「spec.md 直接編集は SSoT 違反」を明示 |
-| L2 | `clear-dirty.sh` | `review.md` 不在 or verdict≠PASS なら dirty 解除を拒否 |
+| L2 | `clear-dirty.js` | `review.md` 不在 or verdict≠PASS なら dirty 解除を拒否 |
 | L3 | `/ori-doctor` | `status.yaml` 手動改竄（dirty=[] なのに review 未完了）を事後検出 |
 
 ### Mermaid 状態遷移図
