@@ -24370,12 +24370,10 @@ var SCENARIO_RUNNER_FILES = /* @__PURE__ */ new Set([
   "tsconfig.json",
   "docker-compose.yml"
 ]);
-var RUN_ARTIFACT_DIRS = /* @__PURE__ */ new Set(["test-results", "playwright-report", "allure-results", "coverage", ".cache", "logs"]);
-var RUN_ARTIFACT_EXT = /\.(png|jpe?g|gif|webp|webm|mp4|zip|log)$/i;
+var RUN_OUTPUT_DIRS = /* @__PURE__ */ new Set(["test-results", "playwright-report", "allure-results", "allure-report", ".cache"]);
 function isRunArtifact(relInDir) {
   const segs = relInDir.split("/");
-  if (segs.some((s2) => RUN_ARTIFACT_DIRS.has(s2))) return true;
-  return RUN_ARTIFACT_EXT.test(relInDir) && !segs.some((s2) => /^__\w*snapshots__$/i.test(s2));
+  return segs.length > 2 && RUN_OUTPUT_DIRS.has(segs[1]);
 }
 function internalPhase(m2, relInDir) {
   if (relInDir === "manifest.yaml") return "derive";

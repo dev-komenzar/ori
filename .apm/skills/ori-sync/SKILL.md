@@ -37,8 +37,9 @@ node ./scripts/sync.js [--file=<path>] [--since=<ref>] [--check]
    - **derived 内の変更は review 済みの doc だけ、review.md より新しいものだけ**：doc の `review.md` より後に変わったファイルだけを dirty にする（flow を回して review 済みの変更を HEAD との差分として再び dirty にしないため）。`review.md` が無い doc（初回の flow 中）には付けない
      - 判定は mtime（秒単位、同秒は review 済み扱い）で、`/ori-doctor` の `check-scenario-staleness.sh` と同じ。clone / checkout 直後は mtime が揃わないため、誤検知・見落としがありうる
      - domain → derived の伝播にはこの判定は無い。domain の編集は finalize 前に commit する（未 commit のまま finalize すると、次の `/ori-sync` が同じ dirty を付け直す）
+     - 削除されたファイルは、残っている最寄りの親ディレクトリの mtime で比べる。review 後に同じ親ディレクトリで別の変更（ファイルの追加・削除）があると、古い削除も再び dirty になる
      - CI の fresh checkout では mtime が揃うため、derived 内の規則は実質ローカル（flow を回す作業環境）向け。CI では domain → derived の規則と `--check` による残 dirty 検査が主になる
-   - tests/ 配下のテスト実行成果物（`test-results/` / `playwright-report/` / `allure-results/` / `coverage/` / `.cache/` / `logs/` 配下、画像・動画・zip・log。`__snapshots__` 等の参照 snapshot は除かない）は対象外。その他の生成物は `.gitignore` に入れる
+   - `tests/` 直下の runner の出力ディレクトリ（`test-results/` / `playwright-report/` / `allure-results/` / `allure-report/` / `.cache/`）は対象外。screenshot の baseline（`__screenshots__/` / `*-snapshots/` / `localBaseline/`）や fixture は、画像・zip・log でもテストの入力なので対象。その他の生成物は `.gitignore` に入れる（未追跡でも ignore されたファイルは見ない）
    - `.ori/` 配下の未 commit 変更・未追跡ファイルはすべて変更として扱う。作業途中の `--check` は、それらの dirty で落ちうる
    - `--since` は単一の commit を取る（`A..B` / `A...B` の範囲指定は不可。PR の base と比べるなら `--since=$(git merge-base origin/main HEAD)`）。解決できない ref は exit 2（shallow clone で `--check` が素通りしないため）
 

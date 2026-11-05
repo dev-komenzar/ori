@@ -402,17 +402,30 @@ describe("PR #138 review follow-ups", () => {
     expect(await dirty(root, ".ori/scenarios/s1")).toEqual([]);
   });
 
-  it("ignores test run artifacts under tests/ (N5)", async () => {
+  it("ignores only the runner output dirs directly under tests/ (N5)", async () => {
     const root = await repo({ ...scenario, ".ori/scenarios/s1/review.md": "verdict: PASS\n" });
     await age(root, ".ori/scenarios/s1/review.md");
-    await write(root, {
-      ".ori/scenarios/s1/tests/test-results/trace.json": "{}\n",
-      ".ori/scenarios/s1/tests/shot.png": "x",
-      ".ori/scenarios/s1/tests/__snapshots__/a.png": "x",
-    });
+    const inputs = [
+      "tests/__screenshots__/home.png",
+      "tests/__snapshots__/a.snap",
+      "tests/s1.spec.ts-snapshots/home-chromium-linux.png",
+      "tests/localBaseline/home.png",
+      "tests/fixtures/avatar.png",
+      "tests/fixtures/upload.zip",
+      "tests/fixtures/sample.log",
+      "tests/logs/helper.ts",
+      "tests/coverage/cases.ts",
+      "tests/fixtures/test-results/expected.json", // 直下でなければ入力
+    ];
+    const outputs = [
+      "tests/test-results/trace.zip",
+      "tests/playwright-report/index.html",
+      "tests/allure-results/r.json",
+      "tests/.cache/x",
+    ];
+    await write(root, Object.fromEntries([...inputs, ...outputs].map((f) => [`.ori/scenarios/s1/${f}`, "x"])));
     run(root);
-    expect((await dirty(root, ".ori/scenarios/s1")).map((d) => d.source.path)).toEqual([
-      ".ori/scenarios/s1/tests/__snapshots__/a.png",
-    ]);
+    const marked = (await dirty(root, ".ori/scenarios/s1")).map((d) => d.source.path.replace(".ori/scenarios/s1/", ""));
+    expect(marked.sort()).toEqual([...inputs].sort());
   });
 });

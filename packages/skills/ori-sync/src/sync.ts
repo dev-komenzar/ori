@@ -378,14 +378,13 @@ const SCENARIO_RUNNER_FILES = new Set([
   "docker-compose.yml",
 ]);
 
-// tests/ 配下でもテスト実行が吐く成果物 (screenshot・動画・trace・レポート・cache) は派生物ではないので除く。
-// 比較用の参照 snapshot (__snapshots__ / __screenshots__ 等) はテストの入力なので除かない
-const RUN_ARTIFACT_DIRS = new Set(["test-results", "playwright-report", "allure-results", "coverage", ".cache", "logs"]);
-const RUN_ARTIFACT_EXT = /\.(png|jpe?g|gif|webp|webm|mp4|zip|log)$/i;
+// tests/ 直下の、テスト runner が既定で吐く出力ディレクトリだけを除く (派生物ではないため)。
+// 拡張子や任意の深さのディレクトリ名では除かない: screenshot baseline (__screenshots__ / *-snapshots / localBaseline) や
+// fixtures の画像・zip・log もテストの入力なので、review をやり直す対象。その他の生成物は .gitignore に入れる
+const RUN_OUTPUT_DIRS = new Set(["test-results", "playwright-report", "allure-results", "allure-report", ".cache"]);
 function isRunArtifact(relInDir: string): boolean {
-  const segs = relInDir.split("/");
-  if (segs.some((s) => RUN_ARTIFACT_DIRS.has(s))) return true;
-  return RUN_ARTIFACT_EXT.test(relInDir) && !segs.some((s) => /^__\w*snapshots__$/i.test(s));
+  const segs = relInDir.split("/"); // ["tests", <dir>, ...]
+  return segs.length > 2 && RUN_OUTPUT_DIRS.has(segs[1]!);
 }
 
 function internalPhase(m: ManifestEntry, relInDir: string): AnyDirtyEntry["affected_phase"] | null {
