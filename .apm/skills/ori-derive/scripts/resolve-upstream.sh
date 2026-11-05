@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ori-derive: resolve upstream sections and compute hashes.
 #
-# Usage: resolve-upstream.sh <slice-id | scenario-id> [--manifest <path>] [--project-root <dir>]
+# Usage: resolve-upstream.sh <slice-id | page-id | scenario-id> [--manifest <path>] [--project-root <dir>] [--coherence]
 #
-# Reads `.ori/slices/<id>/manifest.yaml` or `.ori/scenarios/<id>/manifest.yaml`
-# (or --manifest path) and emits one line per derives_from entry:
+# Reads `.ori/{slices,pages,scenarios}/<id>/manifest.yaml` (or --manifest path)
+# and emits one line per derives_from entry:
 #
 #   <ref> <sha-prefix>          (file resolved, hash computed)
 #   <ref> NOT_FOUND  (to stderr) (file missing)
@@ -28,6 +28,12 @@
 # project-root-relative; otherwise the script prepends `.ori/`. This lets
 # both styles co-exist while we settle on one in the skill SSoT.
 #
+# --coherence (暫定, ori-0eh.4 で write-spec-hash に置換): 代わりに spec.md frontmatter
+# にそのまま貼る `coherence:` ブロックを SSoT 形式
+# (.apm/instructions/feature-spec.instructions.md §coherence-frontmatter) で出力する。
+# upstream = ref (`.ori/` prefix 除去・重複除去)、hash = file キー (anchor なし) で dedupe。
+# 1 件でも NOT_FOUND があれば何も出力せず exit 1。
+#
 # Exit codes:
 #   0  success (some entries may be NOT_FOUND — they print to stderr only)
 #   1  manifest missing / invalid args / project root not found
@@ -37,6 +43,7 @@ set -euo pipefail
 MANIFEST_ARG=""
 PROJECT_ROOT_ARG=""
 ID=""
+COHERENCE=0
 
 usage() {
   cat >&2 <<'EOF'
@@ -45,6 +52,7 @@ Usage: resolve-upstream.sh <slice-id | scenario-id> [options]
 Options:
   --manifest <path>       Override manifest.yaml location (skip slice-id lookup)
   --project-root <dir>    Override project root (default: git rev-parse / .ori/ ancestor)
+  --coherence             Emit a SSoT-format `coherence:` block for spec.md (interim, ori-0eh)
   -h, --help              Show this help and exit
 EOF
 }
@@ -53,6 +61,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --manifest)      MANIFEST_ARG="${2:-}";      shift 2 ;;
     --project-root)  PROJECT_ROOT_ARG="${2:-}";  shift 2 ;;
+    --coherence)     COHERENCE=1;                shift ;;
     -h|--help)       usage; exit 0 ;;
     --)              shift; break ;;
     -*) echo "ERROR: unknown flag: $1" >&2; usage; exit 2 ;;
@@ -97,9 +106,11 @@ else
     exit 1
   fi
   MANIFEST="$PROJECT_ROOT/.ori/slices/$ID/manifest.yaml"
-  if [[ ! -f "$MANIFEST" && -f "$PROJECT_ROOT/.ori/scenarios/$ID/manifest.yaml" ]]; then
-    MANIFEST="$PROJECT_ROOT/.ori/scenarios/$ID/manifest.yaml"
-  fi
+  for kind in pages scenarios; do
+    if [[ ! -f "$MANIFEST" && -f "$PROJECT_ROOT/.ori/$kind/$ID/manifest.yaml" ]]; then
+      MANIFEST="$PROJECT_ROOT/.ori/$kind/$ID/manifest.yaml"
+    fi
+  done
 fi
 
 if [[ ! -f "$MANIFEST" ]]; then
@@ -175,16 +186,50 @@ resolve_path() {
 
 # Emit results (one ref per line: "<ref> <sha-prefix>" on stdout, NOT_FOUND
 # entries on stderr). Iterate via a file descriptor so the loop runs in the
-# parent shell — no subshell — making future state additions (e.g. error
-# counters) work as expected.
+# parent shell — no subshell — so the --coherence accumulators below work.
+UP_REFS=()
+HASH_FILES=()
+HASH_VALUES=()
+MISSING=0
+contains() { local x="$1"; shift; local e; for e in "$@"; do [[ "$e" == "$x" ]] && return 0; done; return 1; }
+
 while IFS= read -r ref; do
   [[ -z "$ref" ]] && continue
   rel="$(resolve_path "$ref")"
   abs="$PROJECT_ROOT/$rel"
   if [[ -f "$abs" ]]; then
     hash="$(sha256sum "$abs" | cut -c1-12)"
-    echo "$ref $hash"
+    if [[ "$COHERENCE" == 1 ]]; then
+      norm="${ref#.ori/}"
+      file="${norm%%#*}"
+      contains "$norm" "${UP_REFS[@]}" || UP_REFS+=("$norm")
+      if ! contains "$file" "${HASH_FILES[@]}"; then
+        HASH_FILES+=("$file"); HASH_VALUES+=("$hash")
+      fi
+    else
+      echo "$ref $hash"
+    fi
   else
     echo "$ref NOT_FOUND" >&2
+    MISSING=1
   fi
 done < <(parse_refs "$MANIFEST")
+
+if [[ "$COHERENCE" == 1 ]]; then
+  if [[ "$MISSING" == 1 ]]; then
+    echo "ERROR: upstream file(s) not found — fix manifest.derives_from before writing coherence" >&2
+    exit 1
+  fi
+  echo "coherence:"
+  echo "  source: derived"
+  echo "  last_derived: $(date +%Y-%m-%d)"
+  if [[ ${#UP_REFS[@]} -eq 0 ]]; then
+    echo "  upstream: []"
+    echo "  hash: {}"
+  else
+    echo "  upstream:"
+    for r in "${UP_REFS[@]}"; do echo "    - $r"; done
+    echo "  hash:"
+    for i in "${!HASH_FILES[@]}"; do echo "    ${HASH_FILES[$i]}: ${HASH_VALUES[$i]}"; done
+  fi
+fi

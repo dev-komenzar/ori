@@ -154,7 +154,10 @@ describe("new-scenario <id> (1:1 anchor guard)", () => {
         join(root, ".ori/scenarios/s2-tag-filter-narrow/spec.md"),
         "utf8",
       );
-      expect(spec).toContain("domain/validation.md#s2-tag-filter-narrow");
+      // coherence は SSoT 形式 (feature-spec.instructions.md §coherence-frontmatter)。
+      // upstream / hash は derive 時に writer が derives_from から生成するので stub では空。
+      expect(spec).toContain("coherence:\n  source: derived\n  upstream: []\n  hash: {}\n");
+      expect(spec).not.toContain("derives_from");
 
       for (const f of ["notes.md", "status.yaml"]) {
         await expect(

@@ -163,8 +163,9 @@ ori:
   schema:
     propagation_level: file
 coherence:
-  derives_from:
-    - domain/validation.md#${id}
+  source: derived
+  upstream: []
+  hash: {}
 ---
 
 # ${id} — Scenario Specification

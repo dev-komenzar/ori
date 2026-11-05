@@ -14,3 +14,22 @@ export {
   ScenarioRunnerSchema,
   parseManifest,
 } from "./manifest.js";
+export {
+  HASH_LENGTH,
+  SPEC_KINDS,
+  type SpecKind,
+  type UpstreamRef,
+  type SpecCoherence,
+  type SpecCoherenceUpdate,
+  type HashKeyConflict,
+  type ExpectedCoherence,
+  type SpecTarget,
+  normalizeHashKey,
+  resolveUpstreamPath,
+  parseDerivesFrom,
+  computeFileHash,
+  computeExpectedCoherence,
+  findSpecTarget,
+  readSpecCoherence,
+  writeSpecCoherence,
+} from "./spec-hash.js";

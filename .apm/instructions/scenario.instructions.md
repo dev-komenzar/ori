@@ -220,7 +220,7 @@ scenario は 4 phase で実装する。詳細は各 SKILL.md に委譲。
   1. 変えたい内容の **source を編集**する（`manifest.yaml` / ドメイン文書 / `.ori/architecture.md`）
   2. `/ori-sync` で dirty を伝播 → `/ori-flow <scenario-id>`（該当 phase を再実行）で再生成
   3. source 側に不備があり上流の変更が要る場合は `/ori-propose` で提案を作成する
-- **spec.md frontmatter の hash**: `coherence.upstream[].hash` は `/ori-derive` が `resolve-upstream.sh` の出力から書き込む値（upstream **ファイル全体**の sha256 先頭 12 hex。`path#section` 指定でも section 単位ではない）が正典。`<section-id>` や `abc123` 等の placeholder・手書き値は不可。scenario spec.md の hash 更新は `/ori-finalize` では未実装（R3 で扱う）で、現状は `/ori-derive` 実行時点の値
+- **spec.md frontmatter の hash**: 形式・hash 計算方式・dedupe 規約は [`feature-spec.instructions.md` §coherence-frontmatter](./feature-spec.instructions.md#coherence-frontmatter) が SSoT（slice / page と共通）。`upstream` / `hash` は writer 専有で、placeholder・手書き値は不可
 - **推測で埋めない**: `TBD` を残し、人間判断に委ねる箇所を明示
 - **scenario = 検証軸、実装は別ワークフロー**: scenario は未充足を RED として示すことに徹する。ori は scenario を実行せず（実行は CI / 手動）、RED の対処も scenario 側では行わない
   - RED の対処は実装軸の別ワークフローで行う: `/ori-flow <slice-id>`（未実装・未 finalize の slice）または `/ori-bug`（case 4: cross-slice bug）
