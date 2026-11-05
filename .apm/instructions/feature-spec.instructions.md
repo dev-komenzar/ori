@@ -12,6 +12,49 @@ applyTo: ".ori/features/*/spec.md"
 - **glossary 参照**: 用語は `[Note](#note)` 形式で glossary 内アンカーへ
 - **コードスニペットは最小限**: 詳細実装は notes.md または src/ 配下に
 
+## frontmatter coherence ブロック {#coherence-frontmatter}
+
+slice / page / scenario の spec.md (`.ori/{slices,pages,scenarios}/<id>/spec.md`) に共通の frontmatter 形式。
+この section が形式の **SSoT**。skill / script / 他の instructions は形式を再掲せずここを参照する。
+
+```yaml
+---
+ori:
+  schema:
+    propagation_level: file
+coherence:
+  source: derived
+  last_derived: 2026-10-02
+  upstream:          # writer 専有: manifest.derives_from の ref を出現順に列挙
+    - domain/aggregates.md#note-aggregate
+    - domain/aggregates.md#tag-aggregate
+  hash:              # writer 専有: file パス (anchor なし) → sha256(raw file) 先頭 12 hex
+    domain/aggregates.md: 56f7a54a8ab2
+---
+```
+
+| key | 値 | 書き手 |
+|---|---|---|
+| `ori.schema.propagation_level` | `file` (正式仕様。hash は file 全体に対して取る) | stub (`new-slice` / `new-page` / `new-scenario`) |
+| `coherence.source` | `derived` 固定。この値が「派生文書」の目印 | stub / writer |
+| `coherence.last_derived` | 最後に derive した日付 (`YYYY-MM-DD`) | writer |
+| `coherence.upstream` | `manifest.derives_from` の各 entry を `file` または `file#section` の文字列にしたもの。出現順、同一 ref は 1 つ | writer |
+| `coherence.hash` | `upstream` に現れる file ごとの hash map | writer |
+
+規約:
+
+- **hash 計算方式**: upstream file の **raw bytes** の sha256 hex 先頭 12 桁 (`sha256sum <file> | cut -c1-12` と同値)。
+  `file#section` 指定でも section 単位ではなく file 全体を hash する (`propagation_level: file`)
+- **キー = file パス (anchor なし)**: `.ori/` からの相対パス (`domain/aggregates.md`)。`#section` や `#.*` をキーに含めない
+- **file 単位 dedupe**: 同一 file を複数 section で参照しても hash のキーは 1 つ。`upstream` には section ごとの ref を残す
+- **path 正規化**: `derives_from` の `.ori/` prefix 有無 (legacy string form / structured `{path, section}` form) は
+  writer が同じキーに正規化する
+- **writer 専有**: `upstream` / `hash` / `last_derived` は決定的 writer (`@ori-ori/coherence` の spec-hash 実装を使う CLI) だけが書く。
+  **LLM (derive phase 含む) は upstream / hash を手書きしない**。placeholder (`abc123` 等) も書かない
+- **stub の初期値**: `source: derived` / `upstream: []` / `hash: {}`。値は derive 時に writer が `derives_from` から生成する
+- **旧形式** (`hash` の `file#.*` / `file#anchor` キー、scenario の `upstream: [{path, hash}]`、stub の
+  `coherence.derives_from`) は読み取りのみ互換。書き戻す writer が新形式へ移行する (記録値は保持)
+
 ## 境界契約 (Boundary contract) section 必須化 {#boundary-contract-section}
 
 `## 境界契約 {#boundary-contract}` section は **必須**。

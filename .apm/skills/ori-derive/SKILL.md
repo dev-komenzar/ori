@@ -24,7 +24,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
   - `.ori/slices/<id>/manifest.yaml`（必須。`derives_from:` を持つ）
   - `manifest.derives_from` に列挙されたドメイン section（例：`domain/aggregates.md#note-aggregate`）
 - 出力：`.ori/slices/<id>/spec.md`
-  - frontmatter: `coherence.source: derived`、`upstream:` に派生元 section を列挙、`hash:` に派生元のスナップショットハッシュ
+  - frontmatter: `coherence` ブロックは [`feature-spec.instructions.md` §coherence-frontmatter](../../instructions/feature-spec.instructions.md#coherence-frontmatter) の形式（SSoT）。`upstream:` / `hash:` は writer 専有で、**LLM は手書きしない**
   - 必須 H2 セクション（**[`feature-spec.instructions`](../../instructions/feature-spec.instructions.md) 準拠** — instructions ファイル名は legacy のまま）
 
 ### scenario の場合
@@ -34,7 +34,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
   - `manifest.derives_from` に列挙されたドメイン section（例：`domain/workflows.md#order-workflow`）
   - `.ori/domain/validation.md`（必須。Gherkin 形式の検証シナリオ）
 - 出力：`.ori/scenarios/<id>/spec.md`
-  - frontmatter: `coherence.source: derived`、`upstream:` に派生元 section を列挙、`hash:` に派生元のスナップショットハッシュ
+  - frontmatter: `coherence` ブロックは [`feature-spec.instructions.md` §coherence-frontmatter](../../instructions/feature-spec.instructions.md#coherence-frontmatter) の形式（SSoT）。`upstream:` / `hash:` は writer 専有で、**LLM は手書きしない**
   - 必須セクション：概要 / シナリオステップ / テスト観点 / 実装ノート
 
 ## 必須セクション（[`feature-spec.instructions.md`](../../instructions/feature-spec.instructions.md) 準拠）
@@ -195,18 +195,9 @@ spec.md の構造 (frontmatter / 必須 H2 / 記述例) の SSoT は [`feature-s
 
 ### scenario の場合
 
-spec.md の構造：
+spec.md の frontmatter（`coherence` ブロック）は [`feature-spec.instructions.md` §coherence-frontmatter](../../instructions/feature-spec.instructions.md#coherence-frontmatter) が SSoT（slice / page と共通。ここに例を duplicate しない）。本文の構造：
 
 ```markdown
----
-coherence:
-  source: derived
-  upstream:
-    - path: domain/workflows.md#order-workflow
-      hash: a1b2c3d4e5f6
-    - path: domain/validation.md
-      hash: 0f9e8d7c6b5a
----
 
 # <scenario-id> — Scenario Specification
 
