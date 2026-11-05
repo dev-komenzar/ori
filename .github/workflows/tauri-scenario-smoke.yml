@@ -1,0 +1,74 @@
+name: tauri-scenario-smoke
+
+# CI smoke for tauri (local mode) scenarios (ori-7c1): build the minimal tauri
+# fixture (build-then-test), then drive it headless with the WDIO runner config
+# extracted verbatim from the ori-generate SKILL.md template
+# (WDIO -> tauri-driver -> WebKitWebDriver -> binary, under xvfb).
+# The TS counterpart (compose-service + playwright) is scenario-smoke.yml.
+#
+# Toolchain lives in ci/tauri-scenario-smoke/Dockerfile (WebKitGTK dev +
+# webkit2gtk-driver + xvfb + tauri-driver). Scope: ci/tauri-scenario-smoke/run-smoke.sh header.
+
+on:
+  pull_request:
+    paths:
+      - '.apm/skills/ori-generate/SKILL.md'
+      - '.apm/instructions/scenario-test.instructions.md'
+      - 'ci/tauri-scenario-smoke/**'
+      - '.github/workflows/tauri-scenario-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.apm/skills/ori-generate/SKILL.md'
+      - '.apm/instructions/scenario-test.instructions.md'
+      - 'ci/tauri-scenario-smoke/**'
+      - '.github/workflows/tauri-scenario-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  tauri-scenario-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build smoke image (WebKitGTK + xvfb + tauri-driver)
+        uses: docker/build-push-action@v6
+        with:
+          context: ci/tauri-scenario-smoke
+          file: ci/tauri-scenario-smoke/Dockerfile
+          tags: ori-tauri-smoke:ci
+          load: true
+          cache-from: type=gha,scope=ori-tauri-smoke
+          cache-to: type=gha,mode=max,scope=ori-tauri-smoke
+
+      - name: Cache cargo registry + fixture target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/cargo-registry
+            ${{ runner.temp }}/cargo-target
+          key: tauri-smoke-cargo-${{ hashFiles('ci/tauri-scenario-smoke/fixtures/myapp/src-tauri/Cargo.lock', 'ci/tauri-scenario-smoke/Dockerfile') }}
+          restore-keys: tauri-smoke-cargo-
+
+      - name: Run tauri scenario smoke (tauri build + headless wdio)
+        run: |
+          mkdir -p "$RUNNER_TEMP/cargo-registry" "$RUNNER_TEMP/cargo-target" "$RUNNER_TEMP/artifacts"
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE":/workspace \
+            -v "$RUNNER_TEMP/cargo-registry":/usr/local/cargo/registry \
+            -v "$RUNNER_TEMP/cargo-target":/cache/target \
+            -v "$RUNNER_TEMP/artifacts":/artifacts \
+            -e ORI_SMOKE_CARGO_TARGET=/cache/target \
+            -e ORI_SMOKE_ARTIFACTS=/artifacts \
+            ori-tauri-smoke:ci
+
+      - name: Upload wdio logs / screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-scenario-smoke
+          path: ${{ runner.temp }}/artifacts
+          if-no-files-found: ignore
