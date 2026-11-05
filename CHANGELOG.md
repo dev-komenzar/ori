@@ -25,6 +25,14 @@ ori (織) — DDD-driven slice/page scaffolding with CoDD coherence.
 - **⚠ `ori-finalize/scripts/clear-dirty.sh` を削除し `clear-dirty.js` に置換** ([#137](https://github.com/dev-komenzar/ori/pull/137)) — 旧 `.sh` は `sed` で `dirty:` 行だけを置換し、配下のリスト要素を残して status.yaml を不正な YAML にしていた ([#133](https://github.com/dev-komenzar/ori/issues/133))。新 `node scripts/clear-dirty.js <id> [--kind slice|page|scenario] [--skip-review-check]` は YAML ライブラリで書き戻し、slice / page / scenario に対応する。`apm install` / `apm update` は skill dir を置き換えるので旧 `.sh` は消える。skill を手でコピーしている場合や、`clear-dirty.sh` を直接呼ぶ独自スクリプト・手順がある場合は、`.sh` を削除して `clear-dirty.js` に切り替えること
 - **既に壊れた status.yaml の検出** — `/ori-sync` は不正な status.yaml を `path:line:col` 付きで報告して exit 1 (他 doc への dirty 付与は続行)。`/ori-doctor` の `lint.js` が `.ori/{slices,pages,scenarios}/*/status.yaml` の YAML 妥当性を検査する。旧 `.sh` で壊れたファイルは自動修復しないので、報告された行 (`dirty: []` の下に残ったリスト要素) を手で削除する
 
+### `/ori-sync` の dirty 伝播の見直し（ori-7jm.10 / ori-t3vg）
+
+- **domain 変更を section 単位で判定** ([#138](https://github.com/dev-komenzar/ori/pull/138)) — `derives_from` の `#anchor` (H2/H3) の節、またはその祖先 H2 の本文が変わったときだけ dirty にする。frontmatter / 前文の変更、H1 / 不明 / 重複 anchor、比較元の版が無い場合、`--file` / `--force` はファイル単位。promptnotes の PR-P2 の変更で 25 文書 → 9 文書
+- **derived 内の伝播** — `manifest.yaml` → derive、scenario の `spec.md` → generate、`tests/**` / runner config → review、scenario の `pages:` に挙げた page の `spec.md` / `testids.yaml` → generate。review.md がある doc で、それより新しい変更だけ (mtime。CI の fresh checkout では効かず、実質ローカル向け)
+- **⚠ 変更一覧が `.ori/` 全体 + 未追跡ファイルに** — 以前は `.ori/domain/` の commit 済みとの差分のみ。作業途中の `--check` は `.ori/` 配下の未 commit 変更による dirty で落ちうる
+- **⚠ 終了コード** — 解決できない `--since` と git での変更一覧の取得失敗は exit 2 (以前は「変更なし」で exit 0)。`--since` は単一の commit のみ (`A..B` / `A...B` は exit 2。`$(git merge-base origin/main HEAD)` を使う)。`manifest.yaml` が YAML として不正なら `path:line:col` 付きで報告して exit 1 (以前は WARN で該当 doc を飛ばし exit 0。ori-5qrc)
+- **status.yaml の書式保持** — dirty の追記でコメントや他キーの書式を落とさない。追加が無ければ書き戻さない (ori-o3nu)
+
 ## v0.5.0 — 2026-09-11
 
 **Scenario 概念導入 + architect 動的生成化 + Review バイパス不能化** を軸とした release。service 横断 E2E テスト生成のための scenario 概念を新設し、validation.md anchor と 1:1 機械ガードまで含めて整備した。`/ori-architect` は固定テンプレートを廃し、要件対話ベースの動的生成へ転換。L1/L2/L3 防御線を強化し review バイパスを不能化。テスト規約を pattern/stacks 階層に一本化し正典化。配布動線は引き続き APM single package (`apm install dev-komenzar/ori`) のみ。

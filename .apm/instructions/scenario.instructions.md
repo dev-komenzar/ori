@@ -202,7 +202,7 @@ scenario は 4 phase で実装する。詳細は各 SKILL.md に委譲。
 - **issue 名**: `ori-scenario-<scenario-id>`
 - **phase issue**: derive / generate / review / finalize
 - **依存**: phase issue 間の順序依存のみ。参加 slice の beads issue への `bd depends` は設定しない（scenario-first。§creation-timing）
-- **dirty 伝播**: `/ori-sync` が `.ori/scenarios/` も走査、finalize で解除
+- **dirty 伝播**: `/ori-sync` が `.ori/scenarios/` も走査し、domain section の変更 (derive)・`manifest.yaml` の変更 (derive)・`spec.md` の変更 (generate)・`tests/**` / runner config の変更 (review)・`pages:` に挙げた page の `spec.md` / `testids.yaml` の変更 (generate) を dirty にする。finalize で解除
 
 ### phase 台帳 (status.yaml) と bd の役割 {#phase-ledger}
 
