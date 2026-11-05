@@ -103,9 +103,9 @@ var require_visit = __commonJS({
     "use strict";
     var identity = require_identity();
     var BREAK = /* @__PURE__ */ Symbol("break visit");
-    var SKIP2 = /* @__PURE__ */ Symbol("skip children");
+    var SKIP = /* @__PURE__ */ Symbol("skip children");
     var REMOVE = /* @__PURE__ */ Symbol("remove node");
-    function visit2(node2, visitor) {
+    function visit(node2, visitor) {
       const visitor_ = initVisitor(visitor);
       if (identity.isDocument(node2)) {
         const cd = visit_(null, node2.contents, visitor_, Object.freeze([node2]));
@@ -114,9 +114,9 @@ var require_visit = __commonJS({
       } else
         visit_(null, node2, visitor_, Object.freeze([]));
     }
-    visit2.BREAK = BREAK;
-    visit2.SKIP = SKIP2;
-    visit2.REMOVE = REMOVE;
+    visit.BREAK = BREAK;
+    visit.SKIP = SKIP;
+    visit.REMOVE = REMOVE;
     function visit_(key, node2, visitor, path) {
       const ctrl = callVisitor(key, node2, visitor, path);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
@@ -163,7 +163,7 @@ var require_visit = __commonJS({
         await visitAsync_(null, node2, visitor_, Object.freeze([]));
     }
     visitAsync.BREAK = BREAK;
-    visitAsync.SKIP = SKIP2;
+    visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
     async function visitAsync_(key, node2, visitor, path) {
       const ctrl = await callVisitor(key, node2, visitor, path);
@@ -250,7 +250,7 @@ var require_visit = __commonJS({
         throw new Error(`Cannot replace node with ${pt} parent`);
       }
     }
-    exports2.visit = visit2;
+    exports2.visit = visit;
     exports2.visitAsync = visitAsync;
   }
 });
@@ -260,7 +260,7 @@ var require_directives = __commonJS({
   "node_modules/.pnpm/yaml@2.9.0/node_modules/yaml/dist/doc/directives.js"(exports2) {
     "use strict";
     var identity = require_identity();
-    var visit2 = require_visit();
+    var visit = require_visit();
     var escapeChars = {
       "!": "%21",
       ",": "%2C",
@@ -404,7 +404,7 @@ var require_directives = __commonJS({
         let tagNames;
         if (doc && tagEntries.length > 0 && identity.isNode(doc.contents)) {
           const tags = {};
-          visit2.visit(doc.contents, (_key, node2) => {
+          visit.visit(doc.contents, (_key, node2) => {
             if (identity.isNode(node2) && node2.tag)
               tags[node2.tag] = true;
           });
@@ -431,7 +431,7 @@ var require_anchors = __commonJS({
   "node_modules/.pnpm/yaml@2.9.0/node_modules/yaml/dist/doc/anchors.js"(exports2) {
     "use strict";
     var identity = require_identity();
-    var visit2 = require_visit();
+    var visit = require_visit();
     function anchorIsValid(anchor) {
       if (/[\x00-\x19\s,[\]{}]/.test(anchor)) {
         const sa = JSON.stringify(anchor);
@@ -442,7 +442,7 @@ var require_anchors = __commonJS({
     }
     function anchorNames(root) {
       const anchors = /* @__PURE__ */ new Set();
-      visit2.visit(root, {
+      visit.visit(root, {
         Value(_key, node2) {
           if (node2.anchor)
             anchors.add(node2.anchor);
@@ -622,7 +622,7 @@ var require_Alias = __commonJS({
   "node_modules/.pnpm/yaml@2.9.0/node_modules/yaml/dist/nodes/Alias.js"(exports2) {
     "use strict";
     var anchors = require_anchors();
-    var visit2 = require_visit();
+    var visit = require_visit();
     var identity = require_identity();
     var Node = require_Node();
     var toJS = require_toJS();
@@ -648,7 +648,7 @@ var require_Alias = __commonJS({
           nodes = ctx.aliasResolveCache;
         } else {
           nodes = [];
-          visit2.visit(doc, {
+          visit.visit(doc, {
             Node: (_key, node2) => {
               if (identity.isAlias(node2) || identity.hasAnchor(node2))
                 nodes.push(node2);
@@ -4832,8 +4832,8 @@ var require_resolve_flow_scalar = __commonJS({
     };
     function parseCharCode(source, offset, length, onError) {
       const cc = source.substr(offset, length);
-      const ok2 = cc.length === length && /^[0-9a-fA-F]+$/.test(cc);
-      const code = ok2 ? parseInt(cc, 16) : NaN;
+      const ok = cc.length === length && /^[0-9a-fA-F]+$/.test(cc);
+      const code = ok ? parseInt(cc, 16) : NaN;
       try {
         return String.fromCodePoint(code);
       } catch {
@@ -5565,17 +5565,17 @@ var require_cst_visit = __commonJS({
   "node_modules/.pnpm/yaml@2.9.0/node_modules/yaml/dist/parse/cst-visit.js"(exports2) {
     "use strict";
     var BREAK = /* @__PURE__ */ Symbol("break visit");
-    var SKIP2 = /* @__PURE__ */ Symbol("skip children");
+    var SKIP = /* @__PURE__ */ Symbol("skip children");
     var REMOVE = /* @__PURE__ */ Symbol("remove item");
-    function visit2(cst, visitor) {
+    function visit(cst, visitor) {
       if ("type" in cst && cst.type === "document")
         cst = { start: cst.start, value: cst.value };
       _visit(Object.freeze([]), cst, visitor);
     }
-    visit2.BREAK = BREAK;
-    visit2.SKIP = SKIP2;
-    visit2.REMOVE = REMOVE;
-    visit2.itemAtPath = (cst, path) => {
+    visit.BREAK = BREAK;
+    visit.SKIP = SKIP;
+    visit.REMOVE = REMOVE;
+    visit.itemAtPath = (cst, path) => {
       let item = cst;
       for (const [field, index2] of path) {
         const tok = item?.[field];
@@ -5586,8 +5586,8 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit2.parentCollection = (cst, path) => {
-      const parent = visit2.itemAtPath(cst, path.slice(0, -1));
+    visit.parentCollection = (cst, path) => {
+      const parent = visit.itemAtPath(cst, path.slice(0, -1));
       const field = path[path.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
@@ -5618,7 +5618,7 @@ var require_cst_visit = __commonJS({
       }
       return typeof ctrl === "function" ? ctrl(item, path) : ctrl;
     }
-    exports2.visit = visit2;
+    exports2.visit = visit;
   }
 });
 
@@ -7334,7 +7334,7 @@ var require_dist = __commonJS({
     var lineCounter = require_line_counter();
     var parser = require_parser();
     var publicApi = require_public_api();
-    var visit2 = require_visit();
+    var visit = require_visit();
     exports2.Composer = composer.Composer;
     exports2.Document = Document.Document;
     exports2.Schema = Schema.Schema;
@@ -7362,8 +7362,8 @@ var require_dist = __commonJS({
     exports2.parseAllDocuments = publicApi.parseAllDocuments;
     exports2.parseDocument = publicApi.parseDocument;
     exports2.stringify = publicApi.stringify;
-    exports2.visit = visit2.visit;
-    exports2.visitAsync = visit2.visitAsync;
+    exports2.visit = visit.visit;
+    exports2.visitAsync = visit.visitAsync;
   }
 });
 
@@ -13916,7 +13916,7 @@ function regexCheck(regex2) {
 }
 
 // node_modules/.pnpm/micromark-factory-space@2.0.1/node_modules/micromark-factory-space/index.js
-function factorySpace(effects, ok2, type, max) {
+function factorySpace(effects, ok, type, max) {
   const limit = max ? max - 1 : Number.POSITIVE_INFINITY;
   let size = 0;
   return start;
@@ -13925,7 +13925,7 @@ function factorySpace(effects, ok2, type, max) {
       effects.enter(type);
       return prefix(code);
     }
-    return ok2(code);
+    return ok(code);
   }
   function prefix(code) {
     if (markdownSpace(code) && size++ < limit) {
@@ -13933,7 +13933,7 @@ function factorySpace(effects, ok2, type, max) {
       return prefix;
     }
     effects.exit(type);
-    return ok2(code);
+    return ok(code);
   }
 }
 
@@ -14165,8 +14165,8 @@ function initializeDocument(effects) {
     self.containerState._closeFlow = void 0;
   }
 }
-function tokenizeContainer(effects, ok2, nok) {
-  return factorySpace(effects, effects.attempt(this.parser.constructs.document, ok2, nok), "linePrefix", this.parser.constructs.disable.null.includes("codeIndented") ? void 0 : 4);
+function tokenizeContainer(effects, ok, nok) {
+  return factorySpace(effects, effects.attempt(this.parser.constructs.document, ok, nok), "linePrefix", this.parser.constructs.disable.null.includes("codeIndented") ? void 0 : 4);
 }
 
 // node_modules/.pnpm/micromark-util-classify-character@2.0.1/node_modules/micromark-util-classify-character/index.js
@@ -14293,7 +14293,7 @@ function resolveAllAttention(events, context) {
   }
   return events;
 }
-function tokenizeAttention(effects, ok2) {
+function tokenizeAttention(effects, ok) {
   const attentionMarkers2 = this.parser.constructs.attentionMarkers.null;
   const previous2 = this.previous;
   const before = classifyCharacter(previous2);
@@ -14315,7 +14315,7 @@ function tokenizeAttention(effects, ok2) {
     const close = !before || before === 2 && after || attentionMarkers2.includes(previous2);
     token._open = Boolean(marker === 42 ? open : open && (before || !close));
     token._close = Boolean(marker === 42 ? close : close && (after || !open));
-    return ok2(code);
+    return ok(code);
   }
 }
 function movePoint(point3, offset) {
@@ -14329,7 +14329,7 @@ var autolink = {
   name: "autolink",
   tokenize: tokenizeAutolink
 };
-function tokenizeAutolink(effects, ok2, nok) {
+function tokenizeAutolink(effects, ok, nok) {
   let size = 0;
   return start;
   function start(code) {
@@ -14377,7 +14377,7 @@ function tokenizeAutolink(effects, ok2, nok) {
       effects.consume(code);
       effects.exit("autolinkMarker");
       effects.exit("autolink");
-      return ok2;
+      return ok;
     }
     if (code === null || code === 32 || code === 60 || asciiControl(code)) {
       return nok(code);
@@ -14411,7 +14411,7 @@ function tokenizeAutolink(effects, ok2, nok) {
       effects.consume(code);
       effects.exit("autolinkMarker");
       effects.exit("autolink");
-      return ok2;
+      return ok;
     }
     return emailValue(code);
   }
@@ -14430,13 +14430,13 @@ var blankLine = {
   partial: true,
   tokenize: tokenizeBlankLine
 };
-function tokenizeBlankLine(effects, ok2, nok) {
+function tokenizeBlankLine(effects, ok, nok) {
   return start;
   function start(code) {
     return markdownSpace(code) ? factorySpace(effects, after, "linePrefix")(code) : after(code);
   }
   function after(code) {
-    return code === null || markdownLineEnding(code) ? ok2(code) : nok(code);
+    return code === null || markdownLineEnding(code) ? ok(code) : nok(code);
   }
 }
 
@@ -14449,7 +14449,7 @@ var blockQuote = {
   name: "blockQuote",
   tokenize: tokenizeBlockQuoteStart
 };
-function tokenizeBlockQuoteStart(effects, ok2, nok) {
+function tokenizeBlockQuoteStart(effects, ok, nok) {
   const self = this;
   return start;
   function start(code) {
@@ -14475,13 +14475,13 @@ function tokenizeBlockQuoteStart(effects, ok2, nok) {
       effects.consume(code);
       effects.exit("blockQuotePrefixWhitespace");
       effects.exit("blockQuotePrefix");
-      return ok2;
+      return ok;
     }
     effects.exit("blockQuotePrefix");
-    return ok2(code);
+    return ok(code);
   }
 }
-function tokenizeBlockQuoteContinuation(effects, ok2, nok) {
+function tokenizeBlockQuoteContinuation(effects, ok, nok) {
   const self = this;
   return contStart;
   function contStart(code) {
@@ -14491,7 +14491,7 @@ function tokenizeBlockQuoteContinuation(effects, ok2, nok) {
     return contBefore(code);
   }
   function contBefore(code) {
-    return effects.attempt(blockQuote, ok2, nok)(code);
+    return effects.attempt(blockQuote, ok, nok)(code);
   }
 }
 function exit(effects) {
@@ -14503,7 +14503,7 @@ var characterEscape = {
   name: "characterEscape",
   tokenize: tokenizeCharacterEscape
 };
-function tokenizeCharacterEscape(effects, ok2, nok) {
+function tokenizeCharacterEscape(effects, ok, nok) {
   return start;
   function start(code) {
     effects.enter("characterEscape");
@@ -14518,7 +14518,7 @@ function tokenizeCharacterEscape(effects, ok2, nok) {
       effects.consume(code);
       effects.exit("characterEscapeValue");
       effects.exit("characterEscape");
-      return ok2;
+      return ok;
     }
     return nok(code);
   }
@@ -14529,7 +14529,7 @@ var characterReference = {
   name: "characterReference",
   tokenize: tokenizeCharacterReference
 };
-function tokenizeCharacterReference(effects, ok2, nok) {
+function tokenizeCharacterReference(effects, ok, nok) {
   const self = this;
   let size = 0;
   let max;
@@ -14579,7 +14579,7 @@ function tokenizeCharacterReference(effects, ok2, nok) {
       effects.consume(code);
       effects.exit("characterReferenceMarker");
       effects.exit("characterReference");
-      return ok2;
+      return ok;
     }
     if (test(code) && size++ < max) {
       effects.consume(code);
@@ -14599,7 +14599,7 @@ var codeFenced = {
   name: "codeFenced",
   tokenize: tokenizeCodeFenced
 };
-function tokenizeCodeFenced(effects, ok2, nok) {
+function tokenizeCodeFenced(effects, ok, nok) {
   const self = this;
   const closeStart = {
     partial: true,
@@ -14636,7 +14636,7 @@ function tokenizeCodeFenced(effects, ok2, nok) {
   function infoBefore(code) {
     if (code === null || markdownLineEnding(code)) {
       effects.exit("codeFencedFence");
-      return self.interrupt ? ok2(code) : effects.check(nonLazyContinuation, atNonLazyBreak, after)(code);
+      return self.interrupt ? ok(code) : effects.check(nonLazyContinuation, atNonLazyBreak, after)(code);
     }
     effects.enter("codeFencedFenceInfo");
     effects.enter("chunkString", {
@@ -14712,9 +14712,9 @@ function tokenizeCodeFenced(effects, ok2, nok) {
   }
   function after(code) {
     effects.exit("codeFenced");
-    return ok2(code);
+    return ok(code);
   }
-  function tokenizeCloseStart(effects2, ok3, nok2) {
+  function tokenizeCloseStart(effects2, ok2, nok2) {
     let size = 0;
     return startBefore;
     function startBefore(code) {
@@ -14749,13 +14749,13 @@ function tokenizeCodeFenced(effects, ok2, nok) {
     function sequenceCloseAfter(code) {
       if (code === null || markdownLineEnding(code)) {
         effects2.exit("codeFencedFence");
-        return ok3(code);
+        return ok2(code);
       }
       return nok2(code);
     }
   }
 }
-function tokenizeNonLazyContinuation(effects, ok2, nok) {
+function tokenizeNonLazyContinuation(effects, ok, nok) {
   const self = this;
   return start;
   function start(code) {
@@ -14768,7 +14768,7 @@ function tokenizeNonLazyContinuation(effects, ok2, nok) {
     return lineStart;
   }
   function lineStart(code) {
-    return self.parser.lazy[self.now().line] ? nok(code) : ok2(code);
+    return self.parser.lazy[self.now().line] ? nok(code) : ok(code);
   }
 }
 
@@ -14781,7 +14781,7 @@ var furtherStart = {
   partial: true,
   tokenize: tokenizeFurtherStart
 };
-function tokenizeCodeIndented(effects, ok2, nok) {
+function tokenizeCodeIndented(effects, ok, nok) {
   const self = this;
   return start;
   function start(code) {
@@ -14812,10 +14812,10 @@ function tokenizeCodeIndented(effects, ok2, nok) {
   }
   function after(code) {
     effects.exit("codeIndented");
-    return ok2(code);
+    return ok(code);
   }
 }
-function tokenizeFurtherStart(effects, ok2, nok) {
+function tokenizeFurtherStart(effects, ok, nok) {
   const self = this;
   return furtherStart2;
   function furtherStart2(code) {
@@ -14832,7 +14832,7 @@ function tokenizeFurtherStart(effects, ok2, nok) {
   }
   function afterPrefix(code) {
     const tail = self.events[self.events.length - 1];
-    return tail && tail[1].type === "linePrefix" && tail[2].sliceSerialize(tail[1], true).length >= 4 ? ok2(code) : markdownLineEnding(code) ? furtherStart2(code) : nok(code);
+    return tail && tail[1].type === "linePrefix" && tail[2].sliceSerialize(tail[1], true).length >= 4 ? ok(code) : markdownLineEnding(code) ? furtherStart2(code) : nok(code);
   }
 }
 
@@ -14883,7 +14883,7 @@ function resolveCodeText(events) {
 function previous(code) {
   return code !== 96 || this.events[this.events.length - 1][1].type === "characterEscape";
 }
-function tokenizeCodeText(effects, ok2, nok) {
+function tokenizeCodeText(effects, ok, nok) {
   const self = this;
   let sizeOpen = 0;
   let size;
@@ -14944,7 +14944,7 @@ function tokenizeCodeText(effects, ok2, nok) {
     if (size === sizeOpen) {
       effects.exit("codeTextSequence");
       effects.exit("codeText");
-      return ok2(code);
+      return ok(code);
     }
     token.type = "codeTextData";
     return data(code);
@@ -15310,7 +15310,7 @@ function resolveContent(events) {
   subtokenize(events);
   return events;
 }
-function tokenizeContent(effects, ok2) {
+function tokenizeContent(effects, ok) {
   let previous2;
   return chunkStart;
   function chunkStart(code) {
@@ -15333,7 +15333,7 @@ function tokenizeContent(effects, ok2) {
   function contentEnd(code) {
     effects.exit("chunkContent");
     effects.exit("content");
-    return ok2(code);
+    return ok(code);
   }
   function contentContinue(code) {
     effects.consume(code);
@@ -15346,7 +15346,7 @@ function tokenizeContent(effects, ok2) {
     return chunkInside;
   }
 }
-function tokenizeContinuation(effects, ok2, nok) {
+function tokenizeContinuation(effects, ok, nok) {
   const self = this;
   return startLookahead;
   function startLookahead(code) {
@@ -15362,14 +15362,14 @@ function tokenizeContinuation(effects, ok2, nok) {
     }
     const tail = self.events[self.events.length - 1];
     if (!self.parser.constructs.disable.null.includes("codeIndented") && tail && tail[1].type === "linePrefix" && tail[2].sliceSerialize(tail[1], true).length >= 4) {
-      return ok2(code);
+      return ok(code);
     }
-    return effects.interrupt(self.parser.constructs.flow, nok, ok2)(code);
+    return effects.interrupt(self.parser.constructs.flow, nok, ok)(code);
   }
 }
 
 // node_modules/.pnpm/micromark-factory-destination@2.0.1/node_modules/micromark-factory-destination/index.js
-function factoryDestination(effects, ok2, nok, type, literalType2, literalMarkerType, rawType, stringType2, max) {
+function factoryDestination(effects, ok, nok, type, literalType2, literalMarkerType, rawType, stringType2, max) {
   const limit = max || Number.POSITIVE_INFINITY;
   let balance = 0;
   return start;
@@ -15400,7 +15400,7 @@ function factoryDestination(effects, ok2, nok, type, literalType2, literalMarker
       effects.exit(literalMarkerType);
       effects.exit(literalType2);
       effects.exit(type);
-      return ok2;
+      return ok;
     }
     effects.enter(stringType2);
     effects.enter("chunkString", {
@@ -15433,7 +15433,7 @@ function factoryDestination(effects, ok2, nok, type, literalType2, literalMarker
       effects.exit(stringType2);
       effects.exit(rawType);
       effects.exit(type);
-      return ok2(code);
+      return ok(code);
     }
     if (balance < limit && code === 40) {
       effects.consume(code);
@@ -15461,7 +15461,7 @@ function factoryDestination(effects, ok2, nok, type, literalType2, literalMarker
 }
 
 // node_modules/.pnpm/micromark-factory-label@2.0.1/node_modules/micromark-factory-label/index.js
-function factoryLabel(effects, ok2, nok, type, markerType, stringType2) {
+function factoryLabel(effects, ok, nok, type, markerType, stringType2) {
   const self = this;
   let size = 0;
   let seen;
@@ -15489,7 +15489,7 @@ function factoryLabel(effects, ok2, nok, type, markerType, stringType2) {
       effects.consume(code);
       effects.exit(markerType);
       effects.exit(type);
-      return ok2;
+      return ok;
     }
     if (markdownLineEnding(code)) {
       effects.enter("lineEnding");
@@ -15522,7 +15522,7 @@ function factoryLabel(effects, ok2, nok, type, markerType, stringType2) {
 }
 
 // node_modules/.pnpm/micromark-factory-title@2.0.1/node_modules/micromark-factory-title/index.js
-function factoryTitle(effects, ok2, nok, type, markerType, stringType2) {
+function factoryTitle(effects, ok, nok, type, markerType, stringType2) {
   let marker;
   return start;
   function start(code) {
@@ -15542,7 +15542,7 @@ function factoryTitle(effects, ok2, nok, type, markerType, stringType2) {
       effects.consume(code);
       effects.exit(markerType);
       effects.exit(type);
-      return ok2;
+      return ok;
     }
     effects.enter(stringType2);
     return atBreak(code);
@@ -15584,7 +15584,7 @@ function factoryTitle(effects, ok2, nok, type, markerType, stringType2) {
 }
 
 // node_modules/.pnpm/micromark-factory-whitespace@2.0.1/node_modules/micromark-factory-whitespace/index.js
-function factoryWhitespace(effects, ok2) {
+function factoryWhitespace(effects, ok) {
   let seen;
   return start;
   function start(code) {
@@ -15598,7 +15598,7 @@ function factoryWhitespace(effects, ok2) {
     if (markdownSpace(code)) {
       return factorySpace(effects, start, seen ? "linePrefix" : "lineSuffix")(code);
     }
-    return ok2(code);
+    return ok(code);
   }
 }
 
@@ -15611,7 +15611,7 @@ var titleBefore = {
   partial: true,
   tokenize: tokenizeTitleBefore
 };
-function tokenizeDefinition(effects, ok2, nok) {
+function tokenizeDefinition(effects, ok, nok) {
   const self = this;
   let identifier;
   return start;
@@ -15667,12 +15667,12 @@ function tokenizeDefinition(effects, ok2, nok) {
     if (code === null || markdownLineEnding(code)) {
       effects.exit("definition");
       self.parser.defined.push(identifier);
-      return ok2(code);
+      return ok(code);
     }
     return nok(code);
   }
 }
-function tokenizeTitleBefore(effects, ok2, nok) {
+function tokenizeTitleBefore(effects, ok, nok) {
   return titleBefore2;
   function titleBefore2(code) {
     return markdownLineEndingOrSpace(code) ? factoryWhitespace(effects, beforeMarker)(code) : nok(code);
@@ -15684,7 +15684,7 @@ function tokenizeTitleBefore(effects, ok2, nok) {
     return markdownSpace(code) ? factorySpace(effects, titleAfterOptionalWhitespace, "whitespace")(code) : titleAfterOptionalWhitespace(code);
   }
   function titleAfterOptionalWhitespace(code) {
-    return code === null || markdownLineEnding(code) ? ok2(code) : nok(code);
+    return code === null || markdownLineEnding(code) ? ok(code) : nok(code);
   }
 }
 
@@ -15693,7 +15693,7 @@ var hardBreakEscape = {
   name: "hardBreakEscape",
   tokenize: tokenizeHardBreakEscape
 };
-function tokenizeHardBreakEscape(effects, ok2, nok) {
+function tokenizeHardBreakEscape(effects, ok, nok) {
   return start;
   function start(code) {
     effects.enter("hardBreakEscape");
@@ -15703,7 +15703,7 @@ function tokenizeHardBreakEscape(effects, ok2, nok) {
   function after(code) {
     if (markdownLineEnding(code)) {
       effects.exit("hardBreakEscape");
-      return ok2(code);
+      return ok(code);
     }
     return nok(code);
   }
@@ -15745,7 +15745,7 @@ function resolveHeadingAtx(events, context) {
   }
   return events;
 }
-function tokenizeHeadingAtx(effects, ok2, nok) {
+function tokenizeHeadingAtx(effects, ok, nok) {
   let size = 0;
   return start;
   function start(code) {
@@ -15774,7 +15774,7 @@ function tokenizeHeadingAtx(effects, ok2, nok) {
     }
     if (code === null || markdownLineEnding(code)) {
       effects.exit("atxHeading");
-      return ok2(code);
+      return ok(code);
     }
     if (markdownSpace(code)) {
       return factorySpace(effects, atBreak, "whitespace")(code);
@@ -15896,7 +15896,7 @@ function resolveToHtmlFlow(events) {
   }
   return events;
 }
-function tokenizeHtmlFlow(effects, ok2, nok) {
+function tokenizeHtmlFlow(effects, ok, nok) {
   const self = this;
   let marker;
   let closingTag;
@@ -15926,7 +15926,7 @@ function tokenizeHtmlFlow(effects, ok2, nok) {
     if (code === 63) {
       effects.consume(code);
       marker = 3;
-      return self.interrupt ? ok2 : continuationDeclarationInside;
+      return self.interrupt ? ok : continuationDeclarationInside;
     }
     if (asciiAlpha(code)) {
       effects.consume(code);
@@ -15950,14 +15950,14 @@ function tokenizeHtmlFlow(effects, ok2, nok) {
     if (asciiAlpha(code)) {
       effects.consume(code);
       marker = 4;
-      return self.interrupt ? ok2 : continuationDeclarationInside;
+      return self.interrupt ? ok : continuationDeclarationInside;
     }
     return nok(code);
   }
   function commentOpenInside(code) {
     if (code === 45) {
       effects.consume(code);
-      return self.interrupt ? ok2 : continuationDeclarationInside;
+      return self.interrupt ? ok : continuationDeclarationInside;
     }
     return nok(code);
   }
@@ -15966,7 +15966,7 @@ function tokenizeHtmlFlow(effects, ok2, nok) {
     if (code === value.charCodeAt(index2++)) {
       effects.consume(code);
       if (index2 === value.length) {
-        return self.interrupt ? ok2 : continuation;
+        return self.interrupt ? ok : continuation;
       }
       return cdataOpenInside;
     }
@@ -15986,7 +15986,7 @@ function tokenizeHtmlFlow(effects, ok2, nok) {
       const name = buffer.toLowerCase();
       if (!slash && !closingTag && htmlRawNames.includes(name)) {
         marker = 1;
-        return self.interrupt ? ok2(code) : continuation(code);
+        return self.interrupt ? ok(code) : continuation(code);
       }
       if (htmlBlockNames.includes(buffer.toLowerCase())) {
         marker = 6;
@@ -15994,7 +15994,7 @@ function tokenizeHtmlFlow(effects, ok2, nok) {
           effects.consume(code);
           return basicSelfClosing;
         }
-        return self.interrupt ? ok2(code) : continuation(code);
+        return self.interrupt ? ok(code) : continuation(code);
       }
       marker = 7;
       return self.interrupt && !self.parser.lazy[self.now().line] ? nok(code) : closingTag ? completeClosingTagAfter(code) : completeAttributeNameBefore(code);
@@ -16009,7 +16009,7 @@ function tokenizeHtmlFlow(effects, ok2, nok) {
   function basicSelfClosing(code) {
     if (code === 62) {
       effects.consume(code);
-      return self.interrupt ? ok2 : continuation;
+      return self.interrupt ? ok : continuation;
     }
     return nok(code);
   }
@@ -16217,10 +16217,10 @@ function tokenizeHtmlFlow(effects, ok2, nok) {
   }
   function continuationAfter(code) {
     effects.exit("htmlFlow");
-    return ok2(code);
+    return ok(code);
   }
 }
-function tokenizeNonLazyContinuationStart(effects, ok2, nok) {
+function tokenizeNonLazyContinuationStart(effects, ok, nok) {
   const self = this;
   return start;
   function start(code) {
@@ -16233,16 +16233,16 @@ function tokenizeNonLazyContinuationStart(effects, ok2, nok) {
     return nok(code);
   }
   function after(code) {
-    return self.parser.lazy[self.now().line] ? nok(code) : ok2(code);
+    return self.parser.lazy[self.now().line] ? nok(code) : ok(code);
   }
 }
-function tokenizeBlankLineBefore(effects, ok2, nok) {
+function tokenizeBlankLineBefore(effects, ok, nok) {
   return start;
   function start(code) {
     effects.enter("lineEnding");
     effects.consume(code);
     effects.exit("lineEnding");
-    return effects.attempt(blankLine, ok2, nok);
+    return effects.attempt(blankLine, ok, nok);
   }
 }
 
@@ -16251,7 +16251,7 @@ var htmlText = {
   name: "htmlText",
   tokenize: tokenizeHtmlText
 };
-function tokenizeHtmlText(effects, ok2, nok) {
+function tokenizeHtmlText(effects, ok, nok) {
   const self = this;
   let marker;
   let index2;
@@ -16532,7 +16532,7 @@ function tokenizeHtmlText(effects, ok2, nok) {
       effects.consume(code);
       effects.exit("htmlTextData");
       effects.exit("htmlText");
-      return ok2;
+      return ok;
     }
     return nok(code);
   }
@@ -16650,7 +16650,7 @@ function resolveToLabelEnd(events, context) {
   splice(events, open, events.length, media);
   return events;
 }
-function tokenizeLabelEnd(effects, ok2, nok) {
+function tokenizeLabelEnd(effects, ok, nok) {
   const self = this;
   let index2 = self.events.length;
   let labelStart;
@@ -16693,14 +16693,14 @@ function tokenizeLabelEnd(effects, ok2, nok) {
     return effects.attempt(referenceCollapsedConstruct, labelEndOk, labelEndNok)(code);
   }
   function labelEndOk(code) {
-    return ok2(code);
+    return ok(code);
   }
   function labelEndNok(code) {
     labelStart._balanced = true;
     return nok(code);
   }
 }
-function tokenizeResource(effects, ok2, nok) {
+function tokenizeResource(effects, ok, nok) {
   return resourceStart;
   function resourceStart(code) {
     effects.enter("resource");
@@ -16739,25 +16739,25 @@ function tokenizeResource(effects, ok2, nok) {
       effects.consume(code);
       effects.exit("resourceMarker");
       effects.exit("resource");
-      return ok2;
+      return ok;
     }
     return nok(code);
   }
 }
-function tokenizeReferenceFull(effects, ok2, nok) {
+function tokenizeReferenceFull(effects, ok, nok) {
   const self = this;
   return referenceFull;
   function referenceFull(code) {
     return factoryLabel.call(self, effects, referenceFullAfter, referenceFullMissing, "reference", "referenceMarker", "referenceString")(code);
   }
   function referenceFullAfter(code) {
-    return self.parser.defined.includes(normalizeIdentifier(self.sliceSerialize(self.events[self.events.length - 1][1]).slice(1, -1))) ? ok2(code) : nok(code);
+    return self.parser.defined.includes(normalizeIdentifier(self.sliceSerialize(self.events[self.events.length - 1][1]).slice(1, -1))) ? ok(code) : nok(code);
   }
   function referenceFullMissing(code) {
     return nok(code);
   }
 }
-function tokenizeReferenceCollapsed(effects, ok2, nok) {
+function tokenizeReferenceCollapsed(effects, ok, nok) {
   return referenceCollapsedStart;
   function referenceCollapsedStart(code) {
     effects.enter("reference");
@@ -16772,7 +16772,7 @@ function tokenizeReferenceCollapsed(effects, ok2, nok) {
       effects.consume(code);
       effects.exit("referenceMarker");
       effects.exit("reference");
-      return ok2;
+      return ok;
     }
     return nok(code);
   }
@@ -16784,7 +16784,7 @@ var labelStartImage = {
   resolveAll: labelEnd.resolveAll,
   tokenize: tokenizeLabelStartImage
 };
-function tokenizeLabelStartImage(effects, ok2, nok) {
+function tokenizeLabelStartImage(effects, ok, nok) {
   const self = this;
   return start;
   function start(code) {
@@ -16805,7 +16805,7 @@ function tokenizeLabelStartImage(effects, ok2, nok) {
     return nok(code);
   }
   function after(code) {
-    return code === 94 && "_hiddenFootnoteSupport" in self.parser.constructs ? nok(code) : ok2(code);
+    return code === 94 && "_hiddenFootnoteSupport" in self.parser.constructs ? nok(code) : ok(code);
   }
 }
 
@@ -16815,7 +16815,7 @@ var labelStartLink = {
   resolveAll: labelEnd.resolveAll,
   tokenize: tokenizeLabelStartLink
 };
-function tokenizeLabelStartLink(effects, ok2, nok) {
+function tokenizeLabelStartLink(effects, ok, nok) {
   const self = this;
   return start;
   function start(code) {
@@ -16827,7 +16827,7 @@ function tokenizeLabelStartLink(effects, ok2, nok) {
     return after;
   }
   function after(code) {
-    return code === 94 && "_hiddenFootnoteSupport" in self.parser.constructs ? nok(code) : ok2(code);
+    return code === 94 && "_hiddenFootnoteSupport" in self.parser.constructs ? nok(code) : ok(code);
   }
 }
 
@@ -16836,13 +16836,13 @@ var lineEnding = {
   name: "lineEnding",
   tokenize: tokenizeLineEnding
 };
-function tokenizeLineEnding(effects, ok2) {
+function tokenizeLineEnding(effects, ok) {
   return start;
   function start(code) {
     effects.enter("lineEnding");
     effects.consume(code);
     effects.exit("lineEnding");
-    return factorySpace(effects, ok2, "linePrefix");
+    return factorySpace(effects, ok, "linePrefix");
   }
 }
 
@@ -16851,7 +16851,7 @@ var thematicBreak = {
   name: "thematicBreak",
   tokenize: tokenizeThematicBreak
 };
-function tokenizeThematicBreak(effects, ok2, nok) {
+function tokenizeThematicBreak(effects, ok, nok) {
   let size = 0;
   let marker;
   return start;
@@ -16870,7 +16870,7 @@ function tokenizeThematicBreak(effects, ok2, nok) {
     }
     if (size >= 3 && (code === null || markdownLineEnding(code))) {
       effects.exit("thematicBreak");
-      return ok2(code);
+      return ok(code);
     }
     return nok(code);
   }
@@ -16902,7 +16902,7 @@ var indentConstruct = {
   partial: true,
   tokenize: tokenizeIndent
 };
-function tokenizeListStart(effects, ok2, nok) {
+function tokenizeListStart(effects, ok, nok) {
   const self = this;
   const tail = self.events[self.events.length - 1];
   let initialSize = tail && tail[1].type === "linePrefix" ? tail[2].sliceSerialize(tail[1], true).length : 0;
@@ -16968,16 +16968,16 @@ function tokenizeListStart(effects, ok2, nok) {
   }
   function endOfPrefix(code) {
     self.containerState.size = initialSize + self.sliceSerialize(effects.exit("listItemPrefix"), true).length;
-    return ok2(code);
+    return ok(code);
   }
 }
-function tokenizeListContinuation(effects, ok2, nok) {
+function tokenizeListContinuation(effects, ok, nok) {
   const self = this;
   self.containerState._closeFlow = void 0;
   return effects.check(blankLine, onBlank, notBlank);
   function onBlank(code) {
     self.containerState.furtherBlankLines = self.containerState.furtherBlankLines || self.containerState.initialBlankLine;
-    return factorySpace(effects, ok2, "listItemIndent", self.containerState.size + 1)(code);
+    return factorySpace(effects, ok, "listItemIndent", self.containerState.size + 1)(code);
   }
   function notBlank(code) {
     if (self.containerState.furtherBlankLines || !markdownSpace(code)) {
@@ -16987,31 +16987,31 @@ function tokenizeListContinuation(effects, ok2, nok) {
     }
     self.containerState.furtherBlankLines = void 0;
     self.containerState.initialBlankLine = void 0;
-    return effects.attempt(indentConstruct, ok2, notInCurrentItem)(code);
+    return effects.attempt(indentConstruct, ok, notInCurrentItem)(code);
   }
   function notInCurrentItem(code) {
     self.containerState._closeFlow = true;
     self.interrupt = void 0;
-    return factorySpace(effects, effects.attempt(list, ok2, nok), "linePrefix", self.parser.constructs.disable.null.includes("codeIndented") ? void 0 : 4)(code);
+    return factorySpace(effects, effects.attempt(list, ok, nok), "linePrefix", self.parser.constructs.disable.null.includes("codeIndented") ? void 0 : 4)(code);
   }
 }
-function tokenizeIndent(effects, ok2, nok) {
+function tokenizeIndent(effects, ok, nok) {
   const self = this;
   return factorySpace(effects, afterPrefix, "listItemIndent", self.containerState.size + 1);
   function afterPrefix(code) {
     const tail = self.events[self.events.length - 1];
-    return tail && tail[1].type === "listItemIndent" && tail[2].sliceSerialize(tail[1], true).length === self.containerState.size ? ok2(code) : nok(code);
+    return tail && tail[1].type === "listItemIndent" && tail[2].sliceSerialize(tail[1], true).length === self.containerState.size ? ok(code) : nok(code);
   }
 }
 function tokenizeListEnd(effects) {
   effects.exit(this.containerState.type);
 }
-function tokenizeListItemPrefixWhitespace(effects, ok2, nok) {
+function tokenizeListItemPrefixWhitespace(effects, ok, nok) {
   const self = this;
   return factorySpace(effects, afterPrefix, "listItemPrefixWhitespace", self.parser.constructs.disable.null.includes("codeIndented") ? void 0 : 4 + 1);
   function afterPrefix(code) {
     const tail = self.events[self.events.length - 1];
-    return !markdownSpace(code) && tail && tail[1].type === "listItemPrefixWhitespace" ? ok2(code) : nok(code);
+    return !markdownSpace(code) && tail && tail[1].type === "listItemPrefixWhitespace" ? ok(code) : nok(code);
   }
 }
 
@@ -17066,7 +17066,7 @@ function resolveToSetextUnderline(events, context) {
   events.push(["exit", heading, context]);
   return events;
 }
-function tokenizeSetextUnderline(effects, ok2, nok) {
+function tokenizeSetextUnderline(effects, ok, nok) {
   const self = this;
   let marker;
   return start;
@@ -17101,7 +17101,7 @@ function tokenizeSetextUnderline(effects, ok2, nok) {
   function after(code) {
     if (code === null || markdownLineEnding(code)) {
       effects.exit("setextHeadingLine");
-      return ok2(code);
+      return ok(code);
     }
     return nok(code);
   }
@@ -17560,12 +17560,12 @@ function createTokenizer(parser, initialize, from) {
             // This allows a “live binding”, which is needed for `interrupt`.
             fields ? Object.assign(Object.create(context), fields) : context,
             effects,
-            ok2,
+            ok,
             nok
           )(code);
         }
       }
-      function ok2(code) {
+      function ok(code) {
         consumed = true;
         onreturn(currentConstruct, info);
         return returnState;
@@ -18544,209 +18544,6 @@ function defaultOnError(left, right) {
       start: right.start,
       end: right.end
     }) + ") is still open");
-  }
-}
-
-// node_modules/.pnpm/unist-util-is@6.0.1/node_modules/unist-util-is/lib/index.js
-var convert = (
-  // Note: overloads in JSDoc can’t yet use different `@template`s.
-  /**
-   * @type {(
-   *   (<Condition extends string>(test: Condition) => (node: unknown, index?: number | null | undefined, parent?: Parent | null | undefined, context?: unknown) => node is Node & {type: Condition}) &
-   *   (<Condition extends Props>(test: Condition) => (node: unknown, index?: number | null | undefined, parent?: Parent | null | undefined, context?: unknown) => node is Node & Condition) &
-   *   (<Condition extends TestFunction>(test: Condition) => (node: unknown, index?: number | null | undefined, parent?: Parent | null | undefined, context?: unknown) => node is Node & Predicate<Condition, Node>) &
-   *   ((test?: null | undefined) => (node?: unknown, index?: number | null | undefined, parent?: Parent | null | undefined, context?: unknown) => node is Node) &
-   *   ((test?: Test) => Check)
-   * )}
-   */
-  /**
-   * @param {Test} [test]
-   * @returns {Check}
-   */
-  (function(test) {
-    if (test === null || test === void 0) {
-      return ok;
-    }
-    if (typeof test === "function") {
-      return castFactory(test);
-    }
-    if (typeof test === "object") {
-      return Array.isArray(test) ? anyFactory(test) : (
-        // Cast because `ReadonlyArray` goes into the above but `isArray`
-        // narrows to `Array`.
-        propertiesFactory(
-          /** @type {Props} */
-          test
-        )
-      );
-    }
-    if (typeof test === "string") {
-      return typeFactory(test);
-    }
-    throw new Error("Expected function, string, or object as test");
-  })
-);
-function anyFactory(tests) {
-  const checks = [];
-  let index2 = -1;
-  while (++index2 < tests.length) {
-    checks[index2] = convert(tests[index2]);
-  }
-  return castFactory(any);
-  function any(...parameters) {
-    let index3 = -1;
-    while (++index3 < checks.length) {
-      if (checks[index3].apply(this, parameters)) return true;
-    }
-    return false;
-  }
-}
-function propertiesFactory(check) {
-  const checkAsRecord = (
-    /** @type {Record<string, unknown>} */
-    check
-  );
-  return castFactory(all2);
-  function all2(node2) {
-    const nodeAsRecord = (
-      /** @type {Record<string, unknown>} */
-      /** @type {unknown} */
-      node2
-    );
-    let key;
-    for (key in check) {
-      if (nodeAsRecord[key] !== checkAsRecord[key]) return false;
-    }
-    return true;
-  }
-}
-function typeFactory(check) {
-  return castFactory(type);
-  function type(node2) {
-    return node2 && node2.type === check;
-  }
-}
-function castFactory(testFunction) {
-  return check;
-  function check(value, index2, parent) {
-    return Boolean(
-      looksLikeANode(value) && testFunction.call(
-        this,
-        value,
-        typeof index2 === "number" ? index2 : void 0,
-        parent || void 0
-      )
-    );
-  }
-}
-function ok() {
-  return true;
-}
-function looksLikeANode(value) {
-  return value !== null && typeof value === "object" && "type" in value;
-}
-
-// node_modules/.pnpm/unist-util-visit-parents@6.0.2/node_modules/unist-util-visit-parents/lib/color.node.js
-function color(d2) {
-  return "\x1B[33m" + d2 + "\x1B[39m";
-}
-
-// node_modules/.pnpm/unist-util-visit-parents@6.0.2/node_modules/unist-util-visit-parents/lib/index.js
-var empty = [];
-var CONTINUE = true;
-var EXIT = false;
-var SKIP = "skip";
-function visitParents(tree, test, visitor, reverse) {
-  let check;
-  if (typeof test === "function" && typeof visitor !== "function") {
-    reverse = visitor;
-    visitor = test;
-  } else {
-    check = test;
-  }
-  const is2 = convert(check);
-  const step = reverse ? -1 : 1;
-  factory(tree, void 0, [])();
-  function factory(node2, index2, parents) {
-    const value = (
-      /** @type {Record<string, unknown>} */
-      node2 && typeof node2 === "object" ? node2 : {}
-    );
-    if (typeof value.type === "string") {
-      const name = (
-        // `hast`
-        typeof value.tagName === "string" ? value.tagName : (
-          // `xast`
-          typeof value.name === "string" ? value.name : void 0
-        )
-      );
-      Object.defineProperty(visit2, "name", {
-        value: "node (" + color(node2.type + (name ? "<" + name + ">" : "")) + ")"
-      });
-    }
-    return visit2;
-    function visit2() {
-      let result = empty;
-      let subresult;
-      let offset;
-      let grandparents;
-      if (!test || is2(node2, index2, parents[parents.length - 1] || void 0)) {
-        result = toResult(visitor(node2, parents));
-        if (result[0] === EXIT) {
-          return result;
-        }
-      }
-      if ("children" in node2 && node2.children) {
-        const nodeAsParent = (
-          /** @type {UnistParent} */
-          node2
-        );
-        if (nodeAsParent.children && result[0] !== SKIP) {
-          offset = (reverse ? nodeAsParent.children.length : -1) + step;
-          grandparents = parents.concat(nodeAsParent);
-          while (offset > -1 && offset < nodeAsParent.children.length) {
-            const child = nodeAsParent.children[offset];
-            subresult = factory(child, offset, grandparents)();
-            if (subresult[0] === EXIT) {
-              return subresult;
-            }
-            offset = typeof subresult[1] === "number" ? subresult[1] : offset + step;
-          }
-        }
-      }
-      return result;
-    }
-  }
-}
-function toResult(value) {
-  if (Array.isArray(value)) {
-    return value;
-  }
-  if (typeof value === "number") {
-    return [CONTINUE, value];
-  }
-  return value === null || value === void 0 ? empty : [value];
-}
-
-// node_modules/.pnpm/unist-util-visit@5.1.0/node_modules/unist-util-visit/lib/index.js
-function visit(tree, testOrVisitor, visitorOrReverse, maybeReverse) {
-  let reverse;
-  let test;
-  let visitor;
-  if (typeof testOrVisitor === "function" && typeof visitorOrReverse !== "function") {
-    test = void 0;
-    visitor = testOrVisitor;
-    reverse = visitorOrReverse;
-  } else {
-    test = testOrVisitor;
-    visitor = visitorOrReverse;
-    reverse = maybeReverse;
-  }
-  visitParents(tree, test, overload, reverse);
-  function overload(node2, parents) {
-    const parent = parents[parents.length - 1];
-    const index2 = parent ? parent.children.indexOf(node2) : void 0;
-    return visitor(node2, index2, parent);
   }
 }
 
@@ -22804,10 +22601,11 @@ function extractSections(markdown) {
   const lines = markdown.split(/\r?\n/);
   const tree = fromMarkdown(markdown);
   const headings = [];
-  visit(tree, "heading", (node2) => {
+  for (const node2 of tree.children) {
+    if (node2.type !== "heading") continue;
     const line = node2.position?.start.line;
     if (line) headings.push({ node: node2, line });
-  });
+  }
   const ordered = [];
   for (let i2 = 0; i2 < headings.length; i2++) {
     const entry = headings[i2];
@@ -23652,8 +23450,8 @@ function createColors(useColor = isColorSupported) {
   return useColor ? colorDefs : Object.fromEntries(Object.keys(colorDefs).map((key) => [key, String]));
 }
 var colors = createColors();
-function getColor(color2, fallback = "reset") {
-  return colors[color2] || colors[fallback];
+function getColor(color, fallback = "reset") {
+  return colors[color] || colors[fallback];
 }
 var ansiRegex = [
   String.raw`[\u001B\u009B][[\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\d\/#&.:=?%@~_]+)*|[a-zA-Z\d]+(?:;[-a-zA-Z\d\/#&.:=?%@~_]*)*)?\u0007)`,
@@ -24056,11 +23854,11 @@ ${indent}`);
 function characterFormat(str2) {
   return str2.replace(/`([^`]+)`/gm, (_3, m2) => colors.cyan(m2)).replace(/\s+_([^_]+)_\s+/gm, (_3, m2) => ` ${colors.underline(m2)} `);
 }
-function getColor2(color2 = "white") {
-  return colors[color2] || colors.white;
+function getColor2(color = "white") {
+  return colors[color] || colors.white;
 }
-function getBgColor(color2 = "bgWhite") {
-  return colors[`bg${color2[0].toUpperCase()}${color2.slice(1)}`] || colors.bgWhite;
+function getBgColor(color = "bgWhite") {
+  return colors[`bg${color[0].toUpperCase()}${color.slice(1)}`] || colors.bgWhite;
 }
 function createConsola2(options2 = {}) {
   let level = _getDefaultLogLevel();

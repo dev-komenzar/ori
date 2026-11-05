@@ -189,7 +189,7 @@ $ /ori-sync                                    # 変更伝播計算
 ## 設計原則
 
 1. **DDD ドキュメントが Single Source of Truth** — 派生物 (spec / コード) の直接編集は guardrail が止める
-2. **変更伝播は単一アルゴリズム** — `--force` で SSoT 保護を解除し、proposal で上流に戻す
+2. **変更伝播は単一アルゴリズム** — source の変更を派生物へ dirty として伝播し、上流の変更は proposal で人間判断を経る
 3. **CLI = 決定的重処理 / AI = 創造的判断** — vendor lock-in 回避のため APM で multi-CLI 配布、capability-role でモデル抽象化
 
 詳細は [docs/design.md](docs/design.md) を参照。

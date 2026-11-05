@@ -11,7 +11,7 @@ description: ドメイン文書と派生文書 (slice / page / scenario) の変�
 node ./scripts/sync.js [--file=<path>] [--since=<ref>] [--check]
 ```
 
-- `--file=<path>` — 単一ファイルに限定して変更検知
+- `--file=<path>` — 単一ファイルに限定して変更検知（相対パスは実行時の cwd 基準）
 - `--since=<ref>` — HEAD の代わりに指定 git ref と比較（`.ori/` 配下の差分 + 未追跡ファイルが対象）
 - `--check` — dirty マーク残存時に非ゼロ終了（CI モード）
 
@@ -32,7 +32,7 @@ node ./scripts/sync.js [--file=<path>] [--since=<ref>] [--check]
    | scenario の `tests/**`（実行成果物を除く）・runner config（`wdio.conf.ts` / `playwright.config.ts` / `docker-compose.yml` / `tsconfig.json` / `teardown.mjs` / `validation.md`） | その scenario | review |
    | page の `spec.md` / `testids.yaml` | その page を `pages:` に持つ scenario | generate |
 
-   - **domain は section 単位**：`derives_from` の `#anchor` が H2/H3 の `{#id}` なら、その節（見出し + 子節を含む本文）か、祖先 H2 の自身の本文（見出し + anchor 付き子節を除く本文）が変わったときだけ dirty にする。次の場合はファイル単位で判定する：anchor なし・H1 の anchor・存在しない anchor・同じ anchor が複数ある・frontmatter / 前文（最初の H2/H3 より前、H1 直下）が変わった・比較元の版が無い（新規 / 削除 / rename されたファイル、git 外）・節に分けられない・`--file` / `--force` で明示指定したとき
+   - **domain は section 単位**：`derives_from` の `#anchor` が H2/H3 の `{#id}` なら、その節（見出し + 子節を含む本文）か、祖先 H2 の自身の本文（見出し + anchor 付き子節を除く本文）が変わったときだけ dirty にする。次の場合はファイル単位で判定する：anchor なし・H1 の anchor・存在しない anchor・同じ anchor が複数ある・frontmatter / 前文（最初の H2/H3 より前、H1 直下）が変わった・比較元の版が無い（新規 / 削除 / rename されたファイル、git 外）・節に分けられない・`--file` で明示指定したとき
      - `<!-- ori:auto-*:start -->` 〜 `end` の自動生成ブロック内の編集は、節の変更として扱わない（spec hash と同じ正規化）
    - **derived 内の変更は review 済みの doc だけ、review.md より新しいものだけ**：doc の `review.md` より後に変わったファイルだけを dirty にする（flow を回して review 済みの変更を HEAD との差分として再び dirty にしないため）。`review.md` が無い doc（初回の flow 中）には付けない
      - 判定は mtime（秒単位、同秒は review 済み扱い）で、`/ori-doctor` の `check-scenario-staleness.sh` と同じ。clone / checkout 直後は mtime が揃わないため、誤検知・見落としがありうる
@@ -47,7 +47,7 @@ node ./scripts/sync.js [--file=<path>] [--since=<ref>] [--check]
 
 - `0` — 正常（`--check` では残 dirty なし）
 - `1` — `manifest.yaml` / `status.yaml` が YAML として不正、または `--check` で残 dirty あり
-- `2` — 引数の誤り（`--force` の対象なし、解決できない `--since`）、または git での変更一覧の取得に失敗
+- `2` — 引数の誤り（廃止済みの `--force`、解決できない `--since`）、または git での変更一覧の取得に失敗
    - `manifest.yaml` / `status.yaml` が YAML として不正なら、該当箇所（`path:line:col`）を報告して exit 1
 3. dirty な slice / page / scenario ごとに：
    - 該当 phase の beads issue を reopen（手動 or `bd update --status=open`）

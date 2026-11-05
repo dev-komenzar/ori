@@ -3,11 +3,11 @@
  *
  * Edges encode the SSoT direction via `type`:
  * - `derives_from`: target depends on source as authoritative truth.
- *   Editing the target without --force is blocked at write time.
+ *   The target is not edited directly; it is re-derived from the source.
  * - `references`: weak link, no SSoT enforcement.
  *
  * Propagation itself is symmetric (single algorithm); the edge type
- * is consulted only by the edit-time guardrail and proposal generator.
+ * does not change how a change fans out.
  */
 
 export type EdgeType = "derives_from" | "references";

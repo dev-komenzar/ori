@@ -23,7 +23,7 @@ node ./scripts/list.js [--check]
    - 内容を読み上げ（target、by、reason、diff）
    - ユーザに **accept / reject / merge** を問う
 3. **accept**：対象ドメイン section を更新 → `/ori-sync` で順伝播 → 該当 slice の dirty 解除
-4. **reject**：proposal を `.ori/proposals/rejected/` へ移動 → 派生文書側の変更を破棄（`git checkout` で再 derive 前の状態に戻す）
+4. **reject**：proposal を `.ori/proposals/rejected/` へ移動。ドメイン文書は変更しない
 5. **merge**：複数 proposal を結合する場合、AI が統合案を作成 → ユーザ確認 → ドメイン更新
 
 ## 注意

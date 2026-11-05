@@ -1,7 +1,6 @@
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { toString as mdToString } from "mdast-util-to-string";
 import type { Heading, Root } from "mdast";
-import { visit } from "unist-util-visit";
 
 export interface Section {
   /** Section id from `{#kebab-case-id}` anchor, or null if missing */
@@ -31,11 +30,14 @@ export function extractSections(markdown: string): SectionMap {
   const lines = markdown.split(/\r?\n/);
   const tree = fromMarkdown(markdown) as Root;
 
+  // Only top-level headings are section boundaries: a heading inside a blockquote or
+  // list item (e.g. a quoted example) belongs to the surrounding section (ori-064a).
   const headings: Array<{ node: Heading; line: number }> = [];
-  visit(tree, "heading", (node: Heading) => {
+  for (const node of tree.children) {
+    if (node.type !== "heading") continue;
     const line = node.position?.start.line;
     if (line) headings.push({ node, line });
-  });
+  }
 
   const ordered: Section[] = [];
   for (let i = 0; i < headings.length; i++) {

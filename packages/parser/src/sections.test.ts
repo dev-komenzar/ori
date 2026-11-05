@@ -49,6 +49,26 @@ Child body line.
     expect(child?.body).toContain("Child body line.");
     expect(child?.body).not.toContain("Parent body line.");
   });
+  it("ignores headings nested in blockquotes and list items (ori-064a)", () => {
+    const md = `## Parent {#parent}
+Parent body.
+
+> ## Quoted {#quoted}
+> quoted body
+
+- ### Listed {#listed}
+  listed body
+
+## Next {#next}
+Next body.
+`;
+    const result = extractSections(md);
+    expect(result.ordered.map((s) => s.id)).toEqual(["parent", "next"]);
+    const parent = result.byId.get("parent");
+    expect(parent?.endLine).toBe(10);
+    expect(parent?.body).toContain("quoted body");
+    expect(parent?.body).toContain("listed body");
+  });
 });
 
 describe("normalizeForHash", () => {

@@ -8,7 +8,7 @@
 |---|----------|------|------|
 | **1** | **ドメインモデル**が誤り | 不変条件が抜けていた、概念の境界が違った | `.ori/domain/` を編集 |
 | **2** | **spec は正しいが impl が誤り**（テスト網羅漏れ） | impl がエッジケースで落ちる | 失敗テストを追加 |
-| **3** | **spec 自体に欠陥**（domain は正しいが derive が悪い） | 派生時に取りこぼし／曲解 | `--force` で spec 編集 → proposal |
+| **3** | **spec 自体に欠陥**（domain は正しいが derive が悪い） | 派生時に取りこぼし／曲解 | `manifest.yaml` を直す or 再 derive（spec は直接編集しない） |
 | **4** | **複数 slice の統合バグ** | 単体ではテスト通るが組み合わせで破綻 | 新規 slice 作成 |
 
 判別の質問順序：
@@ -60,16 +60,19 @@ $ /ori-flow capture-auto-save --phase review     # 推奨
 
 例：domain には「`Tag` は小文字正規化」と書かれているのに、spec.md がそれを取りこぼしていた。
 
+spec.md は派生文書なので直接編集しません（`/ori-sync --force` は廃止済）。原因に応じて source を直し、再生成します。
+
+**取りこぼし**（`aggregates.md#tag-vo` が manifest の `derives_from` に無かった）：
+
 ```bash
-$ vim .ori/slices/ui-tag-chip/spec.md
-$ /ori-sync
-✗ ERROR: spec.md is derived. Edit blocked.
-  Options:
-    [1] Edit domain source: domain/aggregates.md#tag-vo
-    [2] Force edit + upstream proposal:  /ori-sync --force slices/ui-tag-chip/spec.md
+$ vim .ori/slices/ui-tag-chip/manifest.yaml   # derives_from に domain/aggregates.md#tag-vo を追加
+$ /ori-sync                                   # manifest の変更で derive が dirty になる
+$ /ori-flow ui-tag-chip                       # 再 derive → test-red → impl-green → review
 ```
 
-SSoT 保護が「曖昧な箇所をドメインに戻す動線」を強制します。多くの場合 domain を直すのが正解。どうしても spec で局所決定したい場合は `--force` + proposal で上流レビューを残します。
+**曲解**（`derives_from` は正しいが spec の書き方が domain と食い違う）：`/ori-flow ui-tag-chip` で derive からやり直します。
+
+再 derive しても同じ解釈になるなら、domain の記述が曖昧で一意に派生できていません。**ケース 1 に昇格**して domain を明確にします（domain の変更に人間の判断が要るなら `/ori-propose` → `/ori-review-proposals`）。spec だけで局所決定する経路はありません。
 
 ## ケース 4：統合バグ（複数 slice にまたがる）
 
@@ -96,6 +99,6 @@ $ /ori-flow switch-edit-target
 | やってはいけないこと | 理由 |
 |------------------|------|
 | impl を直接 patch、テスト・spec は触らない | 次の derive で実装が上書きされ消える。テストが守らない |
-| spec.md を `--force` なしで直接編集 | guardrail が止める。drift が git history で検出される |
+| spec.md を直接編集 | 次の derive で上書きされ消える。domain との drift が残る。source（manifest / domain）を直して再 derive する |
 | ドメインを直さず、複数 slice の spec で局所対応 | 同じバグの暗黒コピーが各所に発生。CoDD の意義を失う |
 | review を skip | adversarial 視点なしで「自分の修正は正しい」と確信してしまう |

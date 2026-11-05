@@ -10,7 +10,7 @@ Change detection and propagation for the ori coherence graph.
 - **Edge**: `derives_from` (SSoT-protected) or `references` (weak link).
 - **Graph**: bidirectional adjacency; built from slice/page manifests.
 - **Propagation**: single algorithm — when a node changes, every adjacent node is marked dirty. The receiver decides what to do (re-derive, propose, ignore).
-- **SSoT protection**: enforced at edit-time via `--force`, not at propagation time.
+- **SSoT protection**: not enforced at propagation time. Derived files are not edited directly; upstream changes go through `/ori-propose` (the former `/ori-sync --force` is retired).
 
 ## Exports
 
