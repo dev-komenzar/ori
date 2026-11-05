@@ -250,7 +250,7 @@ async function deriveRows(root: string, page: PageInfo): Promise<{ rows: Derived
 const HEADER =
   "# page testid 契約 (SSoT: ddd-vsa-hex/pattern.md §UI selector / testid 規約)\n" +
   "# derived: @ori-generated — testids.js sync が ui-fields から再生成する。手で編集しない\n" +
-  "# extra:   ori-derive / ori-generate が testids.js add-extra で追記する (変更・削除は人間のみ)\n";
+  "# extra:   ori-derive / ori-generate が testids.js add-extra で追記する (変更・削除は人間のみ。例外: レビュー指摘に応じた既存 entry の purpose 文の誤り修正に限り AI も直接編集してよい。追加・削除・testid / source / dynamic の変更は人間のみ。AI が直したら PR 説明に明記する)\n";
 
 function contractPath(root: string, id: string): string {
   return join(root, ".ori/pages", id, "testids.yaml");
@@ -589,7 +589,8 @@ async function migrateMap(root: string, id: string): Promise<number> {
   const { rows } = await deriveRows(root, page);
   const c = await readContract(root, id);
   const allIds = await listPageIds(root);
-  const impl = await indexImpl(root, new Set(allIds), await loadPagesLenient(root, allIds));
+  const pageRefs = await loadPagesLenient(root, allIds);
+  const impl = await indexImpl(root, new Set(allIds), pageRefs);
   const texts: [string, string][] = [];
   for (const f of await sourceFiles(root)) texts.push([relative(root, f), await readFile(f, "utf8")]);
   let remaining = 0;
@@ -625,6 +626,22 @@ async function migrateMap(root: string, id: string): Promise<number> {
   if (uncontracted.size > 0) {
     console.log(`\n# ${id}: 未契約の testid (契約に追加するか削除するかは人間判断。件数・exit code には含めない)`);
     for (const [t, locs] of uncontracted) {
+      console.log(t);
+      for (const l of locs) console.log(`  impl ${l}`);
+    }
+    console.log("");
+  }
+  // どの page にも帰属できなかった (名前空間も screen-N も旧 root も無く、同ファイルから page が 1 つに決まらない)
+  // 実装 testid。どの page の契約にも無いものだけ出す (region-feed / restart-prompt* 型。ori-lm38)
+  const allKnown = new Set<string>(pageRefs.flatMap((p) => [...p.keys]));
+  const unattributed = new Map<string, string[]>();
+  for (const o of impl.occurrences) {
+    if (o.owner !== null || allKnown.has(o.value)) continue;
+    unattributed.set(o.value, [...(unattributed.get(o.value) ?? []), o.loc]);
+  }
+  if (unattributed.size > 0) {
+    console.log(`# ${id}: page に帰属できない未契約の testid (どの page の契約にも無い。${id} のものか他 page のものかを確認し、契約に足すか削除するかは人間判断。件数・exit code には含めない)`);
+    for (const [t, locs] of unattributed) {
       console.log(t);
       for (const l of locs) console.log(`  impl ${l}`);
     }
