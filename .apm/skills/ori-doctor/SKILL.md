@@ -34,7 +34,7 @@ description: ori プロジェクトの健康診断。.ori/ を歩き schema / st
   **hash キー集合と `manifest.derives_from` の file 集合の差分** (欠落・余剰) / **`source: derived` なのに hash 未記録**
 - 旧形式キー (`file#.*` / `file#anchor`) は file キーに正規化して比較する (偽陽性 drift を出さない)。形式のみの問題は INFO として
   `write-spec-hash --migrate` を案内する
-- 単一ターゲット指定も可: `bash ./scripts/check-hash-consistency.sh slices/<id>` (finalize gate が使用)
+- 単一ターゲット指定も可: `bash ./scripts/check-hash-consistency.sh slices/<id>` (finalize gate が使用)。exit code は 0..63 = issue 件数 / **64 = 引数・環境の誤り** (対象 id なし・不明 option・`.ori/` なし)
 
 ### 3. Dirty integrity (unauthorized clear detection)
 

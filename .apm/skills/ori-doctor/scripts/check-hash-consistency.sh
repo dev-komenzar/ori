@@ -4,6 +4,7 @@
 # 全 .ori/{slices,pages,scenarios}/*/spec.md が対象。drift / file 欠落 / キー集合差分 / hash 未記録を issue として数える。
 #
 # Usage: check-hash-consistency.sh [<kind>/<id>...]   (省略時は全件。finalize gate は単一ターゲットで呼ぶ)
+# exit code: 0..63 = issue 件数 (63 で頭打ち) / 64 = 引数・環境の誤り (対象 id なし・不明 option・.ori/ なし)
 set -euo pipefail
 
 # Auto-detect project root (PWD-first; SCRIPT_DIR fallback last).
@@ -23,7 +24,7 @@ if [ -z "$PROJECT_ROOT" ]; then
   SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
   PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
 fi
-if [ -z "$PROJECT_ROOT" ] || [ ! -d "$PROJECT_ROOT/.ori" ]; then echo "ERROR: cannot find project root (.ori/ not found)" >&2; exit 1; fi
+if [ -z "$PROJECT_ROOT" ] || [ ! -d "$PROJECT_ROOT/.ori" ]; then echo "ERROR: cannot find project root (.ori/ not found)" >&2; exit 64; fi
 cd "$PROJECT_ROOT"
 
 if ! command -v node >/dev/null 2>&1; then

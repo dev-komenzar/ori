@@ -15210,6 +15210,8 @@ function readSpecCoherence(specText) {
 }
 
 // packages/skills/ori-doctor/src/check-hash-consistency.ts
+var EXIT_USAGE = 64;
+var MAX_ISSUE_EXIT = 63;
 var args = process.argv.slice(2);
 var root = process.cwd();
 var targetArgs = [];
@@ -15219,7 +15221,7 @@ for (let i = 0; i < args.length; i++) {
     root = args[++i] ?? root;
   } else if (a.startsWith("--")) {
     console.error(`ERROR: unknown option: ${a}`);
-    process.exit(2);
+    process.exit(EXIT_USAGE);
   } else {
     targetArgs.push(a);
   }
@@ -15252,7 +15254,7 @@ function resolveTargets() {
     }
     if (!t) {
       console.error(`ERROR: \u5BFE\u8C61\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093: ${arg} (.ori/{slices,pages,scenarios}/<id>/ \u306E <kind>/<id> \u3067\u6307\u5B9A)`);
-      process.exit(2);
+      process.exit(EXIT_USAGE);
     }
     out.push(t);
   }
@@ -15335,7 +15337,7 @@ for (const t of resolveTargets()) {
   }
 }
 console.log(`  hash consistency: ${issues} issue(s)`);
-process.exit(Math.min(issues, 255));
+process.exit(Math.min(issues, MAX_ISSUE_EXIT));
 /*! Bundled license information:
 
 is-extendable/index.js:

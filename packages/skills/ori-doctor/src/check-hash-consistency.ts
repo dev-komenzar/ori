@@ -6,7 +6,7 @@
  *
  * Usage: check-hash-consistency.js [--root <dir>] [<kind>/<id> | <id>]...
  *   対象省略時は .ori/{slices,pages,scenarios}/*\/spec.md の全件。
- *   exit code = issue 件数 (255 で頭打ち)。対象 id が見つからない場合は 2。
+ *   exit code: 0..63 = issue 件数 (63 で頭打ち) / 64 = 引数・環境の誤り (不明 option・対象 id なし・root 不明)。
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -21,6 +21,10 @@ import {
   type SpecTarget,
 } from "@ori-ori/coherence";
 
+/** 引数・環境の誤り (sysexits EX_USAGE)。issue 件数 (0..63) と区別するため件数側を 63 で頭打ちにする。 */
+const EXIT_USAGE = 64;
+const MAX_ISSUE_EXIT = 63;
+
 const args = process.argv.slice(2);
 let root = process.cwd();
 const targetArgs: string[] = [];
@@ -30,7 +34,7 @@ for (let i = 0; i < args.length; i++) {
     root = args[++i] ?? root;
   } else if (a.startsWith("--")) {
     console.error(`ERROR: unknown option: ${a}`);
-    process.exit(2);
+    process.exit(EXIT_USAGE);
   } else {
     targetArgs.push(a);
   }
@@ -65,7 +69,7 @@ function resolveTargets(): SpecTarget[] {
     }
     if (!t) {
       console.error(`ERROR: 対象が見つかりません: ${arg} (.ori/{slices,pages,scenarios}/<id>/ の <kind>/<id> で指定)`);
-      process.exit(2);
+      process.exit(EXIT_USAGE);
     }
     out.push(t);
   }
@@ -162,5 +166,5 @@ for (const t of resolveTargets()) {
 }
 
 console.log(`  hash consistency: ${issues} issue(s)`);
-// exit code は件数 (run-checks.sh が合算)。256 で 0 に巻き戻らないよう 255 で頭打ち
-process.exit(Math.min(issues, 255));
+// exit code は件数 (run-checks.sh が合算)。引数誤りの EXIT_USAGE と衝突しないよう 63 で頭打ち
+process.exit(Math.min(issues, MAX_ISSUE_EXIT));

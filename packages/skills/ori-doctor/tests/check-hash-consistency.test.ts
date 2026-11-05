@@ -123,6 +123,17 @@ describe("check-hash-consistency.sh", () => {
 
   it("存在しないターゲットは exit 2", async () => {
     const r = await run(base(`  source: derived\n`), ["slices/nope"]);
+    expect(r.code).toBe(64);
+    expect(r.out).toContain("対象が見つかりません");
+  });
+
+  it("不明 option も exit 64 (issue 件数と区別できる)", async () => {
+    const r = await run(base(`  source: derived\n`), ["--bogus"]);
+    expect(r.code).toBe(64);
+  });
+
+  it("issue 件数 2 は exit 2 のまま (引数誤りと区別できる)", async () => {
+    const r = await run(base(`  source: derived\n  hash:\n    domain/aggregates.md: ${OK}\n    domain/gone.md: ${OK}\n`));
     expect(r.code).toBe(2);
   });
 });
