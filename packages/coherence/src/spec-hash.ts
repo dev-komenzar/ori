@@ -207,8 +207,11 @@ function splitFrontmatter(text: string): FrontmatterSplit {
 }
 
 function scalarString(node: unknown): string | undefined {
-  if (isScalar(node)) return node.value === null || node.value === undefined ? undefined : String(node.value);
-  return undefined;
+  if (!isScalar(node) || node.value === null || node.value === undefined) return undefined;
+  // 引用符なしの数字だけの hash (`012345678901` / `12345e678901`) は YAML が数値に解決し先頭 0 や桁を失うので、
+  // 文字列以外は元の表記を使う
+  if (typeof node.value !== "string" && typeof node.source === "string") return node.source;
+  return String(node.value);
 }
 
 /**
