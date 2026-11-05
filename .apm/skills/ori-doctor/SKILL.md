@@ -27,8 +27,14 @@ description: ori プロジェクトの健康診断。.ori/ を歩き schema / st
 
 ### 2. 派生文書の hash 一致
 
-- `.ori/slices/*/status.yaml` の `upstream_hash` と現在の domain section ハッシュを比較
-- 不一致なら **dirty 残存** として報告
+- `.ori/{slices,pages,scenarios}/*/spec.md` の `coherence.hash` (file パス → sha256 先頭 12 桁。形式の SSoT は
+  [`feature-spec.instructions.md#coherence-frontmatter`](../../instructions/feature-spec.instructions.md#coherence-frontmatter)) と、
+  upstream file の現在の hash を比較する (`upstream:` の有無は問わない全 spec が対象)
+- 次をすべて issue として数える (exit 非0): **drift** (記録 ≠ 現在) / **記録された file の欠落** /
+  **hash キー集合と `manifest.derives_from` の file 集合の差分** (欠落・余剰) / **`source: derived` なのに hash 未記録**
+- 旧形式キー (`file#.*` / `file#anchor`) は file キーに正規化して比較する (偽陽性 drift を出さない)。形式のみの問題は INFO として
+  `write-spec-hash --migrate` を案内する
+- 単一ターゲット指定も可: `bash ./scripts/check-hash-consistency.sh slices/<id>` (finalize gate が使用)
 
 ### 3. Dirty integrity (unauthorized clear detection)
 
@@ -42,7 +48,7 @@ description: ori プロジェクトの健康診断。.ori/ を歩き schema / st
 
 ### 5. Cross-reference の整合
 
-- spec.md / workflows/<id>.md / screen-N.md の `upstream:` 列挙先がすべて実在するか
+- spec.md / workflows/<id>.md / screen-N.md の `upstream:` 列挙先がすべて実在するか (spec の hash 側の file 実在は §2)
 - 存在しない section へのリンクを broken-link として報告
 
 ### 5. proposal の残存
@@ -172,7 +178,7 @@ page / widget が持つ ui-field のうち、その page の spec.md に挙動�
    - `check-ui-fields-traceability.sh` — ui-fields のショートカットと、どの page にも属さない screen の field id が scenario・page・slice の spec.md#test-points に未写像なら WARN（文字列一致、fix は test-points 追記 → `/ori-flow <id>`）
    - `check-spec-gaps.sh` — page / widget が持つ ui-field のうち、その page の spec.md の #invariants / #test-points に field id の引用が無いものを WARN（§15、fix は `/ori-flow <page-id>`）
    - `check-dirty-integrity.sh` — dirty=[] なのに review.md 不在/verdict≠PASS を検出（status.yaml の手動改竄チェック）
-   - `check-hash-consistency.sh` — 派生ファイルの upstream 参照実在確認
+   - `check-hash-consistency.sh` — spec の `coherence.hash` と upstream file の sha256 を比較 (drift / file 欠落 / キー集合差分 / hash 未記録。slice・page・scenario 全種別。本体は `check-hash-consistency.js`)
    - `check-cross-ref.sh` — derives_from / upstream の cross-reference 検証
    - `check-proposals.sh` — pending proposal カウント
    - `check-scenario-coverage.sh` — validation.md の未 scaffold scenario section を WARN（live 計算、`new-scenario.js --list-validation` 再利用）
@@ -216,9 +222,10 @@ page / widget が持つ ui-field のうち、その page の spec.md に挙動�
   fix: 1) restore .ori/slices/detect-external-changes/status.yaml, 2) /ori-flow detect-external-changes
 
 ═══ Hash Consistency ═══
-⚠ slices/capture-auto-save: 1 upstream out of sync
-  upstream: domain/aggregates.md#note-aggregate
-  fix: /ori-flow capture-auto-save (re-derive)
+⚠ slices/capture-auto-save: drift: domain/aggregates.md 記録 56f7a54a8ab2 ≠ 現在 0c1d2e3f4a5b
+  fix: /ori-flow <id> で再 derive (hash は writer が生成する)
+⚠ pages/main: hash 欠落: domain/ui-fields/screen-1.md が derives_from にあるが coherence.hash に無い
+ℹ scenarios/save-note: 旧形式の coherence を検出。write-spec-hash --migrate で新形式へ移行できます
 
 ═══ Dirty Integrity ═══
 ✗ slices/delete-note: dirty=[] but review.md not found
@@ -301,7 +308,7 @@ dirty: []
 レポート内容に応じて以下を案内：
 
 - **schema 違反パス**：`vim .ori/domain/<file>.md` で手動修正（自動修正しない）→ 再度 `/ori-doctor`
-- **hash 不一致パス**：`/ori-flow <id>` で該当 slice / page を再 derive
+- **hash 不一致パス**：`/ori-flow <id>` で該当 slice / page / scenario を再 derive (hash は手で直さない)。旧形式のみの INFO は `write-spec-hash --migrate`
 - **dirty integrity 違反パス**：`/ori-flow <id>` で該当 slice の全 phase（特に review）を再実行。status.yaml を手動編集せず、`/ori-finalize` の `clear-dirty.js` を経由すること
 - **broken cross-ref パス**：該当 slice / page の `manifest.yaml` を更新 or 旧 anchor を domain 側で復活
 - **proposal 残存パス**：`/ori-review-proposals` で人間判断

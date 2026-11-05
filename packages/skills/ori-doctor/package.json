@@ -9,6 +9,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@ori-ori/coherence": "workspace:*",
     "@ori-ori/parser": "workspace:*",
     "consola": "^3.2.3",
     "yaml": "^2.5.0"

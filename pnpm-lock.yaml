@@ -144,6 +144,9 @@ importers:
 
   packages/skills/ori-doctor:
     dependencies:
+      '@ori-ori/coherence':
+        specifier: workspace:*
+        version: link:../../coherence
       '@ori-ori/parser':
         specifier: workspace:*
         version: link:../../parser
