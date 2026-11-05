@@ -1,4 +1,5 @@
 import { execFile, execSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   mkdir,
   mkdtemp,
@@ -199,6 +200,75 @@ implementation:
       expect(stdout.trim()).toMatch(/^other\.md [0-9a-f]{12}$/);
     } finally {
       await rm(projectRoot, { recursive: true, force: true });
+    }
+  });
+});
+
+// 暫定 --coherence モード (ori-0eh): SSoT 形式 (feature-spec.instructions.md §coherence-frontmatter)
+// の coherence ブロックを出力する。ori-0eh.4 で write-spec-hash に置換するまでの hash 記録経路。
+describe("ori-derive resolve-upstream.sh --coherence (ori-0eh interim)", () => {
+  const sha12 = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 12);
+
+  async function runCoherence(projectRoot: string, id: string) {
+    return execFileAsync(BASH_PATH, [SCRIPT, id, "--project-root", projectRoot, "--coherence"]);
+  }
+
+  it("emits upstream refs (.ori/ stripped, deduped) and a file-keyed hash map", async () => {
+    const manifest = `slice_id: test-slice
+derives_from:
+  - domain/aggregates.md#note-aggregate
+  - path: .ori/domain/aggregates.md
+    section: tag-aggregate
+  - .ori/domain/aggregates.md#note-aggregate
+  - domain/workflows.md
+`;
+    await withFixture(
+      { ".ori/domain/aggregates.md": "# Agg\n", ".ori/domain/workflows.md": "# Wf\n" },
+      manifest,
+      async (root) => {
+        const { stdout } = await runCoherence(root, "test-slice");
+        const today = new Date();
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const date = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+        expect(stdout).toBe(`coherence:
+  source: derived
+  last_derived: ${date}
+  upstream:
+    - domain/aggregates.md#note-aggregate
+    - domain/aggregates.md#tag-aggregate
+    - domain/workflows.md
+  hash:
+    domain/aggregates.md: ${sha12("# Agg\n")}
+    domain/workflows.md: ${sha12("# Wf\n")}
+`);
+      },
+    );
+  });
+
+  it("exits 1 and prints no block when an upstream file is missing", async () => {
+    await withFixture({}, "derives_from:\n  - domain/missing.md\n", async (root) => {
+      const err = await runCoherence(root, "test-slice").catch((e) => e);
+      expect(err.code).toBe(1);
+      expect(err.stdout).toBe("");
+      expect(err.stderr).toContain("domain/missing.md NOT_FOUND");
+    });
+  });
+
+  it("resolves page manifests (.ori/pages/<id>/)", async () => {
+    const root = await mkdtemp(join(tmpdir(), "ori-0eh-"));
+    try {
+      await mkdir(join(root, ".ori", "pages", "p1"), { recursive: true });
+      await mkdir(join(root, ".ori", "domain"), { recursive: true });
+      await writeFile(join(root, ".ori", "domain", "screens.md"), "s\n", "utf8");
+      await writeFile(
+        join(root, ".ori", "pages", "p1", "manifest.yaml"),
+        "page_id: p1\ntype: page\nderives_from:\n  - domain/screens.md#screen-1\n",
+        "utf8",
+      );
+      const { stdout } = await runCoherence(root, "p1");
+      expect(stdout).toContain(`    domain/screens.md: ${sha12("s\n")}\n`);
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 });

@@ -83,6 +83,10 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
    - page / widget: 持つ ui-field を **1 つ残らず** `## 不変条件` か `## テスト観点` で規定し、field id を「field `screen-N-xxx`」の形で引用する。
      レイアウト図・入出力だけに置いた要素は規定に数えない。上流から挙動を書けない field は推測で埋めず **TBD** を残す
      (基準: [`feature-spec.instructions.md#page-field-behavior`](../../instructions/feature-spec.instructions.md#page-field-behavior))
+5b. **coherence frontmatter の記録（暫定。ori-0eh.4 で writer `write-spec-hash` の実行に置換）**：spec.md を書き出したら、次の出力を frontmatter の `coherence:` ブロックとして **そのまま貼る**（既存の `coherence:` ブロックは丸ごと置き換え、他キーと本文は触らない）。upstream / hash を自分で計算・編集しない。exit 1（upstream file 不在）なら停止しユーザに提示する
+   ```bash
+   bash ./scripts/resolve-upstream.sh <id> --coherence
+   ```
 6. **Slice DoD 由来 item の derive**：`manifest.yaml` の `expected_deliverables` block (SSoT: [`feature-manifest.instructions.md`](../../instructions/feature-manifest.instructions.md)) と `.ori/architecture.md` の stack 情報を読み、以下を spec.md の所定 section に必ず差し込む。**hardcoded sample をスキルに置かず**、各 instructions の記述例を SSoT として参照する:
    - **`## 境界契約 {#boundary-contract}`**: `expected_deliverables.boundary.kind` と `contact_point` を写し、`production_fixture.location` と `cross_root_contracts[].generator` を併記。`feature-spec.instructions.md` の "境界契約 section 必須化" 記述例に揃える
    - **`## テスト観点 {#test-points}`**:
@@ -115,7 +119,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
    - テスト観点に boundary test と production fixture の項目が両方あるか
    - 実装ノートに stub commands / production fixture / sub_layers / phase_hooks のいずれかへの言及があるか (slice_kind が `command` で `cross_root` を持つ場合は **全部必須**、それ以外は該当する rule だけ必須)
    - 全 H2/H3 に `{#id}` があるか（grep: `^###? [^{]+$`）
-   - frontmatter `coherence.source: derived` と `upstream:` の有無
+   - frontmatter の `coherence:` ブロックが `resolve-upstream.sh <id> --coherence` の出力と一致するか（不一致なら再実行して貼り直す。手で直さない）
 8. 検証失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
 9. **beads issue 更新**：
    ```bash
@@ -170,12 +174,16 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
      - **storage 隔離**: runner config が XDG を per-run temp に向けて隔離する（app 側 override 不要。Linux のみ）。app が XDG を経由せず `$HOME` を直接読む保存先を持つ場合はその旨を記録する（G4）
      - **node_modules 解決**: `.ori/scenarios/node_modules` symlink（G3）
      - **fixture seed**: 既存データ前提 scenario の seed 要否と frontmatter 形式（G6）
+8b. **coherence frontmatter の記録（暫定。ori-0eh.4 で writer `write-spec-hash` の実行に置換）**：spec.md を書き出したら、次の出力を frontmatter の `coherence:` ブロックとして **そのまま貼る**（既存の `coherence:` ブロックは丸ごと置き換え、他キーと本文は触らない）。upstream / hash を自分で計算・編集しない。exit 1（upstream file 不在）なら停止しユーザに提示する
+   ```bash
+   bash ./scripts/resolve-upstream.sh <scenario-id> --coherence
+   ```
 9. **spec.md の自己検証**：
    - 必須 H2 4 種が揃っているか（`## 概要`、`## シナリオステップ`、`## テスト観点`、`## 実装ノート`）
    - `#scenario-steps` に `^\s*Then ` が 1 件以上あり、件数が `.ori/domain/validation.md#<id>` の `Then` 件数と一致するか（不一致・0 件は修正対象）
    - runner=wdio の場合、実装ノートに前提条件（build 契約 / plugin / storage 隔離（XDG） / symlink / fixture seed）が記録されているか
    - 全 H2/H3 に `{#id}` があるか（grep: `^###? [^{]+$`）
-   - frontmatter `coherence.source: derived` と `upstream:` の有無
+   - frontmatter の `coherence:` ブロックが `resolve-upstream.sh <id> --coherence` の出力と一致するか（不一致なら再実行して貼り直す。手で直さない）
 10. 検証失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
 11. **beads issue 更新**：
     ```bash

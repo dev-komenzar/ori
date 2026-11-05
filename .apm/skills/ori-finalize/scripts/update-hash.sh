@@ -37,6 +37,9 @@ for up in $upstreams; do
     hash=$(sha256sum "$path" | cut -c1-12)
     escaped=$(echo "$up" | sed 's/[\/&]/\\&/g')
     sed -i "s|    $escaped#.*: .*|    $escaped#.*: $hash|" "$SPEC"
+    # SSoT 形式 (file キー, anchor なし。feature-spec.instructions.md §coherence-frontmatter)。
+    # 暫定: ori-0eh.6 で本 script ごと検証 gate に置換する
+    sed -i "s|^    $escaped: .*|    $escaped: $hash|" "$SPEC"
   fi
 done
 

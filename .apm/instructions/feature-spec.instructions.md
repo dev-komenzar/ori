@@ -51,6 +51,7 @@ coherence:
   writer が同じキーに正規化する
 - **writer 専有**: `upstream` / `hash` / `last_derived` は決定的 writer (`@ori-ori/coherence` の spec-hash 実装を使う CLI) だけが書く。
   **LLM (derive phase 含む) は upstream / hash を手書きしない**。placeholder (`abc123` 等) も書かない
+  (writer 導入 (ori-0eh.4) までの暫定: `/ori-derive` は `resolve-upstream.sh <id> --coherence` の出力をそのまま貼る)
 - **stub の初期値**: `source: derived` / `upstream: []` / `hash: {}`。値は derive 時に writer が `derives_from` から生成する
 - **旧形式** (`hash` の `file#.*` / `file#anchor` キー、scenario の `upstream: [{path, hash}]`、stub の
   `coherence.derives_from`) は読み取りのみ互換。書き戻す writer が新形式へ移行する (記録値は保持)
