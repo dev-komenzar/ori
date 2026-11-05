@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -152,5 +152,60 @@ describe("clear-dirty.js", () => {
     expect(r.code).toBe(0);
     expect(r.out).toContain("cleared 0 dirty mark(s)");
     expect(await readFile(join(root, ".ori/slices/a/status.yaml"), "utf8")).toBe("slice_id: a\ndirty: []\n");
+  });
+
+  it("does not accept a verdict split across lines (`verdict:` / `PASS` on the next line)", async () => {
+    const root = await fixture({
+      ".ori/slices/a/status.yaml": DIRTY_STATUS,
+      ".ori/slices/a/review.md": "## Pass 1\n\nverdict:\nPASS\n",
+    });
+    const r = run(root, ["a"]);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("no verdict found");
+    expect(await readFile(join(root, ".ori/slices/a/status.yaml"), "utf8")).toBe(DIRTY_STATUS);
+  });
+
+  it("adds `dirty: []` when the key is missing", async () => {
+    const root = await fixture({
+      ".ori/slices/a/status.yaml": "slice_id: a\nfinalized_at: 2026-06-30\n",
+      ".ori/slices/a/review.md": PASS,
+    });
+    const r = run(root, ["a"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("cleared 0 dirty mark(s)");
+    expect(yamlParse(await readFile(join(root, ".ori/slices/a/status.yaml"), "utf8"))).toEqual({
+      slice_id: "a",
+      finalized_at: "2026-06-30",
+      dirty: [],
+    });
+  });
+
+  it("refuses a status.yaml whose top level is not a mapping, leaving it untouched", async () => {
+    const body = "- slice_id: a\n- dirty: []\n";
+    const root = await fixture({ ".ori/slices/a/status.yaml": body, ".ori/slices/a/review.md": PASS });
+    const r = run(root, ["a"]);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("top level must be a mapping");
+    expect(await readFile(join(root, ".ori/slices/a/status.yaml"), "utf8")).toBe(body);
+  });
+
+  it("fails when --kind points at a kind without that id", async () => {
+    const root = await fixture({ ".ori/slices/a/status.yaml": DIRTY_STATUS, ".ori/slices/a/review.md": PASS });
+    const r = run(root, ["a", "--kind", "page"]);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain(".ori/pages/a/status.yaml not found");
+    expect(await readFile(join(root, ".ori/slices/a/status.yaml"), "utf8")).toBe(DIRTY_STATUS);
+  });
+
+  it("keeps the file mode, leaves no temp file, and does not reformat unrelated flow collections", async () => {
+    const body = `slice_id: a\nbeads: {epic: ori-x, completion: [derive, plan]}\n${DIRTY_STATUS.slice("slice_id: create-note\n".length)}`;
+    const root = await fixture({ ".ori/slices/a/status.yaml": body, ".ori/slices/a/review.md": PASS });
+    const statusPath = join(root, ".ori/slices/a/status.yaml");
+    await chmod(statusPath, 0o640);
+    const r = run(root, ["a"]);
+    expect(r.code).toBe(0);
+    expect((await stat(statusPath)).mode & 0o777).toBe(0o640);
+    expect(await readdir(join(root, ".ori/slices/a"))).toEqual(["review.md", "status.yaml"]);
+    expect(await readFile(statusPath, "utf8")).toContain("beads: {epic: ori-x, completion: [derive, plan]}\n");
   });
 });

@@ -24149,32 +24149,34 @@ async function lintFile(path) {
   }
   return issues2;
 }
-async function lintStatusYamls(oriDir) {
-  const issues2 = [];
-  for (const kind of ["slices", "pages", "scenarios"]) {
-    let entries;
-    try {
-      entries = await readdir(join(oriDir, kind), { withFileTypes: true });
-    } catch {
-      continue;
+var STATUS_YAML_PATH = /(^|\/)\.ori\/(slices|pages|scenarios)\/[^/]+\/status\.yaml$/;
+async function* walkStatusYamls(dir) {
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name === ".git") continue;
+      yield* walkStatusYamls(full);
+    } else if (entry.isFile() && STATUS_YAML_PATH.test(full)) {
+      yield full;
     }
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const path = join(oriDir, kind, entry.name, "status.yaml");
-      let raw;
-      try {
-        raw = await readFile(path, "utf8");
-      } catch {
-        continue;
-      }
-      const doc = import_yaml.default.parseDocument(raw);
-      for (const err of doc.errors) {
-        issues2.push({
-          file: path,
-          line: err.linePos?.[0]?.line ?? 1,
-          message: `status.yaml \u304C YAML \u3068\u3057\u3066 parse \u3067\u304D\u306A\u3044: ${err.message.split("\n")[0]}`
-        });
-      }
+  }
+}
+async function lintStatusYamls(target2) {
+  const issues2 = [];
+  for await (const path of walkStatusYamls(target2)) {
+    const doc = import_yaml.default.parseDocument(await readFile(path, "utf8"));
+    for (const err of doc.errors) {
+      issues2.push({
+        file: path,
+        line: err.linePos?.[0]?.line ?? 1,
+        message: `status.yaml \u304C YAML \u3068\u3057\u3066 parse \u3067\u304D\u306A\u3044: ${err.message.split("\n")[0]}`
+      });
     }
   }
   return issues2;

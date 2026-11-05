@@ -20,6 +20,11 @@ ori (織) — DDD-driven slice/page scaffolding with CoDD coherence.
 
 - **docs / smoke の新順序化** ([`ori-63f.3`](https://github.com/dev-komenzar/ori/pull/106)) — `docs/design.md` §17、`docs/start/*`、`docs/acceptance/README.md`、`README.md` (状態遷移表 / Mermaid)、`ci/smoke/run-smoke.sh` のコメントを `architect → bootstrap` 順に更新。過去の acceptance / smoke 実施記録は歴史記録として据え置き、冒頭に旧フロー注記を追記
 
+### status.yaml の破損防止（ori-6dr5 / ori-r5b8）
+
+- **⚠ `ori-finalize/scripts/clear-dirty.sh` を削除し `clear-dirty.js` に置換** ([#137](https://github.com/dev-komenzar/ori/pull/137)) — 旧 `.sh` は `sed` で `dirty:` 行だけを置換し、配下のリスト要素を残して status.yaml を不正な YAML にしていた ([#133](https://github.com/dev-komenzar/ori/issues/133))。新 `node scripts/clear-dirty.js <id> [--kind slice|page|scenario] [--skip-review-check]` は YAML ライブラリで書き戻し、slice / page / scenario に対応する。`apm install` / `apm update` は skill dir を置き換えるので旧 `.sh` は消える。skill を手でコピーしている場合や、`clear-dirty.sh` を直接呼ぶ独自スクリプト・手順がある場合は、`.sh` を削除して `clear-dirty.js` に切り替えること
+- **既に壊れた status.yaml の検出** — `/ori-sync` は不正な status.yaml を `path:line:col` 付きで報告して exit 1 (他 doc への dirty 付与は続行)。`/ori-doctor` の `lint.js` が `.ori/{slices,pages,scenarios}/*/status.yaml` の YAML 妥当性を検査する。旧 `.sh` で壊れたファイルは自動修復しないので、報告された行 (`dirty: []` の下に残ったリスト要素) を手で削除する
+
 ## v0.5.0 — 2026-09-11
 
 **Scenario 概念導入 + architect 動的生成化 + Review バイパス不能化** を軸とした release。service 横断 E2E テスト生成のための scenario 概念を新設し、validation.md anchor と 1:1 機械ガードまで含めて整備した。`/ori-architect` は固定テンプレートを廃し、要件対話ベースの動的生成へ転換。L1/L2/L3 防御線を強化し review バイパスを不能化。テスト規約を pattern/stacks 階層に一本化し正典化。配布動線は引き続き APM single package (`apm install dev-komenzar/ori`) のみ。

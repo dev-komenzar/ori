@@ -7362,7 +7362,7 @@ var require_dist = __commonJS({
 
 // packages/skills/ori-finalize/src/clear-dirty.ts
 var import_yaml = __toESM(require_dist(), 1);
-import { access, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { access, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 var KINDS = ["slice", "page", "scenario"];
 var kindDir = (k) => `${k}s`;
@@ -7457,7 +7457,7 @@ async function reviewGate(root, kind, id) {
     ]);
   }
   const body = await readFile(abs, "utf8");
-  const verdicts = [...body.matchAll(/verdict\s*[=:]\s*(PASS|NEEDS_FIX|REJECT)/g)].map((m) => m[1]);
+  const verdicts = [...body.matchAll(/verdict[ \t]*[=:][ \t]*(PASS|NEEDS_FIX|REJECT)/g)].map((m) => m[1]);
   const verdict = verdicts.at(-1);
   if (!verdict) {
     fail([`\u274C Cannot clear dirty: no verdict found in ${rel}`, `   Run /ori-review ${id} to complete review.`]);
@@ -7499,7 +7499,7 @@ async function main() {
   const before = doc.get("dirty");
   const count = before && typeof before === "object" && "items" in before ? before.items.length : 0;
   doc.set("dirty", doc.createNode([]));
-  const out = doc.toString({ lineWidth: 0 });
+  const out = doc.toString({ lineWidth: 0, flowCollectionPadding: false });
   const check = (0, import_yaml.parseDocument)(out);
   const checked = check.errors.length === 0 ? check.toJS() : null;
   if (!checked || !Array.isArray(checked.dirty) || checked.dirty.length !== 0) {
@@ -7508,9 +7508,7 @@ async function main() {
       ...yamlErrorLines(rel, check.errors)
     ]);
   }
-  const tmp = `${statusPath}.tmp-${process.pid}`;
-  await writeFile(tmp, out, "utf8");
-  await rename(tmp, statusPath);
+  await writeFile(statusPath, out, "utf8");
   console.log(`cleared ${count} dirty mark(s) for ${kind} ${id}`);
 }
 await main();

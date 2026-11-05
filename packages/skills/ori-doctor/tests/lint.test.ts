@@ -14,14 +14,14 @@ afterEach(async () => {
   await Promise.all(tmpDirs.splice(0).map((d) => rm(d, { recursive: true, force: true })));
 });
 
-async function runLint(files: Record<string, string>, extraArgs: string[] = []) {
+async function runLint(files: Record<string, string>, extraArgs: string[] = [], target = ".ori") {
   const root = await mkdtemp(join(tmpdir(), "ori-doctor-lint-"));
   tmpDirs.push(root);
   for (const [rel, body] of Object.entries(files)) {
     await mkdir(dirname(join(root, rel)), { recursive: true });
     await writeFile(join(root, rel), body);
   }
-  return spawnSync("node", [LINT, ".ori", ...extraArgs], { cwd: root, encoding: "utf8" });
+  return spawnSync("node", [LINT, target, ...extraArgs], { cwd: root, encoding: "utf8" });
 }
 
 describe("lint.js frontmatter YAML error (ori-8ro7)", () => {
@@ -71,5 +71,12 @@ describe("lint.js status.yaml YAML error (ori-6dr5)", () => {
   it("exits 1 with --strict", async () => {
     const r = await runLint({ ".ori/slices/a/status.yaml": brokenDirty }, ["--strict"]);
     expect(r.status).toBe(1);
+  });
+
+  it("also finds status.yaml when linting the project root or a sub dir of .ori", async () => {
+    for (const target of [".", ".ori/slices"]) {
+      const r = await runLint({ ".ori/slices/a/status.yaml": brokenDirty }, [], target);
+      expect(r.stdout + r.stderr).toMatch(/\.ori\/slices\/a\/status\.yaml:\d+\s+status\.yaml が YAML として parse できない/);
+    }
   });
 });

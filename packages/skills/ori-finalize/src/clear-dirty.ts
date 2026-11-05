@@ -7,7 +7,7 @@
 // - status.yaml は YAML ライブラリで読み書きする。行単位の置換は dirty: の下のブロック列を
 //   残して YAML を壊すため使わない (GitHub #133 / ori-6dr5)。
 // - 書き戻す前に結果を parse し直し、不正なら書き込まずに非 0 で終わる。
-import { access, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { access, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { isMap, parseDocument } from "yaml";
 
@@ -106,7 +106,8 @@ async function reviewGate(root: string, kind: Kind, id: string): Promise<void> {
     ]);
   }
   const body = await readFile(abs, "utf8");
-  const verdicts = [...body.matchAll(/verdict\s*[=:]\s*(PASS|NEEDS_FIX|REJECT)/g)].map((m) => m[1]);
+  // 行内だけで照合する (\s だと "verdict:\nPASS" のように改行をまたいで通ってしまう。旧 grep -oP は行単位)
+  const verdicts = [...body.matchAll(/verdict[ \t]*[=:][ \t]*(PASS|NEEDS_FIX|REJECT)/g)].map((m) => m[1]);
   const verdict = verdicts.at(-1);
   if (!verdict) {
     fail([`❌ Cannot clear dirty: no verdict found in ${rel}`, `   Run /ori-review ${id} to complete review.`]);
@@ -153,7 +154,8 @@ async function main(): Promise<void> {
   const before = doc.get("dirty");
   const count = before && typeof before === "object" && "items" in before ? (before.items as unknown[]).length : 0;
   doc.set("dirty", doc.createNode([]));
-  const out = doc.toString({ lineWidth: 0 });
+  // 無関係な行の再整形を抑える: 長い文字列を折り返さない / flow collection を `[a, b]` のまま出す
+  const out = doc.toString({ lineWidth: 0, flowCollectionPadding: false });
 
   // 書き込む前に結果が YAML として正しく、dirty が空配列になっていることを確かめる
   const check = parseDocument(out);
@@ -165,9 +167,8 @@ async function main(): Promise<void> {
     ]);
   }
 
-  const tmp = `${statusPath}.tmp-${process.pid}`;
-  await writeFile(tmp, out, "utf8");
-  await rename(tmp, statusPath);
+  // 内容は上で検証済みなのでその場で書き戻す (tmp+rename だと permission が変わり、失敗時に tmp が残る)
+  await writeFile(statusPath, out, "utf8");
   console.log(`cleared ${count} dirty mark(s) for ${kind} ${id}`);
 }
 
