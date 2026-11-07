@@ -33,7 +33,7 @@ description: ori プロジェクトの健康診断。.ori/ を歩き schema / st
 - 次をすべて issue として数える (exit 非0): **drift** (記録 ≠ 現在) / **記録された file の欠落** /
   **hash キー集合と `manifest.derives_from` の file 集合の差分** (欠落・余剰) / **`source: derived` なのに hash 未記録**
 - 旧形式キー (`file#.*` / `file#anchor`) は file キーに正規化して比較する (偽陽性 drift を出さない)。形式のみの問題は INFO として
-  `write-spec-hash.js --migrate` を案内する
+  ori-derive skill の `scripts/write-spec-hash.js --migrate` を案内する
 - 単一ターゲット指定も可: `bash ./scripts/check-hash-consistency.sh slices/<id>` (finalize gate が使用)。exit code は 0..63 = issue 件数 / **64 = 引数・環境の誤り** (対象 id なし・不明 option・`.ori/` なし)
 
 ### 3. Dirty integrity (unauthorized clear detection)
@@ -223,9 +223,9 @@ page / widget が持つ ui-field のうち、その page の spec.md に挙動�
 
 ═══ Hash Consistency ═══
 ⚠ slices/capture-auto-save: drift: domain/aggregates.md 記録 56f7a54a8ab2 ≠ 現在 0c1d2e3f4a5b
-  fix: /ori-flow <id> で再 derive (hash は ori-derive の writer が生成する。手書きしない)。再 derive 不要と人間が判断した場合のみ node scripts/write-spec-hash.js slice/capture-auto-save --accept
+  fix: /ori-flow <id> で再 derive (hash は ori-derive の writer が生成する。手書きしない)。再 derive 不要と人間が判断した場合のみ node <ori-derive skill>/scripts/write-spec-hash.js slice/capture-auto-save --accept
 ⚠ pages/main: hash 欠落: domain/ui-fields/screen-1.md が derives_from にあるが coherence.hash に無い
-ℹ scenarios/save-note: 旧形式の coherence を検出 (値は正規化して比較済み)。node scripts/write-spec-hash.js scenario/save-note --migrate で新形式へ移行できます
+ℹ scenarios/save-note: 旧形式の coherence を検出 (値は正規化して比較済み)。node <ori-derive skill>/scripts/write-spec-hash.js scenario/save-note --migrate で新形式へ移行できます
 
 ═══ Dirty Integrity ═══
 ✗ slices/delete-note: dirty=[] but review.md not found
@@ -308,7 +308,7 @@ dirty: []
 レポート内容に応じて以下を案内：
 
 - **schema 違反パス**：`vim .ori/domain/<file>.md` で手動修正（自動修正しない）→ 再度 `/ori-doctor`
-- **hash 不一致パス**：`/ori-flow <id>` で該当 slice / page / scenario を再 derive (hash は手で直さない)。旧形式のみの INFO は `node scripts/write-spec-hash.js <slice|page|scenario>/<id> --migrate` (全件は `--all --migrate`)。upstream 変更が spec に影響しないと**人間が**判断した drift のみ `--accept` (LLM が自発的に使わない。ori-derive SKILL.md 参照)
+- **hash 不一致パス**：`/ori-flow <id>` で該当 slice / page / scenario を再 derive (hash は手で直さない)。旧形式のみの INFO は `node <ori-derive skill>/scripts/write-spec-hash.js <slice|page|scenario>/<id> --migrate` (全件は `--all --migrate`)。upstream 変更が spec に影響しないと**人間が**判断した drift のみ `--accept` (LLM が自発的に使わない。ori-derive SKILL.md 参照)
 - **dirty integrity 違反パス**：`/ori-flow <id>` で該当 slice の全 phase（特に review）を再実行。status.yaml を手動編集せず、`/ori-finalize` の `clear-dirty.js` を経由すること
 - **broken cross-ref パス**：該当 slice / page の `manifest.yaml` を更新 or 旧 anchor を domain 側で復活
 - **proposal 残存パス**：`/ori-review-proposals` で人間判断

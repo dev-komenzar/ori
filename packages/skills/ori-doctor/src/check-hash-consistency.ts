@@ -90,7 +90,7 @@ const writerTarget = (t: SpecTarget): string => `${SINGULAR[t.kind]}/${t.id}`;
 const REDERIVE = "/ori-flow <id> で再 derive (hash は ori-derive の writer が生成する。手書きしない)";
 /** drift の fix: 原則は再 derive。upstream 変更が spec に影響しないと人間が判断した場合のみ --accept。 */
 const driftFix = (t: SpecTarget): string =>
-  `${REDERIVE}。再 derive 不要と人間が判断した場合のみ node scripts/write-spec-hash.js ${writerTarget(t)} --accept (LLM が drift を消す目的で自発的に使わない)`;
+  `${REDERIVE}。再 derive 不要と人間が判断した場合のみ node <ori-derive skill>/scripts/write-spec-hash.js ${writerTarget(t)} --accept (LLM が drift を消す目的で自発的に使わない)`;
 
 for (const t of resolveTargets()) {
   const label = `${t.kind}/${t.id}`;
@@ -164,7 +164,7 @@ for (const t of resolveTargets()) {
 
   // 形式のみの問題は issue にしない
   if (coh.legacy) {
-    info(label, `旧形式の coherence を検出 (値は正規化して比較済み)。node scripts/write-spec-hash.js ${writerTarget(t)} --migrate (全件は --all --migrate) で新形式へ移行できます`);
+    info(label, `旧形式の coherence を検出 (値は正規化して比較済み)。node <ori-derive skill>/scripts/write-spec-hash.js ${writerTarget(t)} --migrate (全件は --all --migrate) で新形式へ移行できます`);
   }
   for (const c of coh.conflicts) {
     info(label, `旧キーが同一 file ${c.file} で別の hash を記録 (${c.entries.map((e) => `${e.key}=${e.value}`).join(", ")}); 先頭の値で比較`);
