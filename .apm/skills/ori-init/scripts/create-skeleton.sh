@@ -176,6 +176,7 @@ DIRS=(
   ".ori/slices"
   ".ori/pages"
   ".ori/proposals"
+  ".ori/scenarios"
   ".ori/state"
 )
 for d in "${DIRS[@]}"; do
@@ -183,7 +184,7 @@ for d in "${DIRS[@]}"; do
 done
 
 # .gitkeep — keep empty VCS-tracked dirs visible.
-for d in ".ori/slices" ".ori/pages" ".ori/proposals"; do
+for d in ".ori/slices" ".ori/pages" ".ori/proposals" ".ori/scenarios"; do
   target="$DEST/$d/.gitkeep"
   [[ -e "$target" ]] || : > "$target"
 done

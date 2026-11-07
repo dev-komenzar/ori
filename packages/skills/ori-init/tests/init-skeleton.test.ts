@@ -1,4 +1,5 @@
 import { execFile, execSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import {
   access,
   mkdir,
@@ -39,14 +40,11 @@ const BASH_PATH = execSync("command -v bash", {
 // directory containing `bd`. This keeps mkdir, sed, etc. discoverable on
 // distributions (Nix, custom prefixes) where coreutils don't live at /bin.
 function pathWithoutBd(): string {
-  const bdBin = execSync("command -v bd", {
-    encoding: "utf8",
-    shell: "/bin/sh",
-  }).trim();
-  const bdDir = dirname(bdBin);
+  // `command -v` only reports the first hit; bd may live in several PATH
+  // dirs (e.g. nix store + nix profile), so drop every dir that contains it.
   return (process.env.PATH ?? "")
     .split(":")
-    .filter((d) => d !== bdDir)
+    .filter((d) => d !== "" && !existsSync(join(d, "bd")))
     .join(":");
 }
 
@@ -59,7 +57,24 @@ async function fileExists(path: string): Promise<boolean> {
   }
 }
 
+// Default: run with `bd` stripped from PATH. `bd init` (bd 1.3.0+) takes
+// 5-12s and would blow vitest's default timeout for tests that don't care
+// about beads (ori-8i6). Only the bd-integration suite uses runScriptWithBd.
 async function runScript(
+  dest: string,
+  extraArgs: string[] = [],
+  env: NodeJS.ProcessEnv = {},
+): Promise<{ stdout: string; stderr: string }> {
+  return execFileAsync(BASH_PATH, [INIT_SCRIPT, "--dest", dest, ...extraArgs], {
+    env: {
+      ...process.env,
+      PATH: pathWithoutBd(),
+      ...env,
+    },
+  });
+}
+
+async function runScriptWithBd(
   dest: string,
   extraArgs: string[] = [],
   env: NodeJS.ProcessEnv = {},
@@ -205,6 +220,7 @@ describe("ori-init create-skeleton.sh — skeleton creation (ori-1ih)", () => {
       expect(await fileExists(join(dest, ".ori/slices/.gitkeep"))).toBe(true);
       expect(await fileExists(join(dest, ".ori/pages/.gitkeep"))).toBe(true);
       expect(await fileExists(join(dest, ".ori/proposals/.gitkeep"))).toBe(true);
+      expect(await fileExists(join(dest, ".ori/scenarios/.gitkeep"))).toBe(true);
     } finally {
       await rm(dest, { recursive: true, force: true });
     }
@@ -399,11 +415,13 @@ describe("ori-init create-skeleton.sh — current_agent resolution (ori-zpy)", (
   });
 });
 
+const BD_TIMEOUT_MS = 60_000;
+
 describe("ori-init create-skeleton.sh — bd integration (ori-ks7)", () => {
   it("runs `bd init` after skeleton creation so /ori-flow has a SSoT immediately", async () => {
     const dest = await mkdtemp(join(tmpdir(), "ori-init-bd-"));
     try {
-      await runScript(dest);
+      await runScriptWithBd(dest);
       const prefix = await readBdPrefix(join(dest, ".beads"));
       // ori-ks7 spec: prefix defaults to `ori`. bd requires a trailing
       // hyphen so the on-disk prefix is `ori-`.
@@ -411,17 +429,17 @@ describe("ori-init create-skeleton.sh — bd integration (ori-ks7)", () => {
     } finally {
       await rm(dest, { recursive: true, force: true });
     }
-  });
+  }, BD_TIMEOUT_MS);
 
   it("is idempotent — re-running over an existing .beads/ skips bd init", async () => {
     const dest = await mkdtemp(join(tmpdir(), "ori-init-bd-"));
     try {
-      await runScript(dest);
+      await runScriptWithBd(dest);
       const beadsStat = await stat(join(dest, ".beads"));
 
       // A second run must not error and must not destroy the existing
       // beads workspace (re-init without authorization would lose data).
-      const { stdout } = await runScript(dest);
+      const { stdout } = await runScriptWithBd(dest);
       expect(stdout).toMatch(/skipping bd init \(idempotent\)/);
 
       const beadsStatAfter = await stat(join(dest, ".beads"));
@@ -430,12 +448,12 @@ describe("ori-init create-skeleton.sh — bd integration (ori-ks7)", () => {
     } finally {
       await rm(dest, { recursive: true, force: true });
     }
-  });
+  }, BD_TIMEOUT_MS);
 
   it("respects ORI_BD_PREFIX env var (with or without trailing hyphen)", async () => {
     const dest = await mkdtemp(join(tmpdir(), "ori-init-bd-"));
     try {
-      await runScript(dest, [], { ORI_BD_PREFIX: "demo" });
+      await runScriptWithBd(dest, [], { ORI_BD_PREFIX: "demo" });
       const prefix = await readBdPrefix(join(dest, ".beads"));
       // `demo` is normalized to `demo-` (bd requires trailing hyphen) and
       // env override takes precedence over the `ori` default.
@@ -443,7 +461,7 @@ describe("ori-init create-skeleton.sh — bd integration (ori-ks7)", () => {
     } finally {
       await rm(dest, { recursive: true, force: true });
     }
-  });
+  }, BD_TIMEOUT_MS);
 
   it("warns and continues with exit 0 when `bd` is not on PATH", async () => {
     const dest = await mkdtemp(join(tmpdir(), "ori-init-bd-"));
@@ -465,5 +483,5 @@ describe("ori-init create-skeleton.sh — bd integration (ori-ks7)", () => {
     } finally {
       await rm(dest, { recursive: true, force: true });
     }
-  });
+  }, BD_TIMEOUT_MS);
 });
