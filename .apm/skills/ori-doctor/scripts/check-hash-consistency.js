@@ -15096,8 +15096,20 @@ function normalizeHashKey(key) {
 function resolveUpstreamPath(projectRoot, file) {
   return isAbsolute(file) ? file : join(projectRoot, ".ori", file);
 }
+var UI_FIELDS_DIR = "domain/ui-fields";
+var PAGE_GROUPING_FILE_NODE = "overview";
+function resolveNodeId(raw) {
+  const uiField = /^ui-field:([a-z0-9][a-z0-9-]*)(#.*)?$/.exec(raw);
+  if (uiField) return `${UI_FIELDS_DIR}/${uiField[1]}.md${uiField[2] ?? ""}`;
+  const grouping = /^page-grouping:([a-z0-9][a-z0-9-]*)$/.exec(raw);
+  if (grouping) {
+    const file = `${UI_FIELDS_DIR}/page-groups.md`;
+    return grouping[1] === PAGE_GROUPING_FILE_NODE ? file : `${file}#${grouping[1]}`;
+  }
+  return raw;
+}
 function toRef(path, section) {
-  const raw = stripQuotes(path);
+  const raw = resolveNodeId(stripQuotes(path));
   if (raw === "") return void 0;
   const hashIdx = raw.indexOf("#");
   const file = stripOriPrefix(hashIdx === -1 ? raw : raw.slice(0, hashIdx));

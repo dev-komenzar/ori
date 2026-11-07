@@ -89,8 +89,30 @@ export function resolveUpstreamPath(projectRoot: string, file: string): string {
 // ---------------------------------------------------------------------------
 // manifest.derives_from
 
+/** 11a / 11b の成果物ディレクトリ (`.ori/` 相対)。ori-ddd-11a-ui-fields / ori-ddd-11b-ui-grouping の出力先と同じ。 */
+const UI_FIELDS_DIR = "domain/ui-fields";
+/** page-groups.md の file-level node (`node_id: page-grouping:overview`)。H2 section ではない。 */
+const PAGE_GROUPING_FILE_NODE = "overview";
+
+/**
+ * derives_from の node-id 形式を `file` / `file#section` へ解決する (ori-0eh.9)。
+ * - `ui-field:<name>[#section]` → `domain/ui-fields/<name>.md[#section]`
+ * - `page-grouping:<id>` → `domain/ui-fields/page-groups.md#<id>` (`overview` は file-level node なので section なし)
+ * それ以外 (file パス・未対応の node-id) はそのまま返す。testids.ts が受理する screen 参照形式と対応する。
+ */
+function resolveNodeId(raw: string): string {
+  const uiField = /^ui-field:([a-z0-9][a-z0-9-]*)(#.*)?$/.exec(raw);
+  if (uiField) return `${UI_FIELDS_DIR}/${uiField[1]}.md${uiField[2] ?? ""}`;
+  const grouping = /^page-grouping:([a-z0-9][a-z0-9-]*)$/.exec(raw);
+  if (grouping) {
+    const file = `${UI_FIELDS_DIR}/page-groups.md`;
+    return grouping[1] === PAGE_GROUPING_FILE_NODE ? file : `${file}#${grouping[1]}`;
+  }
+  return raw;
+}
+
 function toRef(path: string, section?: string): UpstreamRef | undefined {
-  const raw = stripQuotes(path);
+  const raw = resolveNodeId(stripQuotes(path));
   if (raw === "") return undefined;
   const hashIdx = raw.indexOf("#");
   const file = stripOriPrefix(hashIdx === -1 ? raw : raw.slice(0, hashIdx));
@@ -103,6 +125,7 @@ function toRef(path: string, section?: string): UpstreamRef | undefined {
  * manifest.derives_from を UpstreamRef 列に変換する (resolve-upstream.sh の awk パーサの TS 移植)。
  * - legacy string form: `- domain/aggregates.md#note-aggregate`
  * - structured form: `- path: .ori/domain/x.md` + 任意の `section: y`
+ * - node-id form: `- ui-field:screen-1` / `- page-grouping:<id>` (domain/ui-fields/ 配下の file へ解決。resolveNodeId 参照)
  * 入力は manifest.yaml のテキストまたは parse 済みオブジェクト。出現順を保ち、同一 ref は 1 つにまとめる。
  */
 export function parseDerivesFrom(manifest: string | unknown): UpstreamRef[] {

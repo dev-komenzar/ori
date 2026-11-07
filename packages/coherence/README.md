@@ -19,7 +19,7 @@ Change detection and propagation for the ori coherence graph.
 - `detectChangesInFile(path, prev, curr, opts)` — compare two revisions and return changed nodes
 - `parseManifest(yaml)` — validate `.ori/slices/<id>/manifest.yaml` or `.ori/pages/<id>/manifest.yaml` (discriminated by `type`)
 - spec-hash (`src/spec-hash.ts`, ori-0eh.2) — coherence frontmatter (`upstream` / `hash`) の共通実装。形式の SSoT は `.apm/instructions/feature-spec.instructions.md` §coherence-frontmatter
-  - `parseDerivesFrom(manifest)` — manifest.derives_from (legacy string / structured `{path, section}`) を正規化した ref 列へ
+  - `parseDerivesFrom(manifest)` — manifest.derives_from (legacy string / structured `{path, section}` / node-id `ui-field:<name>`・`page-grouping:<id>`) を正規化した ref 列へ
   - `normalizeHashKey(key)` — `file#.*` / `file#anchor` / `file` → `file`
   - `computeFileHash(path)` — sha256(raw bytes) 先頭 12 hex (`sha256sum | cut -c1-12` と同値)
   - `computeExpectedCoherence(root, refs)` — 書かれるべき upstream / hash (file 単位 dedupe) と欠落 file

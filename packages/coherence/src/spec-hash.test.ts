@@ -63,6 +63,30 @@ derives_from:
     expect(refs.map((r) => r.file)).toEqual(["domain/bounded-contexts.md", "domain/aggregates.md"]);
   });
 
+  it("resolves node-id form (ui-field:<name> / page-grouping:<id>) to domain/ui-fields/ files (ori-0eh.9)", () => {
+    const refs = parseDerivesFrom(`derives_from:
+  - ui-field:screen-1
+  - ui-field:screen-2#screen-2-title
+  - page-grouping:capture-form
+  - page-grouping:overview
+  - path: ui-field:screen-3
+    section: screen-3-body
+  - domain/ui-fields/screen-1.md
+`);
+    expect(refs).toEqual([
+      { ref: "domain/ui-fields/screen-1.md", file: "domain/ui-fields/screen-1.md" },
+      { ref: "domain/ui-fields/screen-2.md#screen-2-title", file: "domain/ui-fields/screen-2.md", section: "screen-2-title" },
+      { ref: "domain/ui-fields/page-groups.md#capture-form", file: "domain/ui-fields/page-groups.md", section: "capture-form" },
+      { ref: "domain/ui-fields/page-groups.md", file: "domain/ui-fields/page-groups.md" },
+      { ref: "domain/ui-fields/screen-3.md#screen-3-body", file: "domain/ui-fields/screen-3.md", section: "screen-3-body" },
+    ]);
+  });
+
+  it("leaves unsupported node-ids and file paths untouched", () => {
+    expect(parseDerivesFrom({ derives_from: ["aggregate:User", "domain/ui-field:x.md"] }).map((r) => r.ref))
+      .toEqual(["aggregate:User", "domain/ui-field:x.md"]);
+  });
+
   it("accepts parsed objects, dedupes identical refs, tolerates missing/empty", () => {
     expect(parseDerivesFrom({ derives_from: ["domain/a.md#x", ".ori/domain/a.md#x", "domain/a.md#y"] }).map((r) => r.ref))
       .toEqual(["domain/a.md#x", "domain/a.md#y"]);

@@ -49,6 +49,10 @@ coherence:
 - **file 単位 dedupe**: 同一 file を複数 section で参照しても hash のキーは 1 つ。`upstream` には section ごとの ref を残す
 - **path 正規化**: `derives_from` の `.ori/` prefix 有無 (legacy string form / structured `{path, section}` form) は
   writer が同じキーに正規化する
+- **node-id 形式の解決**: page manifest の `derives_from` に書かれる node-id は file に解決してから記録する
+  (`upstream` / `hash` には解決後の値が入る)。`ui-field:<name>[#section]` → `domain/ui-fields/<name>.md[#section]`、
+  `page-grouping:<id>` → `domain/ui-fields/page-groups.md#<id>` (`page-grouping:overview` は file-level node なので
+  `domain/ui-fields/page-groups.md`)。それ以外の node-id は解決しない (file として扱われ、存在しなければ欠落)
 - **writer 専有**: `upstream` / `hash` / `last_derived` は決定的 writer `write-spec-hash` (ori-derive skill の
   `scripts/write-spec-hash.js <slice|page|scenario>/<id>`。`@ori-ori/coherence` の spec-hash 実装を使う) だけが書く。
   `/ori-derive` は spec.md synthesis の後に必ず実行する。
