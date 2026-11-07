@@ -15150,8 +15150,9 @@ function splitFrontmatter(text) {
   return { yaml: after.slice(0, c.index), open: m[0], rest: after.slice(c.index), eol };
 }
 function scalarString(node) {
-  if ((0, import_yaml2.isScalar)(node)) return node.value === null || node.value === void 0 ? void 0 : String(node.value);
-  return void 0;
+  if (!(0, import_yaml2.isScalar)(node) || node.value === null || node.value === void 0) return void 0;
+  if (typeof node.value !== "string" && typeof node.source === "string") return node.source;
+  return String(node.value);
 }
 function readSpecCoherence(specText) {
   const result = { upstream: [], hash: {}, conflicts: [], legacy: false };
@@ -15267,7 +15268,10 @@ var warn = (label, msg, fix) => {
   if (fix) console.log(`        fix: ${fix}`);
 };
 var info = (label, msg) => console.log(`  INFO  ${label}: ${msg}`);
-var REDERIVE = "/ori-flow <id> \u3067\u518D derive (hash \u306F writer \u304C\u751F\u6210\u3059\u308B)";
+var SINGULAR = { slices: "slice", pages: "page", scenarios: "scenario" };
+var writerTarget = (t) => `${SINGULAR[t.kind]}/${t.id}`;
+var REDERIVE = "/ori-flow <id> \u3067\u518D derive (hash \u306F ori-derive \u306E writer \u304C\u751F\u6210\u3059\u308B\u3002\u624B\u66F8\u304D\u3057\u306A\u3044)";
+var driftFix = (t) => `${REDERIVE}\u3002\u518D derive \u4E0D\u8981\u3068\u4EBA\u9593\u304C\u5224\u65AD\u3057\u305F\u5834\u5408\u306E\u307F node scripts/write-spec-hash.js ${writerTarget(t)} --accept (LLM \u304C drift \u3092\u6D88\u3059\u76EE\u7684\u3067\u81EA\u767A\u7684\u306B\u4F7F\u308F\u306A\u3044)`;
 for (const t of resolveTargets()) {
   const label = `${t.kind}/${t.id}`;
   if (!existsSync2(t.specPath)) {
@@ -15305,7 +15309,7 @@ for (const t of resolveTargets()) {
     const actual = computeFileHash(abs);
     const rec = (coh.hash[file] ?? "").trim().toLowerCase();
     if (rec !== actual) {
-      warn(label, `drift: ${file} \u8A18\u9332 ${coh.hash[file]} \u2260 \u73FE\u5728 ${actual}`, REDERIVE);
+      warn(label, `drift: ${file} \u8A18\u9332 ${coh.hash[file]} \u2260 \u73FE\u5728 ${actual}`, driftFix(t));
     }
   }
   if (recorded.length > 0) {
@@ -15330,7 +15334,7 @@ for (const t of resolveTargets()) {
     }
   }
   if (coh.legacy) {
-    info(label, "\u65E7\u5F62\u5F0F\u306E coherence \u3092\u691C\u51FA (\u5024\u306F\u6B63\u898F\u5316\u3057\u3066\u6BD4\u8F03\u6E08\u307F)\u3002write-spec-hash --migrate \u3067\u65B0\u5F62\u5F0F\u3078\u79FB\u884C\u3067\u304D\u307E\u3059");
+    info(label, `\u65E7\u5F62\u5F0F\u306E coherence \u3092\u691C\u51FA (\u5024\u306F\u6B63\u898F\u5316\u3057\u3066\u6BD4\u8F03\u6E08\u307F)\u3002node scripts/write-spec-hash.js ${writerTarget(t)} --migrate (\u5168\u4EF6\u306F --all --migrate) \u3067\u65B0\u5F62\u5F0F\u3078\u79FB\u884C\u3067\u304D\u307E\u3059`);
   }
   for (const c of coh.conflicts) {
     info(label, `\u65E7\u30AD\u30FC\u304C\u540C\u4E00 file ${c.file} \u3067\u5225\u306E hash \u3092\u8A18\u9332 (${c.entries.map((e) => `${e.key}=${e.value}`).join(", ")}); \u5148\u982D\u306E\u5024\u3067\u6BD4\u8F03`);

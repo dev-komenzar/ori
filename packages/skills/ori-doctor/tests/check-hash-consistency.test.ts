@@ -53,6 +53,7 @@ describe("check-hash-consistency.sh", () => {
     const r = await run(base(`  source: derived\n  hash:\n    domain/aggregates.md: 000000000000\n`));
     expect(r.out).toContain("drift: domain/aggregates.md");
     expect(r.out).toContain(OK);
+    expect(r.out).toContain("write-spec-hash.js slice/s1 --accept");
     expect(r.code).toBe(1);
   });
 
@@ -105,7 +106,7 @@ describe("check-hash-consistency.sh", () => {
     const r = await run(base(`  source: derived\n  hash:\n    domain/aggregates.md#.*: ${OK}\n    domain/aggregates.md#b: ${OK}\n`));
     expect(r.out).not.toContain("drift");
     expect(r.out).toContain("INFO");
-    expect(r.out).toContain("--migrate");
+    expect(r.out).toContain("write-spec-hash.js slice/s1 --migrate");
     expect(r.code).toBe(0);
   });
 
