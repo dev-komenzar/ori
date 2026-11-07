@@ -20,6 +20,15 @@ ori (織) — DDD-driven slice/page scaffolding with CoDD coherence.
 
 - **docs / smoke の新順序化** ([`ori-63f.3`](https://github.com/dev-komenzar/ori/pull/106)) — `docs/design.md` §17、`docs/start/*`、`docs/acceptance/README.md`、`README.md` (状態遷移表 / Mermaid)、`ci/smoke/run-smoke.sh` のコメントを `architect → bootstrap` 順に更新。過去の acceptance / smoke 実施記録は歴史記録として据え置き、冒頭に旧フロー注記を追記
 
+### spec hash drift 検知の再設計（epic `ori-0eh`）
+
+既存プロジェクトは **[spec hash 形式の移行ガイド](docs/guide/spec-hash-migration.md)** の手順 (`write-spec-hash.js --all --migrate` → `/ori-doctor` → 再 derive または `--accept`) で移行する。
+
+- **⚠ `/ori-finalize` が hash を更新しなくなった** ([`ori-0eh.6`](https://github.com/dev-komenzar/ori/issues/78)) — `ori-finalize/scripts/update-hash.sh` を削除した。以前の finalize は spec.md の hash を現在値で無条件に上書きしていたため、derive 後の upstream 変更が隠れていた。現在の finalize は最初に `check-hash-consistency.sh <kind>/<id>` で検証だけを行う。drift (または hash の欠落・余剰・未記録) があれば dirty 解除の前に止まり、`/ori-flow <id>` での再 derive を案内する。slice / page / scenario のすべてが対象。人間が「spec に影響しない」と判断した drift だけ `write-spec-hash.js --accept` で承認する。`update-hash.sh` を直接呼ぶ独自手順があれば、その呼び出しを削除すること
+- **⚠ `/ori-doctor` が drift を issue として数える** ([#141](https://github.com/dev-komenzar/ori/pull/141), `ori-0eh.5`) — 全 `.ori/{slices,pages,scenarios}/*/spec.md` の `coherence.hash` を upstream の sha256 先頭 12 桁と照合する。旧 finalize の上書きで隠れていた stale な spec が、**移行直後にまとめて検出される。これは意図どおりの挙動**。旧形式のキーは正規化して比較し、INFO で `--migrate` を案内する (issue には数えない)
+- **決定的 writer `write-spec-hash.js`** ([#142](https://github.com/dev-komenzar/ori/pull/142), `ori-0eh.3` / `ori-0eh.4`) — `coherence.upstream` / `hash` / `last_derived` を書けるのは `ori-derive` の writer だけになった。derive では毎回実行する。`--migrate [--all]` は旧形式を記録値のまま移行し、`--accept` は人間判断による re-baseline に使う
+- **coherence 形式の SSoT** ([#140](https://github.com/dev-komenzar/ori/pull/140), [#145](https://github.com/dev-komenzar/ori/pull/145), `ori-0eh.1` / `ori-0eh.2` / `ori-0eh.9`) — hash のキーを file パス (anchor なし) に統一した。正本は `feature-spec.instructions.md` §coherence-frontmatter。page manifest の node-id (`ui-field:` / `page-grouping:`) は file に解決してから記録する
+
 ### status.yaml の破損防止（ori-6dr5 / ori-r5b8）
 
 - **⚠ `ori-finalize/scripts/clear-dirty.sh` を削除し `clear-dirty.js` に置換** ([#137](https://github.com/dev-komenzar/ori/pull/137)) — 旧 `.sh` は `sed` で `dirty:` 行だけを置換し、配下のリスト要素を残して status.yaml を不正な YAML にしていた ([#133](https://github.com/dev-komenzar/ori/issues/133))。新 `node scripts/clear-dirty.js <id> [--kind slice|page|scenario] [--skip-review-check]` は YAML ライブラリで書き戻し、slice / page / scenario に対応する。`apm install` / `apm update` は skill dir を置き換えるので旧 `.sh` は消える。skill を手でコピーしている場合や、`clear-dirty.sh` を直接呼ぶ独自スクリプト・手順がある場合は、`.sh` を削除して `clear-dirty.js` に切り替えること

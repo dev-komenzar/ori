@@ -199,6 +199,7 @@ $ /ori-sync                                    # 変更伝播計算
 - **利用ガイド**
   - [スタック別 Getting started](docs/start/index.md)
   - [バグが見つかったときの動線](docs/guide/bug-triage.md) — slice 完走後にバグ発覚した際の triage と再走手順
+  - [spec hash 形式の移行ガイド](docs/guide/spec-hash-migration.md) — 既存プロジェクトを新しい `coherence.hash` 形式と finalize の hash 検証 gate に移行する手順
 - **コントリビューション**
   - [Contributing 入口](docs/contributing/index.md) — テンプレート募集 / PR ルール / リポジトリ構造
 - **設計**
