@@ -215,7 +215,7 @@ coherence:
   });
 
   it("duplicate keys for the same file with matching values: no conflict", () => {
-    // update-hash.sh が生成していた YAML 上の重複キー (promptnotes ori-ehz)
+    // 旧 finalize の hash 更新 script が生成していた YAML 上の重複キー (promptnotes ori-ehz)
     const c = readSpecCoherence(`---
 coherence:
   hash:

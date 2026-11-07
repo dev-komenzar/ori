@@ -461,7 +461,7 @@ MVP v0.1 = **32 skills**、3-tier 分類で組織(tier 詳細は実装時に確�
 | 4 | impl-green | source code | deep | self-fix 1 回、fail なら停止(test green になるまで) |
 | 5 | refactor | source diffs | fast | rollback、skip 扱い |
 | 6 | review | beads comments | **reasoning (fresh)** | critical → 停止、minor → continue |
-| 7 | finalize | manifest hash 更新 + dirty 解除 + proposals | fast | retry 3 回 |
+| 7 | finalize | hash 検証 gate (書き換えない) + dirty 解除 + proposals | fast | retry 3 回 |
 
 ### Scenario 4-phase 一覧
 
@@ -470,7 +470,7 @@ MVP v0.1 = **32 skills**、3-tier 分類で組織(tier 詳細は実装時に確�
 | 1 | **derive** | `spec.md` + `validation.md` + runner chain 解決結果の記録 | deep | derives_from 不完全 / 無効 runner override → 停止 |
 | 2 | generate | `tests/` + runner config + `docker-compose.yml`(compose-service 系のみ) | deep | self-fix 1 回、fail なら停止 |
 | 3 | review | beads comments | **reasoning (fresh)** | critical → 停止、minor → continue |
-| 4 | finalize | manifest hash 更新 + dirty 解除 | fast | retry 3 回 |
+| 4 | finalize | hash 検証 gate (書き換えない) + dirty 解除 | fast | retry 3 回 |
 
 ### 共通ルール
 

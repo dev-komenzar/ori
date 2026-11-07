@@ -30,6 +30,17 @@ const SHARED_ENTRIES = [
     skills: ["ori-architect", "ori-bootstrap", "ori-doctor", "ori-feature-status"],
   },
   { entry: "lint.ts", src: "packages/skills/ori-doctor/src/lint.ts", skills: ["ori-architect"] },
+  // finalize の hash 検証 gate (ori-0eh.6)。.sh は同 dir の .js を呼ぶので両方複製する
+  {
+    entry: "check-hash-consistency.ts",
+    src: "packages/skills/ori-doctor/src/check-hash-consistency.ts",
+    skills: ["ori-finalize"],
+  },
+  {
+    entry: "check-hash-consistency.sh",
+    src: ".apm/skills/ori-doctor/scripts/check-hash-consistency.sh",
+    skills: ["ori-finalize"],
+  },
   {
     entry: "check-scenario-exists.sh",
     src: ".apm/skills/ori-generate/scripts/check-scenario-exists.sh",
