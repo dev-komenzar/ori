@@ -4,8 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "(cd ../../../ && node scripts/build-skills.mjs > /dev/null) && vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ori-ori/coherence": "workspace:*",
+    "yaml": "^2.5.0"
   },
   "devDependencies": {
     "vitest": "^2.1.0"

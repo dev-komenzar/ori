@@ -148,6 +148,22 @@ coherence:
     expect(c.legacy).toBe(false);
   });
 
+  it("unquoted digit-only hash values keep their written form (leading zeros, exponent-like)", () => {
+    const c = readSpecCoherence(`---
+coherence:
+  hash:
+    domain/a.md: 012345678901
+    domain/b.md: 12345e678901
+    domain/c.md: "000000000001"
+---
+`);
+    expect(c.hash).toEqual({
+      "domain/a.md": "012345678901",
+      "domain/b.md": "12345e678901",
+      "domain/c.md": "000000000001",
+    });
+  });
+
   it("`#.*` keys are normalized to file keys", () => {
     const c = readSpecCoherence(`---
 coherence:

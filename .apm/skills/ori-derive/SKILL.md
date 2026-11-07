@@ -24,7 +24,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
   - `.ori/slices/<id>/manifest.yaml`（必須。`derives_from:` を持つ）
   - `manifest.derives_from` に列挙されたドメイン section（例：`domain/aggregates.md#note-aggregate`）
 - 出力：`.ori/slices/<id>/spec.md`
-  - frontmatter: `coherence` ブロックは [`feature-spec.instructions.md` §coherence-frontmatter](../../instructions/feature-spec.instructions.md#coherence-frontmatter) の形式（SSoT）。`upstream:` / `hash:` は writer 専有で、**LLM は手書きしない**
+  - frontmatter: `coherence` ブロックは [`feature-spec.instructions.md` §coherence-frontmatter](../../instructions/feature-spec.instructions.md#coherence-frontmatter) の形式（SSoT）。`upstream:` / `hash:` / `last_derived:` は writer（`scripts/write-spec-hash.js`）専有で、**LLM は手書きしない**
   - 必須 H2 セクション（**[`feature-spec.instructions`](../../instructions/feature-spec.instructions.md) 準拠** — instructions ファイル名は legacy のまま）
 
 ### scenario の場合
@@ -34,7 +34,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
   - `manifest.derives_from` に列挙されたドメイン section（例：`domain/workflows.md#order-workflow`）
   - `.ori/domain/validation.md`（必須。Gherkin 形式の検証シナリオ）
 - 出力：`.ori/scenarios/<id>/spec.md`
-  - frontmatter: `coherence` ブロックは [`feature-spec.instructions.md` §coherence-frontmatter](../../instructions/feature-spec.instructions.md#coherence-frontmatter) の形式（SSoT）。`upstream:` / `hash:` は writer 専有で、**LLM は手書きしない**
+  - frontmatter: `coherence` ブロックは [`feature-spec.instructions.md` §coherence-frontmatter](../../instructions/feature-spec.instructions.md#coherence-frontmatter) の形式（SSoT）。`upstream:` / `hash:` / `last_derived:` は writer（`scripts/write-spec-hash.js`）専有で、**LLM は手書きしない**
   - 必須セクション：概要 / シナリオステップ / テスト観点 / 実装ノート
 
 ## 必須セクション（[`feature-spec.instructions.md`](../../instructions/feature-spec.instructions.md) 準拠）
@@ -51,6 +51,8 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
 各 H2 は `{#id}` 必須。H3 を追加する場合も `{#id}` 必須。**section 雛形 / 記述例の SSoT は [`feature-spec.instructions.md`](../../instructions/feature-spec.instructions.md)** — このスキル内に template を duplicate しない (DoD 拡張時の sync 漏れを防ぐ)。
 
 ## 手順
+
+`scripts/write-spec-hash.js` の対象指定は `<kind>/<id>`: `type: slice` → `slice/<id>`、`type: page` / `type: widget` → `page/<id>`（widget も `.ori/pages/<id>/`）、`type: scenario` → `scenario/<id>`。exit 1 は対象の失敗（メッセージをユーザに提示して停止）、exit 2 は引数の誤り（指定を直して再実行）。
 
 1. **存在確認と type 判定**：
    - `.ori/slices/<id>/manifest.yaml` または `.ori/scenarios/<id>/manifest.yaml` の存在を確認
@@ -72,9 +74,10 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
 3. **manifest.yaml の読み込み**：`.ori/slices/<id>/manifest.yaml` を Read。`derives_from:` が空ならエラー停止し「先に DDD phase で domain を整備するか、manifest に upstream を追記してください」と案内
 3. **upstream section の取得**：
    ```bash
-   bash ./scripts/resolve-upstream.sh <slice-id>
+   node scripts/write-spec-hash.js <slice|page>/<id> --dry-run
    ```
-   派生元 section のパスとハッシュを取得
+   派生元 ref（`file#section`）の一覧を取得し、upstream file の存在を確認する（spec.md は書かない）。
+   exit 1（derives_from が 0 件 / upstream file 不在）なら停止しメッセージをユーザに提示する。列挙された section を Read する
 4. **矛盾検出**：複数 upstream が同じ概念について異なる規定を持つ場合、停止して `/ori-propose` を促す（自動マージしない）
 5. **spec.md の synthesis**：
    - 上記 6 セクションを必須として埋める (記述形式は `feature-spec.instructions.md` を SSoT として参照)
@@ -83,10 +86,13 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
    - page / widget: 持つ ui-field を **1 つ残らず** `## 不変条件` か `## テスト観点` で規定し、field id を「field `screen-N-xxx`」の形で引用する。
      レイアウト図・入出力だけに置いた要素は規定に数えない。上流から挙動を書けない field は推測で埋めず **TBD** を残す
      (基準: [`feature-spec.instructions.md#page-field-behavior`](../../instructions/feature-spec.instructions.md#page-field-behavior))
-5b. **coherence frontmatter の記録（暫定。ori-0eh.4 で writer `write-spec-hash` の実行に置換）**：spec.md を書き出したら、次の出力を frontmatter の `coherence:` ブロックとして **そのまま貼る**（既存の `coherence:` ブロックは丸ごと置き換え、他キーと本文は触らない）。upstream / hash を自分で計算・編集しない。exit 1（upstream file 不在）なら停止しユーザに提示する
+5b. **coherence frontmatter の記録（必須。spec.md を書き出すたびに実行）**：
    ```bash
-   bash ./scripts/resolve-upstream.sh <id> --coherence
+   node scripts/write-spec-hash.js <slice|page>/<id>
    ```
+   - writer が `manifest.derives_from` から `coherence.upstream` / `hash` / `last_derived` を丸ごと再生成する（他キーと本文は変更しない）
+   - synthesis で書く frontmatter の `coherence:` は stub の `source: derived` のまま残す。upstream / hash を自分で計算・貼り付け・編集しない（placeholder も不可）
+   - exit 1（derives_from が 0 件 / upstream file 不在 / spec.md 不在）なら停止しメッセージをユーザに提示する。**exit 0 以外を成功扱いしない**
 6. **Slice DoD 由来 item の derive**：`manifest.yaml` の `expected_deliverables` block (SSoT: [`feature-manifest.instructions.md`](../../instructions/feature-manifest.instructions.md)) と `.ori/architecture.md` の stack 情報を読み、以下を spec.md の所定 section に必ず差し込む。**hardcoded sample をスキルに置かず**、各 instructions の記述例を SSoT として参照する:
    - **`## 境界契約 {#boundary-contract}`**: `expected_deliverables.boundary.kind` と `contact_point` を写し、`production_fixture.location` と `cross_root_contracts[].generator` を併記。`feature-spec.instructions.md` の "境界契約 section 必須化" 記述例に揃える
    - **`## テスト観点 {#test-points}`**:
@@ -119,7 +125,7 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
    - テスト観点に boundary test と production fixture の項目が両方あるか
    - 実装ノートに stub commands / production fixture / sub_layers / phase_hooks のいずれかへの言及があるか (slice_kind が `command` で `cross_root` を持つ場合は **全部必須**、それ以外は該当する rule だけ必須)
    - 全 H2/H3 に `{#id}` があるか（grep: `^###? [^{]+$`）
-   - frontmatter の `coherence:` ブロックが `resolve-upstream.sh <id> --coherence` の出力と一致するか（不一致なら再実行して貼り直す。手で直さない）
+   - `node scripts/write-spec-hash.js <slice|page>/<id>` を再実行して `unchanged` になるか（`updated` なら手順 5b 以降に coherence が手で変更されている。writer の出力を正とし、手で直さない）
 8. 検証失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
 9. **beads issue 更新**：
    ```bash
@@ -139,9 +145,10 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
 3. **manifest.yaml の読み込み**：`.ori/scenarios/<id>/manifest.yaml` を Read。`derives_from:` が空ならエラー停止し「先に DDD phase で domain を整備するか、manifest に upstream を追記してください」と案内
 4. **upstream section の取得**：
    ```bash
-   bash ./scripts/resolve-upstream.sh <scenario-id>
+   node scripts/write-spec-hash.js scenario/<scenario-id> --dry-run
    ```
-   派生元 section のパスとハッシュを取得
+   派生元 ref（`file#section`）の一覧を取得し、upstream file の存在を確認する（spec.md は書かない）。
+   exit 1（derives_from が 0 件 / upstream file 不在）なら停止しメッセージをユーザに提示する。列挙された section を Read する
 5. **矛盾検出**：複数 upstream が同じ概念について異なる規定を持つ場合、停止して `/ori-propose` を促す（自動マージしない）
 6. **validation.md の読み込み**：`.ori/domain/validation.md` を Read。Gherkin 形式の検証シナリオを理解
 7. **runner chain の解決**（ori-bc9 / D4）：
@@ -174,16 +181,19 @@ description: /ori-flow phase 1。manifest の derives_from とドメイン文書
      - **storage 隔離**: runner config が XDG を per-run temp に向けて隔離する（app 側 override 不要。Linux のみ）。app が XDG を経由せず `$HOME` を直接読む保存先を持つ場合はその旨を記録する（G4）
      - **node_modules 解決**: `.ori/scenarios/node_modules` symlink（G3）
      - **fixture seed**: 既存データ前提 scenario の seed 要否と frontmatter 形式（G6）
-8b. **coherence frontmatter の記録（暫定。ori-0eh.4 で writer `write-spec-hash` の実行に置換）**：spec.md を書き出したら、次の出力を frontmatter の `coherence:` ブロックとして **そのまま貼る**（既存の `coherence:` ブロックは丸ごと置き換え、他キーと本文は触らない）。upstream / hash を自分で計算・編集しない。exit 1（upstream file 不在）なら停止しユーザに提示する
+8b. **coherence frontmatter の記録（必須。spec.md を書き出すたびに実行）**：
    ```bash
-   bash ./scripts/resolve-upstream.sh <scenario-id> --coherence
+   node scripts/write-spec-hash.js scenario/<scenario-id>
    ```
+   - writer が `manifest.derives_from` から `coherence.upstream` / `hash` / `last_derived` を丸ごと再生成する（他キーと本文は変更しない。旧形式 `upstream: [{path, hash}]` も新形式へ書き換わる）
+   - synthesis で書く frontmatter の `coherence:` は stub の `source: derived` のまま残す。upstream / hash を自分で計算・貼り付け・編集しない（placeholder も不可）
+   - exit 1（derives_from が 0 件 / upstream file 不在 / spec.md 不在）なら停止しメッセージをユーザに提示する。**exit 0 以外を成功扱いしない**
 9. **spec.md の自己検証**：
    - 必須 H2 4 種が揃っているか（`## 概要`、`## シナリオステップ`、`## テスト観点`、`## 実装ノート`）
    - `#scenario-steps` に `^\s*Then ` が 1 件以上あり、件数が `.ori/domain/validation.md#<id>` の `Then` 件数と一致するか（不一致・0 件は修正対象）
    - runner=wdio の場合、実装ノートに前提条件（build 契約 / plugin / storage 隔離（XDG） / symlink / fixture seed）が記録されているか
    - 全 H2/H3 に `{#id}` があるか（grep: `^###? [^{]+$`）
-   - frontmatter の `coherence:` ブロックが `resolve-upstream.sh <id> --coherence` の出力と一致するか（不一致なら再実行して貼り直す。手で直さない）
+   - `node scripts/write-spec-hash.js scenario/<scenario-id>` を再実行して `unchanged` になるか（`updated` なら手順 8b 以降に coherence が手で変更されている。writer の出力を正とし、手で直さない）
 10. 検証失敗時は **1 回だけ** 自動修正を試み、それでも失敗ならユーザに判断を委ねる
 11. **beads issue 更新**：
     ```bash
@@ -241,6 +251,9 @@ Scenario: シナリオ名
 - **自動 scaffold は禁止**：slice / scenario が存在しなくても勝手に新規作成を呼ばない（ユーザ確認必須）
 - **spec.md は派生ファイル**：直接編集は不可。更新手順は [`scenario.instructions.md`](../../instructions/scenario.instructions.md) §caveats に従う
 - **推測で埋めない**：`TBD` を残し、人間判断に委ねる箇所を明示
+- **coherence の upstream / hash は writer だけが書く**：derive では既定モード（引数なし）だけを使う。`write-spec-hash.js` の他モードは derive の手順に含めない:
+  - `--accept`：upstream が変わったが spec は再 derive 不要と**人間が判断した**時の re-baseline 専用（hash を現在値にし、`last_derived` は保持）。drift を消す操作なので、LLM が drift 検知を通すために自発的に使ってはならない
+  - `--migrate [--all]`：旧形式（`file#.*` / `file#anchor` キー、scenario `[{path, hash}]`）を記録値保持のまま file キーへ移行する専用（同一 file で記録値が食い違えば停止する）
 - このスキルは test や impl を書かない。**phase 1 = spec 派生のみ**
 - **SSoT 参照原則** (ori-fzr.6 以降): spec.md の section 仕様 / 記述例 / DoD 由来 item 雛形は **このスキル内に hardcoded で書かない**。常に [`feature-spec.instructions.md`](../../instructions/feature-spec.instructions.md) / `feature-manifest.instructions.md` / [`ori-architect/patterns/ddd-vsa-hex/pattern.md`](../ori-architect/patterns/ddd-vsa-hex/pattern.md) を読み込んで参照する。pattern.md DoD rule の改訂時にスキル更新が漏れて drift するのを防ぐため
 

@@ -130,6 +130,13 @@ importers:
         version: 2.1.9(@types/node@22.19.19)
 
   packages/skills/ori-derive:
+    dependencies:
+      '@ori-ori/coherence':
+        specifier: workspace:*
+        version: link:../../coherence
+      yaml:
+        specifier: ^2.5.0
+        version: 2.9.0
     devDependencies:
       vitest:
         specifier: ^2.1.0
