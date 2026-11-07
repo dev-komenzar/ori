@@ -573,7 +573,7 @@ scenario の UI 駆動 runner は **derive phase が次の優先チェーンで�
 
 - 実装は既存 2 stack のみ: `typescript`(compose-service + Playwright)/ `typescript-tauri`(local [target: host] + WDIO)
 - 新言語 stack(go / java / rust backend / RN 等)は将来 **runtime recipe を知識(architect SKILL.md)として追加するだけで参加**できる設計(cartesian template 増殖なし — architect 動的生成転換と整合)
-- tauri scenario の CI 自動化(WebKitGTK + xvfb + tauri-driver 入り Docker image)は scope 外(別 issue `ori-7c1`)
+- tauri scenario の CI 自動化は `ori-7c1` で導入: `ci/tauri-scenario-smoke/`(WebKitGTK + webkit2gtk-driver + xvfb + tauri-driver 入り Docker image)が最小 tauri fixture を build-then-test し、ori-generate SKILL.md の wdio template をそのまま使って headless WDIO を GREEN assert する(workflow `tauri-scenario-smoke.yml`)。TS 側の `ci/scenario-smoke/`(compose-service + Playwright)と対
 
 ### Test 生成の責務分担
 
