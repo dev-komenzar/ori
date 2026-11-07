@@ -23,13 +23,11 @@
     "pretest": "pnpm run build:adapters",
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",
-    "typecheck": "pnpm -r run typecheck",
-    "postinstall": "lefthook install"
+    "typecheck": "pnpm -r run typecheck"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "esbuild": "^0.27.0",
-    "lefthook": "^2.1.9",
     "tsup": "^8.3.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
