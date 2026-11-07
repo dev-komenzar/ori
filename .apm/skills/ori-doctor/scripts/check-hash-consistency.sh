@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-# ori-doctor: check hash consistency between derived specs and upstream domain docs
+# ori-doctor: spec の coherence.hash と upstream file の実 hash (sha256 先頭 12 桁) を突き合わせる (ori-0eh.5)
+# 本体は同 bundle の check-hash-consistency.js (packages/skills/ori-doctor/src/check-hash-consistency.ts)。
+# 全 .ori/{slices,pages,scenarios}/*/spec.md が対象。drift / file 欠落 / キー集合差分 / hash 未記録を issue として数える。
+#
+# Usage: check-hash-consistency.sh [<kind>/<id>...]   (省略時は全件。finalize gate は単一ターゲットで呼ぶ)
+# exit code: 0..63 = issue 件数 (63 で頭打ち) / 64 = 引数・環境の誤り (対象 id なし・不明 option・.ori/ なし)
 set -euo pipefail
 
 # Auto-detect project root (PWD-first; SCRIPT_DIR fallback last).
@@ -19,29 +24,14 @@ if [ -z "$PROJECT_ROOT" ]; then
   SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
   PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
 fi
-if [ -z "$PROJECT_ROOT" ] || [ ! -d "$PROJECT_ROOT/.ori" ]; then echo "ERROR: cannot find project root (.ori/ not found)" >&2; exit 1; fi
+if [ -z "$PROJECT_ROOT" ] || [ ! -d "$PROJECT_ROOT/.ori" ]; then echo "ERROR: cannot find project root (.ori/ not found)" >&2; exit 64; fi
 cd "$PROJECT_ROOT"
 
-ISSUES=0
-
-for dir in .ori/slices/*/; do
-  [[ -d "$dir" ]] || continue
-  id=$(basename "$dir")
-  spec="$dir/spec.md"
-
-  [[ -f "$spec" ]] || continue
-
-  # Extract upstream references from spec.md frontmatter
-  upstreams=$(sed -n '/^  upstream:/,/^  [a-z]/p' "$spec" 2>/dev/null | grep '^    - ' | sed 's/    - //' | sed 's/#.*//' | sort -u || true)
-
-  for up in $upstreams; do
-    upfile=".ori/$up"
-    if [[ ! -f "$upfile" ]]; then
-      echo "  WARN  slices/$id: upstream '$up' not found"
-      ((ISSUES++)) || true
-    fi
-  done
-done
-
-echo "  hash consistency: $ISSUES issue(s)"
-exit $ISSUES
+if ! command -v node >/dev/null 2>&1; then
+  echo "  WARN  hash consistency: node が無いため skip"
+  exit 0
+fi
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+rc=0
+node "$SCRIPT_DIR/check-hash-consistency.js" --root "$PROJECT_ROOT" "$@" || rc=$?
+exit $rc
