@@ -68,6 +68,31 @@ const EXPECTED_BLOCK = (date: string, agg = sha12(AGG), wf = sha12(WF)) => `cohe
 `;
 
 describe("write-spec-hash default (derive)", () => {
+  it("resolves page manifest node-id derives_from (ui-field:screen-N / page-grouping:<id>) instead of failing as missing (ori-0eh.9)", async () => {
+    const SCREEN = "# Screen 1 {#screen-1}\n";
+    const GROUPS = "# Page Groups {#page-groups}\n\n## capture {#capture}\n\n- depends_on:\n  - ui-field:screen-1\n";
+    const root = await project({
+      ".ori/domain/ui-fields/screen-1.md": SCREEN,
+      ".ori/domain/ui-fields/page-groups.md": GROUPS,
+      ".ori/pages/p1/manifest.yaml": "page_id: p1\ntype: page\nderives_from:\n  - ui-field:screen-1\n  - page-grouping:capture\n",
+      ".ori/pages/p1/spec.md": spec("coherence:\n  source: derived\n  upstream: []\n  hash: {}\n"),
+    });
+    const r = run(root, ["page/p1"]);
+    expect(r.stderr).toBe("");
+    expect(r.code).toBe(0);
+    const out = await read(root, ".ori/pages/p1/spec.md");
+    expect(out).toContain(`coherence:
+  source: derived
+  last_derived: ${TODAY}
+  upstream:
+    - domain/ui-fields/screen-1.md
+    - domain/ui-fields/page-groups.md#capture
+  hash:
+    domain/ui-fields/screen-1.md: ${sha12(SCREEN)}
+    domain/ui-fields/page-groups.md: ${sha12(GROUPS)}
+`);
+  });
+
   it("regenerates a hash-only spec into the SSoT form (upstream + file-keyed hash), keeping other keys and body", async () => {
     const root = await project({
       ".ori/domain/aggregates.md": AGG,
